@@ -1,0 +1,182 @@
+name: Resume Notion au merge
+
+on:
+  pull_request:
+    types: [closed]
+
+permissions:
+  contents: read
+  pull-requests: read
+
+jobs:
+  resumer:
+    if: github.event.pull_request.merged == true
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ecrire le resume dans la carte Notion
+        env:
+          NOTION_TOKEN: ${{ secrets.NOTION_TOKEN }}
+          NOTION_DB: ${{ secrets.NOTION_DB }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          REPO: ${{ github.repository }}
+          PR_NUM: ${{ github.event.pull_request.number }}
+          PR_TITLE: ${{ github.event.pull_request.title }}
+          PR_BODY: ${{ github.event.pull_request.body }}
+          BRANCHE: ${{ github.event.pull_request.head.ref }}
+        run: |
+          set -euo pipefail
+
+          # 1. Retrouver la carte Notion grace a TSK-<n>
+          REF=$(printf '%s %s' "$BRANCHE" "$PR_TITLE" | grep -oiE 'TSK-[0-9]+' | head -n1 || true)
+          if [ -z "$REF" ]; then
+            echo "Pas de reference TSK-<n> : pas de carte a documenter."
+            exit 0
+          fi
+          NUM=${REF##*-}
+
+          curl -sS -X POST "https://api.notion.com/v1/databases/$NOTION_DB/query" \
+            -H "Authorization: Bearer $NOTION_TOKEN" \
+            -H "Notion-Version: 2022-06-28" \
+            -H "Content-Type: application/json" \
+            --data "$(jq -n --argjson num "$NUM" \
+                '{filter:{property:"Ref",unique_id:{equals:$num}}}')" > /tmp/carte.json
+
+          PAGE_ID=$(jq -r '.results[0].id // empty' /tmp/carte.json)
+          if [ -z "$PAGE_ID" ]; then
+            echo "TSK-$NUM introuvable dans Notion :"
+            cat /tmp/carte.json
+            exit 1
+          fi
+
+          # 2. Le contexte, en deux morceaux courts :
+          #    - l'objectif : le debut du texte de la carte
+          #    - la memoire : quelques mots-cles cumules, reecrits a chaque merge
+          curl -sS "https://api.notion.com/v1/blocks/$PAGE_ID/children?page_size=100" \
+            -H "Authorization: Bearer $NOTION_TOKEN" \
+            -H "Notion-Version: 2022-06-28" \
+            | jq -r '[.results[]? | (.[.type].rich_text? // []) | map(.plain_text) | join("")]
+                     | map(select(length > 0)) | join("\n")' > /tmp/carte-texte.txt
+          head -c 1200 /tmp/carte-texte.txt | iconv -c -f utf-8 -t utf-8 > /tmp/objectif.txt
+
+          # -j : pas de retour a la ligne final, pour qu'une memoire vide soit vraiment vide
+          jq -j '[.results[0].properties["Contexte IA"].rich_text[]?.plain_text] | add // ""' \
+            /tmp/carte.json > /tmp/memoire.txt
+
+          # 3. Le diff de la PR, tronque pour rester dans les limites du palier gratuit.
+          #    Ecrit d'abord dans un fichier : un "curl | head" ferait echouer le script
+          #    avec pipefail quand head coupe le flux.
+          curl -sS "https://api.github.com/repos/$REPO/pulls/$PR_NUM" \
+            -H "Authorization: Bearer $GH_TOKEN" \
+            -H "Accept: application/vnd.github.v3.diff" > /tmp/diff-complet.txt
+          # On retire les fichiers qui coutent des tokens sans rien expliquer :
+          # lockfiles, fichiers minifies, sourcemaps, images
+          awk '/^diff --git / { skip = ($0 ~ /(package-lock\.json|yarn\.lock|pnpm-lock\.yaml|\.min\.(js|css)|\.map|\.(png|jpe?g|gif|svg|ico))$/) }
+               !skip' /tmp/diff-complet.txt > /tmp/diff-filtre.txt
+
+          head -c 12000 /tmp/diff-filtre.txt | iconv -c -f utf-8 -t utf-8 > /tmp/diff.txt
+          if [ "$(wc -c < /tmp/diff-filtre.txt)" -gt 12000 ]; then
+            printf '\n[DIFF TRONQUE]\n' >> /tmp/diff.txt
+          fi
+
+          # 4. Demander le resume au modele
+          CONSIGNE=$(cat <<'EOF'
+          Tu documentes le travail d'une équipe de cinq étudiants sur un projet web.
+          On te donne la carte de la tâche (objectif, notes, résumés des changements
+          précédents), puis le diff d'une pull request qui vient d'être mergée.
+          Écris en français un résumé destiné à un coéquipier qui n'a pas lu le code.
+          Réponds exactement avec ces trois sections, sans gras ni autre mise en forme :
+          ### Ce qui a changé
+          Deux à quatre phrases, qui relient le changement à l'objectif de la carte.
+          ### Comment ça marche
+          Trois à six puces commençant par "- ", sur les fichiers et fonctions clés.
+          ### À savoir pour la suite
+          Une à trois puces : limites, points d'attention, ce qui reste à faire.
+          Si le diff est marqué comme tronqué, dis-le. N'invente rien qui ne soit
+          pas dans le diff. 250 mots maximum.
+          Termine par une dernière ligne, seule, qui commence exactement par "MEMOIRE: "
+          suivie de la mémoire technique de la tâche mise à jour : la mémoire précédente
+          fusionnée avec ce que ce merge apporte, en mots-clés et fragments courts
+          (fichiers, fonctions, choix techniques). 300 caractères maximum.
+          EOF
+          )
+
+          jq -n \
+            --arg consigne "$CONSIGNE" \
+            --arg titre "$PR_TITLE" \
+            --arg desc "${PR_BODY:-}" \
+            --rawfile objectif /tmp/objectif.txt \
+            --rawfile memoire /tmp/memoire.txt \
+            --rawfile diff /tmp/diff.txt \
+            '{model: "gemini-3.5-flash-lite",
+              temperature: 0.2,
+              messages: [
+                {role: "system", content: $consigne},
+                {role: "user", content: ("OBJECTIF DE LA CARTE :\n" + $objectif
+                   + "\n\nMEMOIRE DES MERGES PRECEDENTS :\n"
+                   + (if $memoire == "" then "(aucune, premier merge)" else $memoire end)
+                   + "\n\nPULL REQUEST : " + $titre + "\n" + $desc
+                   + "\n\nDIFF :\n" + $diff)}
+              ]}' > /tmp/requete.json
+
+          curl -sS -X POST "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions" \
+            -H "Authorization: Bearer $GEMINI_API_KEY" \
+            -H "Content-Type: application/json" \
+            --data @/tmp/requete.json > /tmp/reponse.json
+
+          RESUME=$(jq -r '.choices[0].message.content // empty' /tmp/reponse.json)
+          if [ -z "$RESUME" ]; then
+            echo "Le modele n'a pas repondu :"
+            cat /tmp/reponse.json
+            exit 1
+          fi
+
+          # La ligne "MEMOIRE: ..." est pour la machine, pas pour la carte.
+          # Tolerante aux ** ou _ qu'un modele ajouterait malgre la consigne.
+          NOUVELLE_MEMOIRE=$(printf '%s\n' "$RESUME" | grep -m1 '^[*_ ]*MEMOIRE' \
+                             | sed 's/^[*_ ]*MEMOIRE[*_ ]*:[*_ ]*//' || true)
+          RESUME=$(printf '%s\n' "$RESUME" | grep -v '^[*_ ]*MEMOIRE' || true)
+
+          # 5. Transformer le texte en blocs Notion et l'ajouter en bas de la carte
+          TITRE_SECTION="Résumé du merge — PR #$PR_NUM, $(date -u +%d.%m.%Y)"
+
+          jq -n --arg texte "$RESUME" --arg titre "$TITRE_SECTION" '
+            def rt(s): [{type: "text", text: {content: (s | .[0:1900])}}];
+            def bloc(t; s): {object: "block", type: t, (t): {rich_text: rt(s)}};
+            [ {object: "block", type: "divider", divider: {}},
+              bloc("heading_2"; $titre) ]
+            + ( $texte | split("\n") | map(select(test("\\S"))) | map(
+                  if   startswith("### ") then bloc("heading_3"; .[4:])
+                  elif startswith("- ")   then bloc("bulleted_list_item"; .[2:])
+                  else                         bloc("paragraph"; .)
+                  end ) )
+            | {children: .[0:100]}' > /tmp/blocs.json
+
+          REPONSE=$(curl -sS -X PATCH "https://api.notion.com/v1/blocks/$PAGE_ID/children" \
+            -H "Authorization: Bearer $NOTION_TOKEN" \
+            -H "Notion-Version: 2022-06-28" \
+            -H "Content-Type: application/json" \
+            --data @/tmp/blocs.json)
+
+          if [ "$(jq -r '.object' <<< "$REPONSE")" = "error" ]; then
+            echo "Notion a refuse l'ajout du resume :"
+            echo "$REPONSE"
+            exit 1
+          fi
+
+          # 6. Mettre a jour la memoire de la carte. Un echec ici n'annule pas le resume
+          #    deja ecrit : on le signale sans faire echouer l'execution.
+          if [ -n "$NOUVELLE_MEMOIRE" ]; then
+            REPONSE=$(curl -sS -X PATCH "https://api.notion.com/v1/pages/$PAGE_ID" \
+              -H "Authorization: Bearer $NOTION_TOKEN" \
+              -H "Notion-Version: 2022-06-28" \
+              -H "Content-Type: application/json" \
+              --data "$(jq -n --arg m "$NOUVELLE_MEMOIRE" \
+                  '{properties: {"Contexte IA": {rich_text: [{text: {content: ($m | .[0:1500])}}]}}}')")
+            if [ "$(jq -r '.object' <<< "$REPONSE")" = "error" ]; then
+              echo "Memoire non mise a jour :"
+              echo "$REPONSE"
+            fi
+          fi
+
+          echo "TSK-$NUM : resume ajoute a la carte."

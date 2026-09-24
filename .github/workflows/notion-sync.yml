@@ -1,0 +1,115 @@
+name: Sync Notion
+
+on:
+  push:
+    branches-ignore: [main]
+  pull_request:
+    types: [opened, reopened, ready_for_review, closed]
+
+permissions:
+  issues: write   # pour fermer l'issue au merge
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Faire avancer la carte Notion
+        env:
+          NOTION_TOKEN: ${{ secrets.NOTION_TOKEN }}
+          NOTION_DB: ${{ secrets.NOTION_DB }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          BRANCHE: ${{ github.head_ref || github.ref_name }}
+          PR_TITLE: ${{ github.event.pull_request.title }}
+          PR_URL: ${{ github.event.pull_request.html_url }}
+          MERGED: ${{ github.event.pull_request.merged }}
+          EVENT: ${{ github.event_name }}
+          ACTION: ${{ github.event.action }}
+        run: |
+          set -euo pipefail
+
+          REF=$(printf '%s %s' "$BRANCHE" "${PR_TITLE:-}" | grep -oiE 'TSK-[0-9]+' | head -n1 || true)
+          if [ -z "$REF" ]; then
+            echo "Pas de reference TSK-<n> : rien a synchroniser."
+            exit 0
+          fi
+          NUM=${REF##*-}
+
+          curl -sS -X POST "https://api.notion.com/v1/databases/$NOTION_DB/query" \
+            -H "Authorization: Bearer $NOTION_TOKEN" \
+            -H "Notion-Version: 2022-06-28" \
+            -H "Content-Type: application/json" \
+            --data "$(jq -n --argjson num "$NUM" \
+                '{filter:{property:"Ref",unique_id:{equals:$num}}}')" > /tmp/carte.json
+
+          if ! jq -e 'has("results")' /tmp/carte.json > /dev/null; then
+            echo "Reponse inattendue de Notion :"
+            cat /tmp/carte.json
+            exit 1
+          fi
+
+          PAGE_ID=$(jq -r '.results[0].id // empty' /tmp/carte.json)
+          STATUT_ACTUEL=$(jq -r '.results[0].properties.Statut.select.name // ""' /tmp/carte.json)
+
+          if [ -z "$PAGE_ID" ]; then
+            echo "TSK-$NUM introuvable dans Notion."
+            exit 0
+          fi
+
+          if [ "$EVENT" = "push" ]; then
+            NOTE="commit pousse sur $BRANCHE"
+            # Un push ne fait avancer que les cartes "A faire" : il ne fait jamais reculer
+            # une carte deja en revue, terminee ou abandonnee.
+            if [ -z "$STATUT_ACTUEL" ] || [ "$STATUT_ACTUEL" = "À faire" ]; then
+              STATUT="En cours"
+            else
+              STATUT="$STATUT_ACTUEL"
+            fi
+          elif [ "$ACTION" = "closed" ] && [ "$MERGED" = "true" ]; then
+            STATUT="Terminé";  NOTE="PR mergee"
+          elif [ "$ACTION" = "closed" ]; then
+            STATUT="En cours"; NOTE="PR fermee sans merge"
+          else
+            STATUT="En revue"; NOTE="PR ouverte, en attente de review"
+          fi
+
+          PAYLOAD=$(jq -n \
+            --arg statut "$STATUT" \
+            --arg note   "$NOTE" \
+            --arg url    "${PR_URL:-}" \
+            '{properties: {
+                "Statut": {select: {name: $statut}},
+                "Dernier événement Git": {rich_text: [{text: {content: $note}}]}
+              }}
+             | if $url != "" then .properties["Lien GitHub"] = {url: $url} else . end')
+
+          REPONSE=$(curl -sS -X PATCH "https://api.notion.com/v1/pages/$PAGE_ID" \
+            -H "Authorization: Bearer $NOTION_TOKEN" \
+            -H "Notion-Version: 2022-06-28" \
+            -H "Content-Type: application/json" \
+            --data "$PAYLOAD")
+
+          # curl ne traite pas une erreur HTTP comme un echec : on lit la reponse nous-memes
+          if [ "$(jq -r '.object' <<< "$REPONSE")" = "error" ]; then
+            echo "Notion a refuse la mise a jour de TSK-$NUM :"
+            echo "$REPONSE"
+            exit 1
+          fi
+
+          # Au merge, fermer l'issue TSK-<n> : plus besoin d'ecrire "Closes #N" dans la PR
+          if [ "$ACTION" = "closed" ] && [ "$MERGED" = "true" ]; then
+            curl -sS -G "https://api.github.com/search/issues" \
+              -H "Authorization: Bearer $GH_TOKEN" \
+              -H "Accept: application/vnd.github+json" \
+              --data-urlencode "q=repo:$REPO is:issue is:open in:title TSK-$NUM" \
+              | jq -r --arg p "TSK-$NUM " '.items[]? | select(.title | startswith($p)) | .number' \
+              | while read -r N; do
+                  curl -sS -X PATCH "https://api.github.com/repos/$REPO/issues/$N" \
+                    -H "Authorization: Bearer $GH_TOKEN" \
+                    -H "Accept: application/vnd.github+json" \
+                    --data '{"state":"closed","state_reason":"completed"}' > /dev/null
+                  echo "TSK-$NUM : issue #$N fermee"
+                done
+          fi
+
+          echo "TSK-$NUM -> $STATUT"
