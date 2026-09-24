@@ -1,0 +1,197 @@
+name: Notion -> issues et branches
+
+on:
+  schedule:
+    - cron: "*/15 * * * *"
+  workflow_dispatch:
+  push:
+    branches: [main]   # a chaque merge sur main, sans attendre le cron
+
+# Jamais deux executions en parallele : sinon le cron et un push simultanes
+# pourraient trouver la meme carte et creer deux issues pour elle.
+concurrency:
+  group: notion-issues
+  cancel-in-progress: false
+
+permissions:
+  issues: write
+  contents: write
+  pull-requests: write
+
+jobs:
+  creer:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Creer les issues et branches manquantes
+        env:
+          NOTION_TOKEN: ${{ secrets.NOTION_TOKEN }}
+          NOTION_DB: ${{ secrets.NOTION_DB }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          BASE_BRANCH: main   # branche de depart des features
+          NOTION_TEAM_DB: e15540738a694eb1bfa3e8bd3d8bbf62   # base Equipe
+        run: |
+          set -euo pipefail
+
+          # 1. Les taches cochees "Issue a creer" sans lien GitHub
+          FILTRE=$(jq -n '{filter:{and:[
+              {property:"Issue à créer", checkbox:{equals:true}},
+              {property:"Lien GitHub",   url:{is_empty:true}},
+              {property:"Statut",        select:{does_not_equal:"Abandonné"}}
+            ]}}')
+
+          curl -sS -X POST "https://api.notion.com/v1/databases/$NOTION_DB/query" \
+            -H "Authorization: Bearer $NOTION_TOKEN" \
+            -H "Notion-Version: 2022-06-28" \
+            -H "Content-Type: application/json" \
+            --data "$FILTRE" > /tmp/taches.json
+
+          # Si Notion renvoie une erreur au lieu de resultats, on l'affiche et on s'arrete
+          if ! jq -e 'has("results")' /tmp/taches.json > /dev/null; then
+            echo "Reponse inattendue de Notion :"
+            cat /tmp/taches.json
+            exit 1
+          fi
+
+          echo "$(jq '.results | length' /tmp/taches.json) tache(s) a traiter."
+
+          # 2. Table de correspondance : identifiant Notion -> login GitHub
+          curl -sS -X POST "https://api.notion.com/v1/databases/$NOTION_TEAM_DB/query" \
+            -H "Authorization: Bearer $NOTION_TOKEN" \
+            -H "Notion-Version: 2022-06-28" \
+            -H "Content-Type: application/json" \
+            --data '{}' > /tmp/equipe.json
+
+          jq '[ .results[]
+                | { login: ([.properties["Login GitHub"].rich_text[].plain_text] | add // ""),
+                    ids:   [.properties["Personne Notion"].people[].id] }
+                | select(.login != "")
+                | .login as $l | .ids[] | {(.): $l} ]
+              | add // {}' /tmp/equipe.json > /tmp/equipe-map.json
+
+          jq -c '.results[]' /tmp/taches.json | while read -r ligne; do
+            PAGE_ID=$(jq -r '.id' <<< "$ligne")
+            NUM=$(jq -r '.properties.Ref.unique_id.number' <<< "$ligne")
+            TITRE=$(jq -r '[.properties["Nom"].title[].plain_text] | add // ""' <<< "$ligne")
+            NOTION_URL=$(jq -r '.url' <<< "$ligne")
+
+            # Login GitHub de la personne assignee, vide si non trouve
+            ASSIGNEE=$(jq -r --slurpfile map /tmp/equipe-map.json \
+              '($map[0] // {}) as $m
+               | [ .properties["Assigné"].people[].id | $m[.] // empty ] | first // ""' <<< "$ligne")
+
+            # Nom de branche derive du titre : TSK-14-refacto-le-code-react
+            SLUG=$(printf '%s' "$TITRE" | iconv -f utf-8 -t ascii//TRANSLIT 2>/dev/null || printf '%s' "$TITRE")
+            SLUG=$(printf '%s' "$SLUG" | tr '[:upper:]' '[:lower:]' \
+                   | sed -E 's/[^a-z0-9]+/-/g; s/^-+|-+$//g' | cut -c1-40)
+            BRANCHE="TSK-$NUM-$SLUG"
+
+            ISSUE=$(curl -sS -X POST "https://api.github.com/repos/$REPO/issues" \
+              -H "Authorization: Bearer $GH_TOKEN" \
+              -H "Accept: application/vnd.github+json" \
+              --data "$(jq -n --arg t "TSK-$NUM $TITRE" \
+                              --arg b "Tache Notion : $NOTION_URL --- branche : $BRANCHE" \
+                              --arg a "$ASSIGNEE" \
+                  '{title: $t, body: $b}
+                   | if $a != "" then .assignees = [$a] else . end')" \
+              | jq -r '.html_url // empty')
+
+            if [ -z "$ISSUE" ]; then
+              echo "Echec de creation pour TSK-$NUM"
+              continue
+            fi
+
+            BASE_SHA=$(curl -sS "https://api.github.com/repos/$REPO/git/ref/heads/$BASE_BRANCH" \
+              -H "Authorization: Bearer $GH_TOKEN" \
+              -H "Accept: application/vnd.github+json" \
+              | jq -r '.object.sha // empty')
+
+            if [ -n "$BASE_SHA" ]; then
+              curl -sS -X POST "https://api.github.com/repos/$REPO/git/refs" \
+                -H "Authorization: Bearer $GH_TOKEN" \
+                -H "Accept: application/vnd.github+json" \
+                --data "$(jq -n --arg r "refs/heads/$BRANCHE" --arg s "$BASE_SHA" \
+                    '{ref: $r, sha: $s}')" > /dev/null
+              echo "branche $BRANCHE creee"
+            fi
+
+            curl -sS -X PATCH "https://api.notion.com/v1/pages/$PAGE_ID" \
+              -H "Authorization: Bearer $NOTION_TOKEN" \
+              -H "Notion-Version: 2022-06-28" \
+              -H "Content-Type: application/json" \
+              --data "$(jq -n --arg u "$ISSUE" \
+                  '{properties: {"Lien GitHub": {url: $u}}}')" > /dev/null
+
+            echo "TSK-$NUM -> $ISSUE"
+          done
+
+          # ---------------------------------------------------------------
+          # 3. Taches abandonnees : fermer issue et PR, supprimer la branche si vide
+          # ---------------------------------------------------------------
+          MARQUEUR="abandon traite : issue fermee"
+
+          FILTRE_ABANDON=$(jq -n --arg m "$MARQUEUR" '{filter:{and:[
+              {property:"Statut", select:{equals:"Abandonné"}},
+              {property:"Dernier événement Git", rich_text:{does_not_equal:$m}}
+            ]}}')
+
+          curl -sS -X POST "https://api.notion.com/v1/databases/$NOTION_DB/query" \
+            -H "Authorization: Bearer $NOTION_TOKEN" \
+            -H "Notion-Version: 2022-06-28" \
+            -H "Content-Type: application/json" \
+            --data "$FILTRE_ABANDON" > /tmp/abandons.json
+
+          if ! jq -e 'has("results")' /tmp/abandons.json > /dev/null; then
+            echo "Reponse inattendue de Notion (abandons) :"
+            cat /tmp/abandons.json
+            exit 1
+          fi
+
+          echo "$(jq '.results | length' /tmp/abandons.json) tache(s) abandonnee(s) a nettoyer."
+
+          GH=(-sS -H "Authorization: Bearer $GH_TOKEN" -H "Accept: application/vnd.github+json")
+
+          jq -c '.results[]' /tmp/abandons.json | while read -r ligne; do
+            PAGE_ID=$(jq -r '.id' <<< "$ligne")
+            REF="TSK-$(jq -r '.properties.Ref.unique_id.number' <<< "$ligne")"
+
+            # a. Fermer en "not planned" les issues ouvertes dont le titre commence par TSK-<n>
+            curl "${GH[@]}" -G "https://api.github.com/search/issues" \
+              --data-urlencode "q=repo:$REPO is:issue is:open in:title $REF" \
+              | jq -r --arg p "$REF " '.items[]? | select(.title | startswith($p)) | .number' \
+              | while read -r N; do
+                  curl "${GH[@]}" -X PATCH "https://api.github.com/repos/$REPO/issues/$N" \
+                    --data '{"state":"closed","state_reason":"not_planned"}' > /dev/null
+                  echo "$REF : issue #$N fermee (not planned)"
+                done
+
+            # b. Pour chaque branche TSK-<n>-... : fermer ses PR, la supprimer si elle n'a aucun commit
+            curl "${GH[@]}" "https://api.github.com/repos/$REPO/git/matching-refs/heads/$REF-" \
+              | jq -r '.[]?.ref | sub("^refs/heads/"; "")' \
+              | while read -r BR; do
+                  curl "${GH[@]}" "https://api.github.com/repos/$REPO/pulls?state=open&head=${REPO%%/*}:$BR" \
+                    | jq -r '.[]?.number' \
+                    | while read -r PR; do
+                        curl "${GH[@]}" -X PATCH "https://api.github.com/repos/$REPO/pulls/$PR" \
+                          --data '{"state":"closed"}' > /dev/null
+                        echo "$REF : PR #$PR fermee"
+                      done
+
+                  AHEAD=$(curl "${GH[@]}" "https://api.github.com/repos/$REPO/compare/$BASE_BRANCH...$BR" \
+                          | jq -r '.ahead_by // 0')
+                  if [ "$AHEAD" = "0" ]; then
+                    curl "${GH[@]}" -X DELETE "https://api.github.com/repos/$REPO/git/refs/heads/$BR" > /dev/null
+                    echo "$REF : branche $BR supprimee (aucun commit)"
+                  else
+                    echo "$REF : branche $BR conservee ($AHEAD commit(s) - a supprimer a la main si voulu)"
+                  fi
+                done
+
+            # c. Marquer la carte comme traitee pour ne pas la reprendre au prochain passage
+            curl -sS -X PATCH "https://api.notion.com/v1/pages/$PAGE_ID" \
+              -H "Authorization: Bearer $NOTION_TOKEN" \
+              -H "Notion-Version: 2022-06-28" \
+              -H "Content-Type: application/json" \
+              --data "$(jq -n --arg m "$MARQUEUR" \
+                  '{properties: {"Dernier événement Git": {rich_text: [{text: {content: $m}}]}}}')" > /dev/null
+          done
