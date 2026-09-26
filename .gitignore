@@ -1,0 +1,40 @@
+# Secrets : Seul env.exeample est commite
+.env
+.env.*
+!.env.example 
+
+# Notes perso
+perso/
+
+# Node
+node_moodules/
+dist/
+build/
+coverage/
+*.tsbuildinfo
+.vite/
+npm-debug.log*
+
+# Certificats TLS
+infra/nginx/certs/
+*.pem
+*.key
+*.crt
+
+# Donnees locales 
+infra/vault/data/
+infra/grafana/data/
+infra/prometheus/data/
+
+# IDE
+.vscode/*
+! .vscode/extensions.json
+.idea/
+.DS_Store/
+*.swp
+
+#Logs
+logs/
+*.log
+
+# Ne jamais ignorer backend/prisma/migrations/ 
