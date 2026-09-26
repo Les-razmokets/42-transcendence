@@ -7,7 +7,7 @@
 perso/
 
 # Node
-node_moodules/
+node_modules/
 dist/
 build/
 coverage/
@@ -28,9 +28,9 @@ infra/prometheus/data/
 
 # IDE
 .vscode/*
-! .vscode/extensions.json
+!.vscode/extensions.json
 .idea/
-.DS_Store/
+.DS_Store
 *.swp
 
 #Logs
