@@ -27,6 +27,7 @@ infra/grafana/data/
 infra/prometheus/data/
 
 # IDE
+.claude
 .vscode/*
 !.vscode/extensions.json
 .idea/
