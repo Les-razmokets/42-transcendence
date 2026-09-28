@@ -68,12 +68,12 @@ model Membership {
 }
 
 model OAuthAccount {
-  id                String        @id @default(uuid())
-  userId            String
-  user              User          @relation(fields: [userId], references: [id], onDelete: Cascade)
-  provider          OAuthProvider
-  providerAccountId String
-  createdAt         DateTime      @default(now())
+  id                String        @id @default(uuid()) // uuid dans la table
+  userId            String // renvoie a ligne user correpodant dans la table user 
+  user              User          @relation(fields: [userId], references: [id], onDelete: Cascade) // lien vers table user
+  provider          OAuthProvider // enum avec le type OAuth
+  providerAccountId String // id retourner par le OAuth choisis
+  createdAt         DateTime      @default(now()) // date de creation
 
   @@unique([provider, providerAccountId])
   @@index([userId])
