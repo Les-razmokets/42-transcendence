@@ -6,6 +6,7 @@
 enum Role {
 	USER
 	ADMIN
+	FLOOR
 }
 
 generator client {
