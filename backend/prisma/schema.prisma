@@ -3,6 +3,17 @@
 
 // Get a free hosted Postgres database in seconds: `npx create-db`
 
+// lexique :
+// id        = identifiant unique de la ligne (clé primaire)
+// xxxId     = clé étrangère : contient l'id d'une ligne d'une autre table (ex. userId -> User.id)
+// user      = champ de relation Prisma, virtuel (aucune colonne en base) : permet d'écrire include: { user: true }
+// onDelete: Cascade = supprimer la ligne parente supprime aussi les lignes qui pointent vers elle
+// @@unique  = interdit deux lignes avec la même combinaison de valeurs
+//             ex. Membership [userId, casinoId] : un user ne peut pas être membre deux fois du même casino,
+//             mais peut être membre de plusieurs casinos
+// @@index   = accélère les recherches sur ces colonnes (ex. "tous les comptes OAuth d'un userId")
+//
+
 enum Role {
   USER
   ADMIN
@@ -36,7 +47,7 @@ model User {
   lastName      String
   birthDate     DateTime
   phone         String? // pour les notifs ?
-  role          Role           @default(USER)
+  role          Role           @default(USER) //role sur notre site, simple user ou admin avec des droits dacces priviligies 
   createdAt     DateTime       @default(now())
   updatedAt     DateTime       @updatedAt
   memberships   Membership[]
@@ -58,7 +69,7 @@ model Membership {
   id        String     @id @default(uuid())
   userId    String
   casinoId  String
-  role      CasinoRole @default(FLOOR)
+  role      CasinoRole @default(FLOOR) // role un d'un membership au sein du casino
   user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
   casino    Casino     @relation(fields: [casinoId], references: [id])
   createdAt DateTime   @default(now())
