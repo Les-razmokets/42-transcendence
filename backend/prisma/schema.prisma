@@ -6,6 +6,10 @@
 enum Role {
 	USER
 	ADMIN
+}
+
+enum CasinoRole {
+	OWNER
 	FLOOR
 }
 
@@ -27,9 +31,9 @@ model User {
 	birthDate		DateTime
 	phone			String?		// pour les notifs ?
 	role			Role		@default(USER)
-	casinos			Casino[]
 	createdAt		DateTime	@default(now())
 	updatedAt		DateTime	@updatedAt
+	memberships		Membership[]
 }
 
 model Casino {
@@ -37,8 +41,21 @@ model Casino {
 	name			String
 	city			String
 	address			String
-	ownerId			String
-	owner			User		@relation(fields:[ownerId], references: [id], onDelete: Cascade)
 	createdAt		DateTime	@default(now())
 	updatedAt		DateTime	@updatedAt
+	deletedAt		DateTime?
+	memberships		Membership[]
+}
+
+model Membership {
+	id				String		@id @default(uuid())
+	userId			String
+	casinoId		String
+	role			CasinoRole	@default(FLOOR)
+	user			User		@relation(fields: [userId], references: [id], onDelete: Cascade)
+	casino			Casino		@relation(fields: [casinoId], references: [id])
+	createdAt		DateTime	@default(now())
+
+	@@unique		([userId, casinoId])
+	@@index			([casinoId])
 }

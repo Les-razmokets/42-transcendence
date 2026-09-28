@@ -113,8 +113,18 @@ model Casino {
 | `SetNull` | `ownerId` passe à NULL (impose `ownerId String?`) |
 | `NoAction` | Proche de Restrict, vérifié en fin de transaction |
 
-**Choix actuel : `Cascade` sur `Casino.owner`.** Supprimer un compte supprime ses casinos,
-et plus tard tout ce qui dépendra des casinos. À rediscuter en équipe quand les tables de parties et d'historique arriveront.
+> L'exemple `Casino.owner` ci-dessus illustre la syntaxe. Dans le vrai schéma, la propriété d'un casino
+> passe par `Membership` (rôle `OWNER`), pour avoir une seule source de vérité sur « qui a des droits sur ce casino ».
+
+**Supprimer « en cascade » peut effacer bien plus que prévu.** `Cascade` sur un owner effacerait son casino,
+puis ses tables, ses places, et les réservations en cours de joueurs qui n'y sont pour rien.
+Principes retenus (à valider en équipe) :
+
+- **Liens** (ex : `Membership`) : `Cascade` accepté. Si le compte disparaît, son appartenance aussi.
+  Le code doit empêcher de supprimer le **dernier `OWNER`** d'un casino.
+- **Entités métier avec un historique** (Casino, Reservation, Payment) : **soft delete** (`deletedAt DateTime?`)
+  plutôt qu'une suppression physique, et `Restrict` sur les relations qui y mènent. Les stats et le RGPD
+  ont besoin de cet historique.
 
 ---
 
@@ -159,6 +169,44 @@ cd backend && npx prisma migrate dev --create-only --name rename_casino_address
 #   ALTER TABLE "Casino" RENAME COLUMN "adress" TO "address";
 npx prisma migrate dev          # applique la migration éditée
 ```
+
+### Migrations de données : ne pas perdre d'information
+
+Prisma génère la **structure** (tables, colonnes, contraintes), jamais le **déplacement des données**.
+Quand une info change de forme, par exemple quand `isAdmin Boolean` est remplacé par `role Role`, la migration générée se contente de :
+
+```sql
+ALTER TABLE "User" ADD COLUMN "role" "Role" NOT NULL DEFAULT 'USER';
+ALTER TABLE "User" DROP COLUMN "isAdmin";
+```
+
+Résultat en production : **tous les admins redeviennent de simples users**.
+Il faut ajouter à la main, entre l'ajout et la suppression, la requête qui recopie l'info :
+
+```bash
+cd backend && npx prisma migrate dev --create-only --name replace_is_admin_by_role
+# éditer le migration.sql généré :
+#   ALTER TABLE "User" ADD COLUMN "role" "Role" NOT NULL DEFAULT 'USER';
+#   UPDATE "User" SET "role" = 'ADMIN' WHERE "isAdmin" = true;   ← ajouté à la main
+#   ALTER TABLE "User" DROP COLUMN "isAdmin";
+npx prisma migrate dev
+```
+
+Toujours dans cet ordre : **1. créer** la nouvelle colonne → **2. recopier** les données → **3. supprimer** l'ancienne.
+Avant tout `DROP COLUMN`, se demander : *« si la table contenait des données réelles, qu'est-ce qu'on perdrait ? »*
+
+### Tant que la PR n'est pas mergée : une seule migration propre
+
+Une migration mergée sur `main` est gravée pour toujours. Tant qu'elle ne l'est pas, on peut réécrire les migrations de **sa** branche,
+au lieu d'empiler « créer `adress` » puis « supprimer `adress` et créer `address` » :
+
+```bash
+rm -r backend/prisma/migrations/<migrations_de_ma_branche>
+cd backend && npx prisma migrate reset      # ⚠️ vide la base locale
+cd .. && make migrate name=nom_final
+```
+
+Si un coéquipier a déjà appliqué les anciennes migrations de la branche, il devra lui aussi lancer `npx prisma migrate reset`.
 
 ### Lire la clé étrangère
 
