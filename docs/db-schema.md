@@ -21,6 +21,7 @@ erDiagram
     User {
         string id PK "uuid"
         string email UK
+        string username UK "pseudo affiché, stocké en minuscules"
         string passwordHash "nullable (comptes OAuth)"
         string firstName
         string lastName
@@ -143,6 +144,7 @@ Les autres statuts sont terminaux et libèrent la place.
 | Modèle | Contrainte | Pourquoi |
 |---|---|---|
 | User | `email` unique | un compte par adresse |
+| User | `username` unique, stocké en minuscules + validation NestJS (3-20 caractères, `a-z 0-9 _`) | pas deux joueurs « Alice » et « alice » |
 | Membership | `@@unique([userId, casinoId])` | un user ne peut être membre qu'une fois du même casino |
 | Membership | `@@index([casinoId])` | « tous les membres du casino X » |
 | OAuthAccount | `@@unique([provider, providerAccountId])` | un même id ne peut pas apparaître deux fois chez le même provider |
@@ -165,6 +167,8 @@ Les autres statuts sont terminaux et libèrent la place.
   Les réservations actives dessus sont déplacées vers des places libres par le code, et le joueur est notifié.
 - **`maxSeats` réaugmente** : on restaure les places soft-deletées (`deletedAt = null`) au lieu d'en créer de nouvelles,
   sinon le `@@unique([tableId, seatNumber])` bloque.
+- **Pseudo** : obligatoire. À l'inscription OAuth, pré-rempli avec le login 42 / GitHub (modifiable),
+  avec un suffixe (`alice_2`) s'il est déjà pris. C'est lui qui s'affiche aux autres joueurs, jamais le nom réel.
 - **Place libre pour un joueur** = `Seat.status = FREE`, pas de `deletedAt`, et aucune réservation active dessus.
 - **Réservation** : on réserve une place libre **maintenant**, pour une arrivée dans les 2 h. Pas de créneaux à l'avance
   (un joueur de poker peut rester 20 min comme 6 h, on ne peut pas prévoir quand la place se libère).
@@ -175,7 +179,7 @@ Les autres statuts sont terminaux et libèrent la place.
 
 - **Argent** : toujours un `Int` en centimes de **CHF** (seule devise, pas d'autre pays prévu), jamais `Float` ni `Decimal` (format natif de Stripe).
 - **Données financières** : un `Payment` n'est jamais supprimé (conservation 10 ans, Code des obligations art. 958f).
-  Un compte supprimé (RGPD) est **anonymisé** : email remplacé, nom, prénom, téléphone effacés, `deletedAt` renseigné.
+  Un compte supprimé (RGPD) est **anonymisé** : email et pseudo remplacés par `deleted-<id>`, nom, prénom, téléphone effacés, `deletedAt` renseigné.
   Ses `OAuthAccount`, `Membership` et `Notification` sont supprimés par le code dans la même transaction
   (le `Cascade` ne se déclenche pas, puisque le User n'est jamais supprimé physiquement).
 - **Textes traduits** : la base ne stocke jamais de texte affiché. Une notification stocke un `type` + des `params` ;
