@@ -3,24 +3,59 @@
 
 // Get a free hosted Postgres database in seconds: `npx create-db`
 
+enum Role {
+	USER
+	ADMIN
+}
+
+enum CasinoRole {
+	OWNER
+	FLOOR
+}
+
 generator client {
-  provider = "prisma-client"
-  output   = "../src/generated/prisma"
+	provider = "prisma-client"
+	output   = "../src/generated/prisma"
 }
 
 datasource db {
-  provider = "postgresql"
+	provider = "postgresql"
 }
 
 model User {
-  id           String    @id @default(uuid())
-  email        String    @unique
-  passwordHash String?              // ? = optionnel (comptes OAuth)
-  firstName    String
-  lastName     String
-  birthDate    DateTime
-  phone        String?              // pour les notifs ?
-  isAdmin      Boolean   @default(false)
-  createdAt    DateTime  @default(now())
-  updatedAt    DateTime  @updatedAt
+	id				String		@id @default(uuid())
+	email			String		@unique
+	passwordHash	String?		// ? = optionnel (comptes OAuth)
+	firstName		String
+	lastName		String
+	birthDate		DateTime
+	phone			String?		// pour les notifs ?
+	role			Role		@default(USER)
+	createdAt		DateTime	@default(now())
+	updatedAt		DateTime	@updatedAt
+	memberships		Membership[]
+}
+
+model Casino {
+	id				String		@id @default(uuid())
+	name			String
+	city			String
+	address			String
+	createdAt		DateTime	@default(now())
+	updatedAt		DateTime	@updatedAt
+	deletedAt		DateTime?
+	memberships		Membership[]
+}
+
+model Membership {
+	id				String		@id @default(uuid())
+	userId			String
+	casinoId		String
+	role			CasinoRole	@default(FLOOR)
+	user			User		@relation(fields: [userId], references: [id], onDelete: Cascade)
+	casino			Casino		@relation(fields: [casinoId], references: [id])
+	createdAt		DateTime	@default(now())
+
+	@@unique		([userId, casinoId])
+	@@index			([casinoId])
 }
