@@ -29,5 +29,3 @@ make re
 
 - [ ] `npx prisma format` lancé
 - [ ] `schema.prisma` et la migration sont dans le même commit
-- [ ] J'ai relu le `migration.sql` : pas de `Warnings:` ignoré, pas de `DROP` involontaire
-- [ ] Aucune migration déjà mergée n'a été modifiée
