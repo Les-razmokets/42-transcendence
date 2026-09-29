@@ -3,59 +3,91 @@
 
 // Get a free hosted Postgres database in seconds: `npx create-db`
 
+// lexique :
+// id        = identifiant unique de la ligne (clé primaire)
+// xxxId     = clé étrangère : contient l'id d'une ligne d'une autre table (ex. userId -> User.id)
+// user      = champ de relation Prisma, virtuel (aucune colonne en base) : permet d'écrire include: { user: true }
+// onDelete: Cascade = supprimer la ligne parente supprime aussi les lignes qui pointent vers elle
+// @@unique  = interdit deux lignes avec la même combinaison de valeurs
+//             ex. Membership [userId, casinoId] : un user ne peut pas être membre deux fois du même casino,
+//             mais peut être membre de plusieurs casinos
+// @@index   = accélère les recherches sur ces colonnes (ex. "tous les comptes OAuth d'un userId")
+//
+
 enum Role {
-	USER
-	ADMIN
+  USER
+  ADMIN
 }
 
 enum CasinoRole {
-	OWNER
-	FLOOR
+  OWNER
+  FLOOR
+}
+
+enum OAuthProvider {
+  FORTY_TWO
+  GITHUB
+  GOOGLE
 }
 
 generator client {
-	provider = "prisma-client"
-	output   = "../src/generated/prisma"
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
 }
 
 datasource db {
-	provider = "postgresql"
+  provider = "postgresql"
 }
 
 model User {
-	id				String		@id @default(uuid())
-	email			String		@unique
-	passwordHash	String?		// ? = optionnel (comptes OAuth)
-	firstName		String
-	lastName		String
-	birthDate		DateTime
-	phone			String?		// pour les notifs ?
-	role			Role		@default(USER)
-	createdAt		DateTime	@default(now())
-	updatedAt		DateTime	@updatedAt
-	memberships		Membership[]
+  id            String         @id @default(uuid())
+  email         String         @unique
+  passwordHash  String? // ? = optionnel (comptes OAuth)
+  firstName     String
+  lastName      String
+  birthDate     DateTime
+  phone         String? // pour les notifs ?
+  role          Role           @default(USER) //role sur notre site, simple user ou admin avec des droits dacces priviligies 
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  memberships   Membership[]
+  oauthAccounts OAuthAccount[]
 }
 
 model Casino {
-	id				String		@id @default(uuid())
-	name			String
-	city			String
-	address			String
-	createdAt		DateTime	@default(now())
-	updatedAt		DateTime	@updatedAt
-	deletedAt		DateTime?
-	memberships		Membership[]
+  id          String       @id @default(uuid())
+  name        String
+  city        String
+  address     String
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+  deletedAt   DateTime?
+  memberships Membership[]
 }
 
 model Membership {
-	id				String		@id @default(uuid())
-	userId			String
-	casinoId		String
-	role			CasinoRole	@default(FLOOR)
-	user			User		@relation(fields: [userId], references: [id], onDelete: Cascade)
-	casino			Casino		@relation(fields: [casinoId], references: [id])
-	createdAt		DateTime	@default(now())
+  id        String     @id @default(uuid())
+  userId    String
+  casinoId  String
+  role      CasinoRole @default(FLOOR) // role un d'un membership au sein du casino
+  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  casino    Casino     @relation(fields: [casinoId], references: [id])
+  createdAt DateTime   @default(now())
 
-	@@unique		([userId, casinoId])
-	@@index			([casinoId])
+  @@unique([userId, casinoId])
+  @@index([casinoId])
+}
+
+model OAuthAccount {
+  id                String        @id @default(uuid()) // identifiant de CE compte OAuth (clé primaire)
+  userId            String // renvoie a ligne user correpodant dans la table user, clé étrangère : id du User propriétaire (plusieurs comptes OAuth possibles par user)
+  user              User          @relation(fields: [userId], references: [id], onDelete: Cascade) // lien vers table user, supprimer le user supprime ses comptes OAuth
+  provider          OAuthProvider // enum avec le type OAuth : 42, GitHub ou Google
+  providerAccountId String // id de l'utilisateur CHEZ le provider
+  createdAt         DateTime      @default(now()) // date de creation
+
+  // sécurité : un compte externe ne peut être lié qu'à un seul user
+  @@unique([provider, providerAccountId])
+  // accélère "tous les comptes OAuth d'un user",  un index sert à retrouver des lignes sans parcourir toute la table.
+  @@index([userId])
 }
