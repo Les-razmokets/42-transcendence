@@ -42,7 +42,7 @@ datasource db {
 model User {
   id            String         @id @default(uuid())
   email         String         @unique
-  username      String         @unique // pseudo affiché, stocké en minuscules
+  pseudo      String         @unique // pseudo affiché, stocké en minuscules
   passwordHash  String? // ? = optionnel (comptes OAuth)
   firstName     String
   lastName      String
