@@ -21,7 +21,7 @@ erDiagram
     User {
         string id PK "uuid"
         string email UK
-        string username UK "pseudo affiché, stocké en minuscules"
+        string pseudo UK "pseudo affiché, stocké en minuscules"
         string passwordHash "nullable (comptes OAuth)"
         string firstName
         string lastName
@@ -144,7 +144,7 @@ Les autres statuts sont terminaux et libèrent la place.
 | Modèle | Contrainte | Pourquoi |
 |---|---|---|
 | User | `email` unique | un compte par adresse |
-| User | `username` unique, stocké en minuscules + validation NestJS (3-20 caractères, `a-z 0-9 _`) | pas deux joueurs « Alice » et « alice » |
+| User | `pseudo` unique, stocké en minuscules + validation NestJS (3-20 caractères, `a-z 0-9 _`) | pas deux joueurs « Alice » et « alice » |
 | Membership | `@@unique([userId, casinoId])` | un user ne peut être membre qu'une fois du même casino |
 | Membership | `@@index([casinoId])` | « tous les membres du casino X » |
 | OAuthAccount | `@@unique([provider, providerAccountId])` | un même id ne peut pas apparaître deux fois chez le même provider |
