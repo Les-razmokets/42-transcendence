@@ -45,6 +45,16 @@ enum SeatStatus {
   OCCUPIED
 }
 
+enum ReservationStatus {
+  PENDING_PAYMENT
+  CONFIRMED
+  SEATED
+  COMPLETED
+  CANCELLED
+  NO_SHOW
+  EXPIRED
+}
+
 generator client {
   provider = "prisma-client"
   output   = "../src/generated/prisma"
@@ -69,6 +79,7 @@ model User {
   deletedAt     DateTime? // RGPD : null = compte actif, date = compte anonymisé
   memberships   Membership[]
   oauthAccounts OAuthAccount[]
+  reservations  Reservation[]
 }
 
 model Casino {
@@ -129,12 +140,30 @@ model PokerTable {
 }
 
 model Seat {
-  id         String     @id @default(uuid())
-  tableId    String
-  seatNumber Int
-  status     SeatStatus @default(FREE)
-  table      PokerTable @relation(fields: [tableId], references: [id], onDelete: Restrict)
-  deletedAt  DateTime?
+  id           String        @id @default(uuid())
+  tableId      String
+  seatNumber   Int
+  status       SeatStatus    @default(FREE)
+  table        PokerTable    @relation(fields: [tableId], references: [id], onDelete: Restrict)
+  deletedAt    DateTime?
+  reservations Reservation[]
 
   @@unique([tableId, seatNumber])
+}
+
+model Reservation {
+  id          String            @id @default(uuid())
+  userId      String
+  seatId      String
+  status      ReservationStatus
+  seat        Seat              @relation(fields: [seatId], references: [id], onDelete: Restrict)
+  user        User              @relation(fields: [userId], references: [id], onDelete: Restrict)
+  createdAt   DateTime          @default(now())
+  arrivalAt   DateTime
+  seatedAt    DateTime?
+  leftAt      DateTime?
+  cancelledAt DateTime?
+
+  @@index([userId])
+  @@index([seatId])
 }
