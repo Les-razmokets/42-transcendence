@@ -152,9 +152,9 @@ Les autres statuts sont terminaux et libèrent la place.
 | PokerTable | `@@index([casinoId])` | « toutes les tables du casino X » |
 | PokerTable | `CHECK` SQL (ajouté à la main dans la migration) + validation NestJS | `maxSeats` entre 2 et 10, max 8 en Omaha ; blinds > 0 et `bigBlind >= smallBlind` |
 | Seat | `@@unique([tableId, seatNumber])` | un même numéro de place ne peut pas apparaître deux fois sur la même table |
-| Reservation | **index unique partiel** `UNIQUE ("seatId") WHERE status IN ('PENDING_PAYMENT','CONFIRMED','SEATED')`, ajouté à la main dans la migration | une seule réservation active par place : anti double réservation exigé par le sujet. À vérifier (issue 12) : que `migrate dev` ne le supprime pas |
+| Reservation | **index unique partiel** `Reservation_active_seat_key` : `UNIQUE ("seatId") WHERE status IN ('PENDING_PAYMENT','CONFIRMED','SEATED')`, ajouté à la main dans la migration | une seule réservation active par place : anti double réservation exigé par le sujet. Vérifié (issue 12) : absent de `schema.prisma` mais `migrate dev` ne le supprime pas (`prisma migrate diff` vide) |
 | Reservation | `@@index([userId])` | « mes réservations » |
-| Reservation | `@@index([seatId])` | historique d'une place |
+| Reservation | `@@index([seatId])` | historique d'une place (l'index partiel ne couvre que les réservations actives) |
 | Reservation | validation NestJS | `arrivalAt` entre maintenant et maintenant + 2 h |
 | Payment | `reservationId` unique | au plus un paiement par réservation (remboursement = même ligne, statut `REFUNDED`) |
 | Payment | `stripePaymentIntentId` unique, `stripeRefundId` unique | un webhook Stripe reçu deux fois n'est traité qu'une fois |
