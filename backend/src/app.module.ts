@@ -10,6 +10,12 @@ import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { ConfigModule } from '@nestjs/config';
 import { HealthModule } from './health/health.module';
+import { AuthModule } from './auth/auth.module';
+import { UsersModule } from './users/users.module';
+import { CasinosModule } from './casinos/casinos.module';
+import { TablesModule } from './tables/tables.module';
+import { ReservationsModule } from './reservations/reservations.module';
+import { PaymentsModule } from './payments/payments.module';
 
 @Module({
   imports: [
@@ -17,6 +23,12 @@ import { HealthModule } from './health/health.module';
       isGlobal: true,
     }),
     HealthModule,
+    AuthModule,
+    UsersModule,
+    CasinosModule,
+    TablesModule,
+    ReservationsModule,
+    PaymentsModule,
   ],
   controllers: [AppController],
   providers: [AppService],
