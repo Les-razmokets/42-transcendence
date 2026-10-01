@@ -79,7 +79,7 @@ erDiagram
         string id PK "uuid"
         string tableId FK "onDelete Restrict"
         int seatNumber "1 à maxSeats"
-        SeatStatus status "FREE | OCCUPIED (joueur assis sans l'appli)"
+        SeatStatus status "FREE | OCCUPIED (joueur assis sans l'appli, marqué par le floor, indépendant des réservations)"
         datetime deletedAt "nullable (place retirée, historique gardé)"
     }
 
@@ -90,6 +90,7 @@ erDiagram
         ReservationStatus status "voir cycle de vie"
         datetime arrivalAt "heure d'arrivée prévue, max 2 h après createdAt"
         datetime createdAt
+        datetime updatedAt "date du dernier changement de statut"
         datetime seatedAt "nullable, marqué arrivé par le floor"
         datetime leftAt "nullable, a quitté la table"
         datetime cancelledAt "nullable"
@@ -125,7 +126,7 @@ stateDiagram-v2
     [*] --> PENDING_PAYMENT : place choisie, avec prépaiement
     [*] --> CONFIRMED : place choisie, sans prépaiement
     PENDING_PAYMENT --> CONFIRMED : paiement Stripe OK
-    PENDING_PAYMENT --> EXPIRED : paiement jamais abouti
+    PENDING_PAYMENT --> EXPIRED : paiement non abouti en 15 min
     CONFIRMED --> SEATED : le floor le marque arrivé
     CONFIRMED --> CANCELLED : annulation (remboursé)
     CONFIRMED --> NO_SHOW : 30 min après arrivalAt (remboursé)
@@ -138,6 +139,7 @@ stateDiagram-v2
 
 **Réservation active** = `PENDING_PAYMENT`, `CONFIRMED` ou `SEATED` : elle occupe la place.
 Les autres statuts sont terminaux et libèrent la place.
+`EXPIRED` et `NO_SHOW` sont appliqués par une tâche planifiée côté back (`@nestjs/schedule`) ; `updatedAt` donne la date du changement.
 
 ## Contraintes
 
@@ -170,6 +172,9 @@ Les autres statuts sont terminaux et libèrent la place.
 - **Pseudo** : obligatoire. À l'inscription OAuth, pré-rempli avec le login 42 / GitHub (modifiable),
   avec un suffixe (`alice_2`) s'il est déjà pris. C'est lui qui s'affiche aux autres joueurs, jamais le nom réel.
 - **Place libre pour un joueur** = `Seat.status = FREE`, pas de `deletedAt`, et aucune réservation active dessus.
+  Le service le vérifie dans une transaction qui verrouille la place (`SELECT ... FOR UPDATE`) : sinon un floor qui passe
+  la place en `OCCUPIED` pendant qu'un joueur réserve laisserait passer les deux. Inversement, le floor ne peut pas passer
+  en `OCCUPIED` une place qui a une réservation active.
 - **Réservation** : on réserve une place libre **maintenant**, pour une arrivée dans les 2 h. Pas de créneaux à l'avance
   (un joueur de poker peut rester 20 min comme 6 h, on ne peut pas prévoir quand la place se libère).
 - **Pas de valeurs dérivées stockées** : total des jetons, nombre de réservations, temps à table (`leftAt - seatedAt`)
