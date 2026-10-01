@@ -32,3 +32,7 @@ ALTER TABLE "Reservation" ADD CONSTRAINT "Reservation_userId_fkey" FOREIGN KEY (
 -- Une seule réservation active par place (anti double réservation)
 CREATE UNIQUE INDEX "Reservation_active_seat_key" ON "Reservation"("seatId")
   WHERE "status" IN ('PENDING_PAYMENT', 'CONFIRMED', 'SEATED');
+
+-- Une seule réservation active par joueur (anti blocage de table)
+CREATE UNIQUE INDEX "Reservation_active_user_key" ON "Reservation"("userId")
+  WHERE "status" IN ('PENDING_PAYMENT', 'CONFIRMED', 'SEATED');
