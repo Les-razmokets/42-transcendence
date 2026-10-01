@@ -8,6 +8,7 @@ CREATE TABLE "Reservation" (
     "seatId" TEXT NOT NULL,
     "status" "ReservationStatus" NOT NULL,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	"updatedAt" TIMESTAMP(3) NOT NULL,
     "arrivalAt" TIMESTAMP(3) NOT NULL,
     "seatedAt" TIMESTAMP(3),
     "leftAt" TIMESTAMP(3),
