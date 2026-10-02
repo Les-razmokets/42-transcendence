@@ -55,6 +55,20 @@ enum ReservationStatus {
   EXPIRED
 }
 
+enum PaymentStatus {
+  PENDING
+  SUCCEEDED
+  FAILED
+  REFUNDED
+}
+
+enum NotificationType {
+  RESERVATION_CONFIRMED
+  RESERVATION_MODIFIED
+  RESERVATION_CANCELLED
+  SEAT_FREED
+}
+
 generator client {
   provider = "prisma-client"
   output   = "../src/generated/prisma"
@@ -80,6 +94,7 @@ model User {
   memberships   Membership[]
   oauthAccounts OAuthAccount[]
   reservations  Reservation[]
+  notifications Notification[]
 }
 
 model Casino {
@@ -152,19 +167,48 @@ model Seat {
 }
 
 model Reservation {
-  id          String            @id @default(uuid())
-  userId      String
-  seatId      String
-  status      ReservationStatus
-  seat        Seat              @relation(fields: [seatId], references: [id], onDelete: Restrict)
-  user        User              @relation(fields: [userId], references: [id], onDelete: Restrict)
-  createdAt   DateTime          @default(now())
-  updatedAt   DateTime          @updatedAt
-  arrivalAt   DateTime
-  seatedAt    DateTime?
-  leftAt      DateTime?
-  cancelledAt DateTime?
+  id            String            @id @default(uuid())
+  userId        String
+  seatId        String
+  status        ReservationStatus
+  seat          Seat              @relation(fields: [seatId], references: [id], onDelete: Restrict)
+  user          User              @relation(fields: [userId], references: [id], onDelete: Restrict)
+  createdAt     DateTime          @default(now())
+  updatedAt     DateTime          @updatedAt
+  arrivalAt     DateTime
+  seatedAt      DateTime?
+  leftAt        DateTime?
+  cancelledAt   DateTime?
+  payment       Payment?
+  notifications Notification[]
 
   @@index([userId])
   @@index([seatId])
+}
+
+model Payment {
+  id                    String        @id @default(uuid())
+  reservationId         String        @unique
+  amount                Int
+  status                PaymentStatus @default(PENDING)
+  stripePaymentIntentId String        @unique
+  stripeRefundId        String?       @unique
+  reservation           Reservation   @relation(fields: [reservationId], references: [id], onDelete: Restrict)
+  createdAt             DateTime      @default(now())
+  paidAt                DateTime?
+  refundedAt            DateTime?
+}
+
+model Notification {
+  id            String           @id @default(uuid())
+  userId        String
+  reservationId String?
+  type          NotificationType
+  params        Json
+  reservation   Reservation?     @relation(fields: [reservationId], references: [id], onDelete: Restrict)
+  user          User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt     DateTime         @default(now())
+  readAt        DateTime? // null = non lue
+
+  @@index([userId, readAt])
 }

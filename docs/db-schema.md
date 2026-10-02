@@ -100,7 +100,7 @@ erDiagram
         string id PK "uuid"
         string reservationId FK "UK, onDelete Restrict"
         int amount "centimes CHF, jetons prépayés"
-        PaymentStatus status "PENDING | SUCCEEDED | FAILED | REFUNDED"
+        PaymentStatus status "PENDING (défaut) | SUCCEEDED | FAILED | REFUNDED"
         string stripePaymentIntentId UK "idempotence des webhooks"
         string stripeRefundId UK "nullable"
         datetime createdAt
@@ -111,7 +111,7 @@ erDiagram
     Notification {
         string id PK "uuid"
         string userId FK "onDelete Cascade"
-        string reservationId FK "nullable"
+        string reservationId FK "nullable, onDelete Restrict"
         NotificationType type "RESERVATION_CONFIRMED | ..._MODIFIED | ..._CANCELLED | SEAT_FREED"
         json params "valeurs à insérer dans le texte traduit (table, heure...)"
         datetime createdAt
@@ -162,6 +162,7 @@ Les autres statuts sont terminaux et libèrent la place.
 | Payment | `reservationId` unique | au plus un paiement par réservation (remboursement = même ligne, statut `REFUNDED`) |
 | Payment | `stripePaymentIntentId` unique, `stripeRefundId` unique | un webhook Stripe reçu deux fois n'est traité qu'une fois |
 | Notification | `@@index([userId, readAt])` | « mes notifications non lues » (badge) |
+| Notification | `reservationId` nullable, `onDelete Restrict` | `SEAT_FREED` ne concerne aucune réservation du joueur notifié ; une réservation n'est jamais supprimée (historique), le `Restrict` ne fait que le garantir |
 
 ## Règles métier liées au schéma
 
