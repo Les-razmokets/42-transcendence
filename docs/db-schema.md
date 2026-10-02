@@ -21,7 +21,7 @@ erDiagram
     User {
         string id PK "uuid"
         string email UK
-        string username UK "pseudo affiché, stocké en minuscules"
+        string pseudo UK "pseudo affiché, stocké en minuscules"
         string passwordHash "nullable (comptes OAuth)"
         string firstName
         string lastName
@@ -79,7 +79,7 @@ erDiagram
         string id PK "uuid"
         string tableId FK "onDelete Restrict"
         int seatNumber "1 à maxSeats"
-        SeatStatus status "FREE | OCCUPIED (joueur assis sans l'appli)"
+        SeatStatus status "FREE | OCCUPIED (joueur assis sans l'appli, marqué par le floor, indépendant des réservations)"
         datetime deletedAt "nullable (place retirée, historique gardé)"
     }
 
@@ -90,6 +90,7 @@ erDiagram
         ReservationStatus status "voir cycle de vie"
         datetime arrivalAt "heure d'arrivée prévue, max 2 h après createdAt"
         datetime createdAt
+        datetime updatedAt "date du dernier changement de statut"
         datetime seatedAt "nullable, marqué arrivé par le floor"
         datetime leftAt "nullable, a quitté la table"
         datetime cancelledAt "nullable"
@@ -125,7 +126,7 @@ stateDiagram-v2
     [*] --> PENDING_PAYMENT : place choisie, avec prépaiement
     [*] --> CONFIRMED : place choisie, sans prépaiement
     PENDING_PAYMENT --> CONFIRMED : paiement Stripe OK
-    PENDING_PAYMENT --> EXPIRED : paiement jamais abouti
+    PENDING_PAYMENT --> EXPIRED : paiement non abouti en 15 min
     CONFIRMED --> SEATED : le floor le marque arrivé
     CONFIRMED --> CANCELLED : annulation (remboursé)
     CONFIRMED --> NO_SHOW : 30 min après arrivalAt (remboursé)
@@ -138,13 +139,14 @@ stateDiagram-v2
 
 **Réservation active** = `PENDING_PAYMENT`, `CONFIRMED` ou `SEATED` : elle occupe la place.
 Les autres statuts sont terminaux et libèrent la place.
+`EXPIRED` et `NO_SHOW` sont appliqués par une tâche planifiée côté back (`@nestjs/schedule`) ; `updatedAt` donne la date du changement.
 
 ## Contraintes
 
 | Modèle | Contrainte | Pourquoi |
 |---|---|---|
 | User | `email` unique | un compte par adresse |
-| User | `username` unique, stocké en minuscules + validation NestJS (3-20 caractères, `a-z 0-9 _`) | pas deux joueurs « Alice » et « alice » |
+| User | `pseudo` unique, stocké en minuscules + validation NestJS (3-20 caractères, `a-z 0-9 _`) | pas deux joueurs « Alice » et « alice » |
 | Membership | `@@unique([userId, casinoId])` | un user ne peut être membre qu'une fois du même casino |
 | Membership | `@@index([casinoId])` | « tous les membres du casino X » |
 | OAuthAccount | `@@unique([provider, providerAccountId])` | un même id ne peut pas apparaître deux fois chez le même provider |
@@ -152,9 +154,10 @@ Les autres statuts sont terminaux et libèrent la place.
 | PokerTable | `@@index([casinoId])` | « toutes les tables du casino X » |
 | PokerTable | `CHECK` SQL (ajouté à la main dans la migration) + validation NestJS | `maxSeats` entre 2 et 10, max 8 en Omaha ; blinds > 0 et `bigBlind >= smallBlind` |
 | Seat | `@@unique([tableId, seatNumber])` | un même numéro de place ne peut pas apparaître deux fois sur la même table |
-| Reservation | **index unique partiel** `UNIQUE ("seatId") WHERE status IN ('PENDING_PAYMENT','CONFIRMED','SEATED')`, ajouté à la main dans la migration | une seule réservation active par place : anti double réservation exigé par le sujet. À vérifier (issue 12) : que `migrate dev` ne le supprime pas |
+| Reservation | **index unique partiel** `Reservation_active_seat_key` : `UNIQUE ("seatId") WHERE status IN ('PENDING_PAYMENT','CONFIRMED','SEATED')`, ajouté à la main dans la migration | une seule réservation active par place : anti double réservation exigé par le sujet. Vérifié (issue 12) : absent de `schema.prisma` mais `migrate dev` ne le supprime pas (`prisma migrate diff` vide) |
+| Reservation | **index unique partiel** `Reservation_active_user_key` : `UNIQUE ("userId") WHERE status IN ('PENDING_PAYMENT','CONFIRMED','SEATED')`, ajouté à la main dans la migration | une seule réservation active par joueur : un compte ne peut pas bloquer une table |
 | Reservation | `@@index([userId])` | « mes réservations » |
-| Reservation | `@@index([seatId])` | historique d'une place |
+| Reservation | `@@index([seatId])` | historique d'une place (l'index partiel ne couvre que les réservations actives) |
 | Reservation | validation NestJS | `arrivalAt` entre maintenant et maintenant + 2 h |
 | Payment | `reservationId` unique | au plus un paiement par réservation (remboursement = même ligne, statut `REFUNDED`) |
 | Payment | `stripePaymentIntentId` unique, `stripeRefundId` unique | un webhook Stripe reçu deux fois n'est traité qu'une fois |
@@ -170,6 +173,9 @@ Les autres statuts sont terminaux et libèrent la place.
 - **Pseudo** : obligatoire. À l'inscription OAuth, pré-rempli avec le login 42 / GitHub (modifiable),
   avec un suffixe (`alice_2`) s'il est déjà pris. C'est lui qui s'affiche aux autres joueurs, jamais le nom réel.
 - **Place libre pour un joueur** = `Seat.status = FREE`, pas de `deletedAt`, et aucune réservation active dessus.
+  Le service le vérifie dans une transaction qui verrouille la place (`SELECT ... FOR UPDATE`) : sinon un floor qui passe
+  la place en `OCCUPIED` pendant qu'un joueur réserve laisserait passer les deux. Inversement, le floor ne peut pas passer
+  en `OCCUPIED` une place qui a une réservation active.
 - **Réservation** : on réserve une place libre **maintenant**, pour une arrivée dans les 2 h. Pas de créneaux à l'avance
   (un joueur de poker peut rester 20 min comme 6 h, on ne peut pas prévoir quand la place se libère).
 - **Pas de valeurs dérivées stockées** : total des jetons, nombre de réservations, temps à table (`leftAt - seatedAt`)

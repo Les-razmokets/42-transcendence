@@ -30,6 +30,31 @@ enum OAuthProvider {
   GOOGLE
 }
 
+enum PokerVariant {
+  TEXAS_HOLDEM
+  OMAHA
+}
+
+enum TableStatus {
+  OPEN
+  PAUSED
+}
+
+enum SeatStatus {
+  FREE
+  OCCUPIED
+}
+
+enum ReservationStatus {
+  PENDING_PAYMENT
+  CONFIRMED
+  SEATED
+  COMPLETED
+  CANCELLED
+  NO_SHOW
+  EXPIRED
+}
+
 generator client {
   provider = "prisma-client"
   output   = "../src/generated/prisma"
@@ -42,6 +67,7 @@ datasource db {
 model User {
   id            String         @id @default(uuid())
   email         String         @unique
+  pseudo        String         @unique // pseudo affiché, stocké en minuscules
   passwordHash  String? // ? = optionnel (comptes OAuth)
   firstName     String
   lastName      String
@@ -50,8 +76,10 @@ model User {
   role          Role           @default(USER) //role sur notre site, simple user ou admin avec des droits dacces priviligies 
   createdAt     DateTime       @default(now())
   updatedAt     DateTime       @updatedAt
+  deletedAt     DateTime? // RGPD : null = compte actif, date = compte anonymisé
   memberships   Membership[]
   oauthAccounts OAuthAccount[]
+  reservations  Reservation[]
 }
 
 model Casino {
@@ -63,6 +91,7 @@ model Casino {
   updatedAt   DateTime     @updatedAt
   deletedAt   DateTime?
   memberships Membership[]
+  tables      PokerTable[]
 }
 
 model Membership {
@@ -90,4 +119,52 @@ model OAuthAccount {
   @@unique([provider, providerAccountId])
   // accélère "tous les comptes OAuth d'un user",  un index sert à retrouver des lignes sans parcourir toute la table.
   @@index([userId])
+}
+
+model PokerTable {
+  id             String       @id @default(uuid())
+  casinoId       String
+  name           String
+  variant        PokerVariant
+  smallBlind     Int
+  bigBlind       Int
+  maxSeats       Int
+  status         TableStatus  @default(OPEN)
+  moneyOnTable   Int          @default(0)
+  casino         Casino       @relation(fields: [casinoId], references: [id], onDelete: Restrict)
+  moneyUpdatedAt DateTime?
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  deletedAt      DateTime?
+  seats          Seat[]
+}
+
+model Seat {
+  id           String        @id @default(uuid())
+  tableId      String
+  seatNumber   Int
+  status       SeatStatus    @default(FREE)
+  table        PokerTable    @relation(fields: [tableId], references: [id], onDelete: Restrict)
+  deletedAt    DateTime?
+  reservations Reservation[]
+
+  @@unique([tableId, seatNumber])
+}
+
+model Reservation {
+  id          String            @id @default(uuid())
+  userId      String
+  seatId      String
+  status      ReservationStatus
+  seat        Seat              @relation(fields: [seatId], references: [id], onDelete: Restrict)
+  user        User              @relation(fields: [userId], references: [id], onDelete: Restrict)
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+  arrivalAt   DateTime
+  seatedAt    DateTime?
+  leftAt      DateTime?
+  cancelledAt DateTime?
+
+  @@index([userId])
+  @@index([seatId])
 }
