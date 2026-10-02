@@ -171,6 +171,7 @@ model Reservation {
   seatedAt    DateTime?
   leftAt      DateTime?
   cancelledAt DateTime?
+  payment     Payment?
 
   @@index([userId])
   @@index([seatId])
@@ -178,15 +179,13 @@ model Reservation {
 
 model Payment {
   id                    String        @id @default(uuid())
-  userId                String
+  reservationId         String        @unique
   amount                Int
-  status                PaymentStatus
-  stripePaymentIntentId String
-  stripeRefundId        String
-  user                  User          @relation(fields: [userId], references: [id], onDelete: Restrict)
+  status                PaymentStatus @default(PENDING)
+  stripePaymentIntentId String        @unique
+  stripeRefundId        String?       @unique
+  reservation           Reservation   @relation(fields: [reservationId], references: [id], onDelete: Restrict)
   createdAt             DateTime      @default(now())
   paidAt                DateTime?
   refundedAt            DateTime?
-
-  @@index([userId])
 }
