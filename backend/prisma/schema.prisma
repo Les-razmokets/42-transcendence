@@ -55,6 +55,13 @@ enum ReservationStatus {
   EXPIRED
 }
 
+enum PaymentStatus {
+  PENDING
+  SUCCEEDED
+  FAILED
+  REFUNDED
+}
+
 generator client {
   provider = "prisma-client"
   output   = "../src/generated/prisma"
@@ -167,4 +174,19 @@ model Reservation {
 
   @@index([userId])
   @@index([seatId])
+}
+
+model Payment {
+  id                    String        @id @default(uuid())
+  userId                String
+  amount                Int
+  status                PaymentStatus
+  stripePaymentIntentId String
+  stripeRefundId        String
+  user                  User          @relation(fields: [userId], references: [id], onDelete: Restrict)
+  createdAt             DateTime      @default(now())
+  paidAt                DateTime?
+  refundedAt            DateTime?
+
+  @@index([userId])
 }
