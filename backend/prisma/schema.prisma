@@ -167,19 +167,20 @@ model Seat {
 }
 
 model Reservation {
-  id          String            @id @default(uuid())
-  userId      String
-  seatId      String
-  status      ReservationStatus
-  seat        Seat              @relation(fields: [seatId], references: [id], onDelete: Restrict)
-  user        User              @relation(fields: [userId], references: [id], onDelete: Restrict)
-  createdAt   DateTime          @default(now())
-  updatedAt   DateTime          @updatedAt
-  arrivalAt   DateTime
-  seatedAt    DateTime?
-  leftAt      DateTime?
-  cancelledAt DateTime?
-  payment     Payment?
+  id            String            @id @default(uuid())
+  userId        String
+  seatId        String
+  status        ReservationStatus
+  seat          Seat              @relation(fields: [seatId], references: [id], onDelete: Restrict)
+  user          User              @relation(fields: [userId], references: [id], onDelete: Restrict)
+  createdAt     DateTime          @default(now())
+  updatedAt     DateTime          @updatedAt
+  arrivalAt     DateTime
+  seatedAt      DateTime?
+  leftAt        DateTime?
+  cancelledAt   DateTime?
+  payment       Payment?
+  notifications Notification[]
 
   @@index([userId])
   @@index([seatId])
@@ -201,13 +202,13 @@ model Payment {
 model Notification {
   id            String           @id @default(uuid())
   userId        String
-  reservationId String
+  reservationId String?
   type          NotificationType
   params        Json
-  reservation   reservationId    @relation(fields: [reservationId], references: [id], onDelete: Cascade)
+  reservation   Reservation?     @relation(fields: [reservationId], references: [id], onDelete: Restrict)
   user          User             @relation(fields: [userId], references: [id], onDelete: Cascade)
   createdAt     DateTime         @default(now())
-  readAt        DateTime // null = non lue
+  readAt        DateTime? // null = non lue
 
-  @@index([userId], readAt)
+  @@index([userId, readAt])
 }
