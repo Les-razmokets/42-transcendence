@@ -62,6 +62,13 @@ enum PaymentStatus {
   REFUNDED
 }
 
+enum NotificationType {
+  RESERVATION_CONFIRMED
+  RESERVATION_MODIFIED
+  RESERVATION_CANCELLED
+  SEAT_FREED
+}
+
 generator client {
   provider = "prisma-client"
   output   = "../src/generated/prisma"
@@ -87,6 +94,7 @@ model User {
   memberships   Membership[]
   oauthAccounts OAuthAccount[]
   reservations  Reservation[]
+  notifications Notification[]
 }
 
 model Casino {
@@ -188,4 +196,18 @@ model Payment {
   createdAt             DateTime      @default(now())
   paidAt                DateTime?
   refundedAt            DateTime?
+}
+
+model Notification {
+  id            String           @id @default(uuid())
+  userId        String
+  reservationId String
+  type          NotificationType
+  params        Json
+  reservation   reservationId    @relation(fields: [reservationId], references: [id], onDelete: Cascade)
+  user          User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt     DateTime         @default(now())
+  readAt        DateTime // null = non lue
+
+  @@index([userId], readAt)
 }
