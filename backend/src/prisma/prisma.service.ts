@@ -5,9 +5,11 @@ import { PrismaClient } from '../generated/prisma/client';
 
 @Injectable()
 export class PrismaService extends PrismaClient {
-  constructor(config : ConfigService) {
+  constructor(config: ConfigService) {
     super({
-      adapter: new PrismaPg ({ connectionString: config.getOrThrow<string>('DATABASE_URL')}),
+      adapter: new PrismaPg({
+        connectionString: config.getOrThrow<string>('DATABASE_URL'),
+      }),
     });
   }
 }
