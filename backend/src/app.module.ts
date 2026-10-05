@@ -21,7 +21,7 @@ import { PrismaModule } from './prisma/prisma.module';
 @Module({
   imports: [
     ConfigModule.forRoot({
-      envFilePath:"../.env", // TODO: A changer quand nos docker seront en place
+      envFilePath: '../.env', // TODO: A changer quand nos docker seront en place
       isGlobal: true,
     }),
     HealthModule,

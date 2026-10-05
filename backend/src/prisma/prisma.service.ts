@@ -16,9 +16,14 @@ export class PrismaService
     });
   }
 
+  /* Avant Prisma 7, $connect() démarrait le moteur Rust, qui ouvrait réellement une connexion à Postgres. Avec les driver adapters, c'est différent :
+- PrismaPg crée un pool de connexions pg (un réservoir de connexions réutilisables) ;
+- un pool est paresseux : il n'ouvre une connexion que lorsqu'une requête en a besoin ;
+- $connect() se contente donc de préparer le client. Il ne parle pas à Postgres, et il ne peut pas échouer si la base est éteinte.*/
   async onModuleInit() {
     // async : « cette fonction utilise await »
     await this.$connect(); //await : « attends le résultat ici »
+    await this.$queryRaw`SELECT 1`; // attend une reponse de la DB si echoue throw et arret du programme
   }
 
   async onModuleDestroy() {
