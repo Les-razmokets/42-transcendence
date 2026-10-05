@@ -16,3 +16,6 @@ services:
 
 volumes:
   db_data:
+services:
+  backend:
+    build: ./backend
