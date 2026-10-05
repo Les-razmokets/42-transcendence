@@ -17,7 +17,8 @@ export class PrismaService
   }
 
   async onModuleInit() {
-    await this.$connect();
+    // async : « cette fonction utilise await »
+    await this.$connect(); //await : « attends le résultat ici »
   }
 
   async onModuleDestroy() {
