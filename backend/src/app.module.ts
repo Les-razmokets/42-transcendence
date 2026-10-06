@@ -16,10 +16,12 @@ import { CasinosModule } from './casinos/casinos.module';
 import { TablesModule } from './tables/tables.module';
 import { ReservationsModule } from './reservations/reservations.module';
 import { PaymentsModule } from './payments/payments.module';
+import { PrismaModule } from './prisma/prisma.module';
 
 @Module({
   imports: [
     ConfigModule.forRoot({
+      envFilePath: '../.env', // TODO: A changer quand nos docker seront en place
       isGlobal: true,
     }),
     HealthModule,
@@ -29,6 +31,7 @@ import { PaymentsModule } from './payments/payments.module';
     TablesModule,
     ReservationsModule,
     PaymentsModule,
+    PrismaModule,
   ],
   controllers: [AppController],
   providers: [AppService],
