@@ -11,7 +11,6 @@ import {
 	IsNotEmpty,
 	IsOptional,
 	Matches,
-	maxDate
 } from 'class-validator';
 
 const trim = ({ value }: { value: unknown}) => typeof value === 'string' ? value.trim() : value;
@@ -62,6 +61,7 @@ export class UsersCreationDto {
 	birthDate: Date;
 
 	@IsOptional()
+	@IsString()
 	@IsPhoneNumber('CH')
-	phone?: number;
+	phone?: string;
 }
