@@ -1,6 +1,7 @@
-import { Injectable, NotFoundException } from "@nestjs/common";
+import { ConflictException, Injectable, NotFoundException } from "@nestjs/common";
 import { PrismaService } from '../prisma/prisma.service';
-import { User } from '../generated/prisma/client';
+import { User, Prisma } from '../generated/prisma/client';
+import { UserInfo } from './users.struct';
 
 @Injectable() 
 export class UsersService {
@@ -19,5 +20,30 @@ export class UsersService {
 		if (!user)
 			throw new NotFoundException(`User with ID ${id} not found`);
 		return user;
+	}
+	async create(userData: UserInfo): Promise<User> {
+		const normalizedEmail = userData.email.trim().toLowerCase();
+		const normalizedPseudo = userData.pseudo.trim().toLowerCase();
+		const normalizedData: UserInfo = {...userData, email: normalizedEmail, pseudo: normalizedPseudo}
+		try {
+			return await this.prisma.user.create({ data: normalizedData });
+		}
+		catch (error) {
+			if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
+				const info = error.meta as
+					| { driverAdapterError?: { cause?: { constraint?: { index?: string} } } }
+					| undefined;
+				const target = info?.driverAdapterError?.cause?.constraint?.index;
+				let field: string;
+				if (target?.includes('email'))
+					field = 'Email';
+				else if (target?.includes('pseudo'))
+					field = 'Pseudo';
+				else
+					field = 'Email or pseudo';
+				throw new ConflictException(`${field} already in use.`);
+			}
+			throw error;
+		}
 	}
 }
