@@ -34,11 +34,25 @@ define spin
 endef
 
 # Rules
-all: $(BACKDIR)/node_modules up deploy
+all: check-node $(BACKDIR)/node_modules generate up deploy
 	@echo "$(GREEN)🎉 $(NAME) ready! 🎉$(RESET)"
 
 $(BACKDIR)/node_modules: $(BACKDIR)/package-lock.json
 	$(call spin,📦 Installing backend dependencies...,npm ci --prefix $(BACKDIR))
+
+# Verifie que la version de Node correspond a backend/.nvmrc
+check-node:
+	@required=$$(cat $(BACKDIR)/.nvmrc); \
+	current=$$(node -p "process.versions.node.split('.')[0]"); \
+	if [ "$$current" != "$$required" ]; then \
+		echo "$(RED)✗ Node $$required requis, version actuelle : $$(node -v)$(RESET)"; \
+		echo "$(YELLOW)→ cd $(BACKDIR) && nvm install && nvm use$(RESET)"; \
+		exit 1; \
+	fi
+
+# Genere le client Prisma (src/generated/prisma, non versionne)
+generate:
+	$(call spin,⚙️  Generating Prisma client...,$(PRISMA) generate)
 
 up:
 	$(call spin,🐳 Starting containers...,$(COMPOSE) up -d --wait)
@@ -76,7 +90,9 @@ help:
 	@echo "$(CYAN)═══════════════════════════════════════════════════════$(RESET)"
 	@echo "$(GREEN)  Transcendence Makefile - Available targets$(RESET)"
 	@echo "$(CYAN)═══════════════════════════════════════════════════════$(RESET)"
-	@echo "  $(YELLOW)all$(RESET)       - Install deps, start containers, apply migrations"
+	@echo "  $(YELLOW)all$(RESET)       - Check Node, install deps, generate client, start containers, apply migrations"
+	@echo "  $(YELLOW)check-node$(RESET) - Check Node version matches backend/.nvmrc"
+	@echo "  $(YELLOW)generate$(RESET)  - Generate Prisma client"
 	@echo "  $(YELLOW)up$(RESET)        - Start containers (waits for healthy)"
 	@echo "  $(YELLOW)down$(RESET)      - Stop containers"
 	@echo "  $(YELLOW)ps$(RESET)        - Show containers status"
@@ -90,4 +106,4 @@ help:
 	@echo "  $(YELLOW)help$(RESET)      - Show this help message"
 	@echo "$(CYAN)═══════════════════════════════════════════════════════$(RESET)"
 
-.PHONY: all up down ps logs deploy migrate studio clean fclean re help
+.PHONY: all check-node generate up down ps logs deploy migrate studio clean fclean re help
