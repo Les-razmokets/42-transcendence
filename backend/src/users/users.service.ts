@@ -34,13 +34,11 @@ export class UsersService {
 					| { driverAdapterError?: { cause?: { constraint?: { index?: string} } } }
 					| undefined;
 				const target = info?.driverAdapterError?.cause?.constraint?.index;
-				let field: string;
+				let field = 'Email or pseudo';
 				if (target?.includes('email'))
 					field = 'Email';
 				else if (target?.includes('pseudo'))
 					field = 'Pseudo';
-				else
-					field = 'Email or pseudo';
 				throw new ConflictException(`${field} already in use.`);
 			}
 			throw error;
