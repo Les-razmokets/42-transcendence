@@ -34,8 +34,7 @@ define spin
 endef
 
 # Rules
-all: check-node $(BACKDIR)/node_modules generate up deploy
-	@echo "$(GREEN)🎉 $(NAME) ready! 🎉$(RESET)"
+all: up
 
 $(BACKDIR)/node_modules: $(BACKDIR)/package-lock.json
 	$(call spin,📦 Installing backend dependencies...,npm ci --prefix $(BACKDIR))
@@ -55,7 +54,7 @@ generate:
 	$(call spin,⚙️  Generating Prisma client...,$(PRISMA) generate)
 
 up:
-	$(call spin,🐳 Starting containers...,$(COMPOSE) up -d --wait)
+	$(call spin,🐳 Starting containers...,$(COMPOSE) up -d --build --wait)
 
 down:
 	$(call spin,🛑 Stopping containers...,$(COMPOSE) down)
@@ -91,8 +90,6 @@ help:
 	@echo "$(GREEN)  Transcendence Makefile - Available targets$(RESET)"
 	@echo "$(CYAN)═══════════════════════════════════════════════════════$(RESET)"
 	@echo "  $(YELLOW)all$(RESET)       - Check Node, install deps, generate client, start containers, apply migrations"
-	@echo "  $(YELLOW)check-node$(RESET) - Check Node version matches backend/.nvmrc"
-	@echo "  $(YELLOW)generate$(RESET)  - Generate Prisma client"
 	@echo "  $(YELLOW)up$(RESET)        - Start containers (waits for healthy)"
 	@echo "  $(YELLOW)down$(RESET)      - Stop containers"
 	@echo "  $(YELLOW)ps$(RESET)        - Show containers status"
@@ -106,4 +103,4 @@ help:
 	@echo "  $(YELLOW)help$(RESET)      - Show this help message"
 	@echo "$(CYAN)═══════════════════════════════════════════════════════$(RESET)"
 
-.PHONY: all check-node generate up down ps logs deploy migrate studio clean fclean re help
+.PHONY: all up down ps logs deploy migrate studio clean fclean re help

@@ -1,0 +1,17 @@
+FROM node:24.21.0-alpine3.24
+
+WORKDIR /app
+
+COPY package.json tsconfig.json package-lock.json ./
+RUN npm ci 
+
+COPY prisma ./prisma
+RUN npx prisma generate
+
+COPY nest-cli.json tsconfig.build.json ./
+COPY src ./src
+RUN npm run build
+
+COPY . .
+
+CMD ["sh", "-c", "npm run db:migrate && npm run start:prod"]
