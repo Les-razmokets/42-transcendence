@@ -42,13 +42,16 @@
     "vitest": "^5.0.3",
     "storybook": "^10.6.1",
     "@storybook/react-vite": "^10.6.1",
-    "@chromatic-com/storybook": "latest",
+    "@chromatic-com/storybook": "^5.4.0",
     "@storybook/addon-vitest": "^10.6.1",
     "@storybook/addon-a11y": "^10.6.1",
     "@storybook/addon-docs": "^10.6.1",
     "@storybook/addon-onboarding": "^10.6.1",
     "@vitest/browser-playwright": "5.0.3",
     "@vitest/coverage-v8": "5.0.3",
-    "playwright": "latest"
+    "playwright": "^1.63.0"
+  },
+  "allowScripts": {
+    "fsevents@2.3.3": true
   }
 }

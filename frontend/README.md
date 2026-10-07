@@ -2,14 +2,17 @@
 
 ## 🚀 Première fois que tu ouvres le projet
 
-```bash
-# 1. Vérifie ta version de Node (on utilise Node 26, comme tout le monde dans l'équipe)
-node -v
+Prérequis : avoir [nvm](https://github.com/nvm-sh/nvm) installé.
 
-# 2. Va dans le dossier frontend
+```bash
+# 1. Va dans le dossier frontend
 cd frontend
 
-# 3. Installe les dépendances EXACTES du projet (pas npm install !)
+# 2. Passe sur la version de Node du projet (Node 24, lue dans .nvmrc)
+nvm install     # seulement la première fois, si tu n'as pas encore Node 24
+nvm use
+
+# 3. Installe les dépendances EXACTES du projet (⚠️ PAS NPM INSTALL !)
 npm ci
 
 # 4. Installe le navigateur pour les tests Storybook (une seule fois par machine)
@@ -19,6 +22,9 @@ npx playwright install chromium
 npm run dev
 ```
 
+> [!CAUTION]
+> **PAS `NPM INSTALL` !** Utilise toujours `npm ci` pour installer le projet. `npm install` peut modifier le `package-lock.json` et installer des versions différentes de celles de l'équipe.
+
 Ouvre ensuite **http://localhost:5173**. Si la page s'affiche, tout est bon ✅
 
 ---
@@ -27,6 +33,7 @@ Ouvre ensuite **http://localhost:5173**. Si la page s'affiche, tout est bon ✅
 
 ```bash
 git pull
+nvm use
 npm ci          # seulement si package-lock.json a changé
 npm run dev
 ```
@@ -98,7 +105,8 @@ Exemple avec `design-system/primitives/Bouton/` :
 
 ## ❓ Ça ne marche pas
 
-- **`npm ci` échoue** → vérifie `node -v`. Si ce n'est pas la même version majeure que l'équipe, change de version de Node.
+- **`npm ci` échoue** → vérifie `node -v`. Ça doit afficher `v24.x`. Sinon, fais `nvm use` dans `frontend/`.
+- **`nvm: command not found`** → nvm n'est pas chargé dans ton terminal. Vérifie qu'il est bien dans ton `~/.zshrc`, puis ouvre un nouveau terminal.
 - **Port 5173 déjà utilisé** → un autre `npm run dev` tourne déjà quelque part. Ferme-le.
 - **Les tests Storybook plantent sur « browser not found »** → refais `npx playwright install chromium`.
-- **Warning `install-scripts` sur `fsevents`** → sans gravité (paquet macOS pour surveiller les fichiers) : `npm install-scripts approve fsevents`.
+- **Warning `install-scripts` sur `fsevents`** → sans gravité (paquet macOS pour surveiller les fichiers). Il est déjà autorisé dans `allowScripts`. S'il revient après une mise à jour, refais `npm install-scripts approve fsevents` et commit le `package.json`.
