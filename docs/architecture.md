@@ -25,11 +25,20 @@ transcendence/
 │   │   ├── tables/          # PokerTable + Seat
 │   │   └── reservations/    # transaction + gateway WebSocket
 │   └── test/
-├── frontend/                # React + Vite + Tailwind
+├── frontend/                # React + Vite + CSS Modules
 │   ├── Dockerfile
+│   ├── .nvmrc               # Node 24
 │   ├── package.json
-│   ├── public/locales/{en,fr,..}/   # i18n prêt dès le jour 1
+│   ├── .storybook/          # config Storybook
+│   ├── public/
+│   │   ├── images/
+│   │   ├── models/          # fichiers .glb (3D)
+│   │   └── locales/{en,fr,..}/   # i18n prêt dès le jour 1
 │   └── src/
+│       ├── design-system/   # tokens, primitives, composites
+│       ├── features/        # écrans par domaine (auth, booking, lobby…)
+│       ├── lib/             # outils partagés (i18n, API…)
+│       └── three/           # scène 3D de la table
 └── infra/
     ├── nginx/               # reverse proxy HTTPS
     ├── vault/
