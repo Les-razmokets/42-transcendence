@@ -2,13 +2,14 @@ FROM node:24.21.0-alpine3.24
 
 WORKDIR /app
 
-COPY package.json package-lock.json ./
+COPY package.json tsconfig.json package-lock.json ./
 RUN npm ci 
 
 COPY prisma ./prisma
 RUN npx prisma generate
 
-COPY tsconfig.json nest-cli.json src ./
+COPY nest-cli.json tsconfig.build.json ./
+COPY src ./src
 RUN npm run build
 
 COPY . .
