@@ -1,0 +1,6 @@
+# Meme fonctionnement que .gitignore
+
+node_modules
+.env
+src/generated/prisma
+/dist
