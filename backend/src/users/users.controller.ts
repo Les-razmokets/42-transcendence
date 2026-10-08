@@ -12,6 +12,7 @@ import { publicUserSchema, PublicUser } from './users-response.schemas';
 export class UsersController {
   constructor(private readonly usersService: UsersService) {}
 
+  // basic response when we try GET /api/users/:id
   @SerializeOptions({ schema: publicUserSchema })
   @Get(':id')
   async findOne(

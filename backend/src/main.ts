@@ -24,7 +24,7 @@ async function bootstrap() {
     }),
   );
   app.useGlobalInterceptors(
-    new StandardSchemaSerializerInterceptor(app.get(Reflector), {
+    new StandardSchemaSerializerInterceptor(app.get(Reflector), { // defines a default schema for unexpected routes
       schema: publicUserSchema,
     }),
   );
