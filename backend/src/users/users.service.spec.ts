@@ -14,7 +14,10 @@ describe('UsersService.create (doublons)', () => {
   // Préfixe unique par exécution : pseudo <= 20 caractères, minuscules, chiffres, tirets
   const prefix = `t-${Date.now().toString(36)}`;
 
-  const makeUser = (name: string, overrides: Partial<UserInfo> = {}): UserInfo => ({
+  const makeUser = (
+    name: string,
+    overrides: Partial<UserInfo> = {},
+  ): UserInfo => ({
     firstName: 'Test',
     lastName: 'User',
     pseudo: `${prefix}-${name}`,
@@ -66,9 +69,7 @@ describe('UsersService.create (doublons)', () => {
     await service.create(makeUser('pseudo'));
 
     await expect(
-      service.create(
-        makeUser('pseudo2', { pseudo: `${prefix}-pseudo` }),
-      ),
+      service.create(makeUser('pseudo2', { pseudo: `${prefix}-pseudo` })),
     ).rejects.toBeInstanceOf(ConflictException);
   });
 
