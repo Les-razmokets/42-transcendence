@@ -18,6 +18,11 @@ services:
     depends_on:
       db:
         condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget --spider -q http://127.0.0.1:$${PORT}/api/health "]
+      interval: 5s
+      timeout: 3s
+      retries: 10
     env_file:
       - .env
     environment:

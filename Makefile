@@ -35,6 +35,7 @@ endef
 
 # Rules
 all: up
+	@echo "$(GREEN)🎉 $(NAME) ready! 🎉$(RESET)"
 
 $(BACKDIR)/node_modules: $(BACKDIR)/package-lock.json
 	$(call spin,📦 Installing backend dependencies...,npm ci --prefix $(BACKDIR))
