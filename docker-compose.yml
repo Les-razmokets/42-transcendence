@@ -30,5 +30,17 @@ services:
     ports:
       - 127.0.0.1:3000:3000
     restart: unless-stopped
+  frontend:
+    build: ./frontend
+    healthcheck:
+      test: ["CMD-SHELL", "wget --spider -q http://127.0.0.1:5173/"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    env_file:
+        - .env
+    ports:
+        - 127.0.0.1:5173:5173
+    restart: unless-stopped
 volumes:
   db_data:
