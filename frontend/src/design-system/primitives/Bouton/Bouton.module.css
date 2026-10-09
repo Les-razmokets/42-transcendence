@@ -1,0 +1,68 @@
+.bouton {
+    appearance: none;
+    margin: 0;
+    background: none;
+
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--espace-8);
+
+    box-sizing: border-box;
+    height: var(--hauteur-bouton);
+    padding: 0 var(--espace-24);
+
+    border: 1.5px solid transparent;
+    border-radius: var(--rayon-pastille);
+
+    white-space: nowrap;
+
+    cursor: pointer;
+
+    transition: background-color var(--duree-survol) var(--courbe-sortie), border-color var(--duree-survol) var(--courbe-sortie);
+}
+
+.bouton:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
+.principal {
+    background-color: var(--action-principal);
+    color: var(--texte-inverse);
+}
+
+.principal:hover:not(:disabled) {
+    background-color: var(--action-principal-survol);
+}
+
+.principal:active:not(:disabled) {
+    background-color: var(--action-principal-presse);
+}
+
+.accent {
+    background-color: var(--accent-defaut);
+    color: var(--texte-principal);
+}
+
+.accent:hover:not(:disabled) {
+    background-color: var(--accent-survol);
+}
+
+.accent:active:not(:disabled) {
+    background-color: var(--accent-presse);
+}
+
+.secondaire {
+    background-color: transparent;
+    border-color: var(--bordure-forte);
+    color: var(--texte-principal);
+}
+
+.secondaire:hover:not(:disabled) {
+    background-color: var(--fond-surface);
+}
+
+.secondaire:active:not(:disabled) {
+    background-color: var(--fond-profond);
+}
