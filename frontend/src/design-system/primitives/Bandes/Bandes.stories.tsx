@@ -2,7 +2,7 @@ import type { Meta, StoryObj} from '@storybook/react-vite';
 import { Bandes } from './Bandes';
 
 const meta: Meta<typeof Bandes> = {
-  title: 'primitive/Bandes',
+  title: 'primitives/Bandes',
   component: Bandes,
 };
 export default meta;
