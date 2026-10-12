@@ -1,0 +1,1 @@
+export { Bandes } from './Bandes.tsx'
