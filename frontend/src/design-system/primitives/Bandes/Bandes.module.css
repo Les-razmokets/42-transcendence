@@ -1,0 +1,13 @@
+.bandes {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    gap: var(--espace-4);
+}
+
+.epaisse > span { height: 4px}
+.fine > span { height: 2px}
+
+.bandes1 { background-color: var(--bande-1)}
+.bandes2 { background-color: var(--bande-2)}
+.bandes3 { background-color: var(--bande-3)}

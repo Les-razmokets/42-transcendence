@@ -1,3 +1,4 @@
+/// <reference types="vite/client" />
 import type { Preview } from '@storybook/react-vite';
 
 import '@fontsource/monoton';
@@ -9,7 +10,7 @@ import '../src/design-system/tokens/tokens.css';
 
 const preview: Preview = {
   parameters: {
-    layout: 'centered',
+    //layout: 'centered',
     backgrounds: { disable: true },
   },
 };
