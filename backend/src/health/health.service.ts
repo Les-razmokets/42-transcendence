@@ -13,7 +13,7 @@ export class HealthService {
       throw new ServiceUnavailableException('Database unreachable');
     }
   }
-  create(dto: HealthDto): string {
+  create(_dto: HealthDto): string {
     return "{ received: dto, status: 'ok' }";
   }
 }

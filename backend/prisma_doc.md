@@ -17,14 +17,14 @@ Il couvre l'installation, l'écriture du schéma, les migrations et les pièges 
             └── src/generated/prisma    ← client TypeScript généré (ne pas éditer)
 ```
 
-| Fichier | Rôle | Versionné ? |
-|---|---|---|
-| `.env` | Identifiants Postgres + `DATABASE_URL` | ❌ jamais |
-| `docker-compose.yml` | Lance Postgres avec un volume `db_data` | ✅ |
-| `backend/prisma7.config.ts` | Chemin du schéma, des migrations, et de l'URL de la base | ✅ |
-| `backend/prisma/schema.prisma` | Définition des modèles | ✅ |
-| `backend/prisma/migrations/` | Une migration SQL par changement de schéma | ✅ toujours |
-| `backend/src/generated/prisma` | Client généré | ❌ (se régénère) |
+| Fichier                        | Rôle                                                     | Versionné ?      |
+| ------------------------------ | -------------------------------------------------------- | ---------------- |
+| `.env`                         | Identifiants Postgres + `DATABASE_URL`                   | ❌ jamais        |
+| `docker-compose.yml`           | Lance Postgres avec un volume `db_data`                  | ✅               |
+| `backend/prisma7.config.ts`    | Chemin du schéma, des migrations, et de l'URL de la base | ✅               |
+| `backend/prisma/schema.prisma` | Définition des modèles                                   | ✅               |
+| `backend/prisma/migrations/`   | Une migration SQL par changement de schéma               | ✅ toujours      |
+| `backend/src/generated/prisma` | Client généré                                            | ❌ (se régénère) |
 
 > **Règle d'or :** le schéma décrit une intention. Seules les **migrations** modifient la base.
 > Si on modifie le schéma sans créer de migration, la base ne change pas.
@@ -71,14 +71,14 @@ enum Role {
 }
 ```
 
-| Élément | Signification |
-|---|---|
-| `String?` | Colonne nullable. Sans `?`, la colonne est `NOT NULL` |
-| `@id` | Clé primaire |
-| `@default(uuid())` / `now()` / `USER` | Valeur si on n'en fournit pas |
-| `@unique` | Contrainte d'unicité |
-| `@updatedAt` | Rempli par Prisma à chaque update (pas par Postgres) |
-| `enum` | Type Postgres à valeurs fixes |
+| Élément                               | Signification                                         |
+| ------------------------------------- | ----------------------------------------------------- |
+| `String?`                             | Colonne nullable. Sans `?`, la colonne est `NOT NULL` |
+| `@id`                                 | Clé primaire                                          |
+| `@default(uuid())` / `now()` / `USER` | Valeur si on n'en fournit pas                         |
+| `@unique`                             | Contrainte d'unicité                                  |
+| `@updatedAt`                          | Rempli par Prisma à chaque update (pas par Postgres)  |
+| `enum`                                | Type Postgres à valeurs fixes                         |
 
 **Une seule source de vérité par information.** On avait `isAdmin Boolean` en plus de `role Role`.
 Un user avec `isAdmin: true` et `role: USER` n'a aucun sens, donc on a gardé uniquement `role`.
@@ -106,12 +106,12 @@ model Casino {
 
 ### `onDelete` : que faire quand on supprime le parent ?
 
-| Valeur | Effet quand on supprime un User qui a des casinos |
-|---|---|
-| *(rien)* = `Restrict` | Postgres **refuse** la suppression (défaut pour une relation obligatoire) |
-| `Cascade` | Les casinos sont **supprimés** avec lui |
-| `SetNull` | `ownerId` passe à NULL (impose `ownerId String?`) |
-| `NoAction` | Proche de Restrict, vérifié en fin de transaction |
+| Valeur                | Effet quand on supprime un User qui a des casinos                         |
+| --------------------- | ------------------------------------------------------------------------- |
+| _(rien)_ = `Restrict` | Postgres **refuse** la suppression (défaut pour une relation obligatoire) |
+| `Cascade`             | Les casinos sont **supprimés** avec lui                                   |
+| `SetNull`             | `ownerId` passe à NULL (impose `ownerId String?`)                         |
+| `NoAction`            | Proche de Restrict, vérifié en fin de transaction                         |
 
 > L'exemple `Casino.owner` ci-dessus illustre la syntaxe. Dans le vrai schéma, la propriété d'un casino
 > passe par `Membership` (rôle `OWNER`), pour avoir une seule source de vérité sur « qui a des droits sur ce casino ».
@@ -193,7 +193,7 @@ npx prisma migrate dev
 ```
 
 Toujours dans cet ordre : **1. créer** la nouvelle colonne → **2. recopier** les données → **3. supprimer** l'ancienne.
-Avant tout `DROP COLUMN`, se demander : *« si la table contenait des données réelles, qu'est-ce qu'on perdrait ? »*
+Avant tout `DROP COLUMN`, se demander : _« si la table contenait des données réelles, qu'est-ce qu'on perdrait ? »_
 
 ### Tant que la PR n'est pas mergée : une seule migration propre
 
@@ -234,30 +234,30 @@ ALTER TABLE "Casino" ADD CONSTRAINT "Casino_ownerId_fkey"
 
 ### Via le Makefile (depuis la racine)
 
-| Commande | Effet |
-|---|---|
-| `make` / `make all` | Installe les deps, lance Postgres, applique les migrations |
-| `make up` / `make down` | Démarre / arrête les conteneurs (les données sont conservées) |
-| `make ps` / `make logs` | État / logs des conteneurs |
-| `make deploy` | `prisma migrate deploy` : applique les migrations existantes, sans en créer |
-| `make migrate name=xxx` | `prisma migrate dev --name xxx` : crée **et** applique une migration |
-| `make studio` | Interface web pour lire et éditer les données |
-| `make fclean` | ⚠️ Supprime le volume : **toutes les données sont perdues** |
-| `make re` | `fclean` + `all` : base neuve, toutes les migrations rejouées |
+| Commande                | Effet                                                                       |
+| ----------------------- | --------------------------------------------------------------------------- |
+| `make` / `make all`     | Installe les deps, lance Postgres, applique les migrations                  |
+| `make up` / `make down` | Démarre / arrête les conteneurs (les données sont conservées)               |
+| `make ps` / `make logs` | État / logs des conteneurs                                                  |
+| `make deploy`           | `prisma migrate deploy` : applique les migrations existantes, sans en créer |
+| `make migrate name=xxx` | `prisma migrate dev --name xxx` : crée **et** applique une migration        |
+| `make studio`           | Interface web pour lire et éditer les données                               |
+| `make fclean`           | ⚠️ Supprime le volume : **toutes les données sont perdues**                 |
+| `make re`               | `fclean` + `all` : base neuve, toutes les migrations rejouées               |
 
 ### Prisma directement (depuis `backend/`)
 
-| Commande | Quand |
-|---|---|
-| `npx prisma format` | Avant chaque commit : formate et valide |
-| `npx prisma validate` | Vérifie le schéma sans toucher à la base |
-| `npx prisma migrate status` | Compare les migrations du dossier avec celles appliquées en base |
-| `npx prisma migrate dev --name xxx` | Dev : génère le SQL à partir du diff du schéma, puis l'applique |
-| `npx prisma migrate dev --create-only --name xxx` | Génère le SQL **sans l'appliquer**, pour l'éditer d'abord |
-| `npx prisma migrate deploy` | Applique les migrations en attente (CI, prod, après un pull) |
-| `npx prisma migrate reset` | ⚠️ Vide la base et rejoue toutes les migrations (dev uniquement) |
-| `npx prisma generate` | Régénère le client TypeScript dans `src/generated/prisma` |
-| `npx prisma studio` | Explorateur de données |
+| Commande                                          | Quand                                                            |
+| ------------------------------------------------- | ---------------------------------------------------------------- |
+| `npx prisma format`                               | Avant chaque commit : formate et valide                          |
+| `npx prisma validate`                             | Vérifie le schéma sans toucher à la base                         |
+| `npx prisma migrate status`                       | Compare les migrations du dossier avec celles appliquées en base |
+| `npx prisma migrate dev --name xxx`               | Dev : génère le SQL à partir du diff du schéma, puis l'applique  |
+| `npx prisma migrate dev --create-only --name xxx` | Génère le SQL **sans l'appliquer**, pour l'éditer d'abord        |
+| `npx prisma migrate deploy`                       | Applique les migrations en attente (CI, prod, après un pull)     |
+| `npx prisma migrate reset`                        | ⚠️ Vide la base et rejoue toutes les migrations (dev uniquement) |
+| `npx prisma generate`                             | Régénère le client TypeScript dans `src/generated/prisma`        |
+| `npx prisma studio`                               | Explorateur de données                                           |
 
 `migrate dev` = développement (crée des migrations). `migrate deploy` = tout le reste (applique seulement).
 
@@ -269,12 +269,12 @@ docker compose exec db sh -c 'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB"'
 
 Les guillemets simples font lire les variables **dans le conteneur**, qui les reçoit du `.env`, et non dans ton shell.
 
-| Dans `psql` | Effet |
-|---|---|
-| `\dt` | Lister les tables |
-| `\d "Casino"` | Colonnes, index et clés étrangères d'une table |
-| `SELECT * FROM "_prisma_migrations";` | Migrations appliquées selon Prisma |
-| `\q` | Quitter |
+| Dans `psql`                           | Effet                                          |
+| ------------------------------------- | ---------------------------------------------- |
+| `\dt`                                 | Lister les tables                              |
+| `\d "Casino"`                         | Colonnes, index et clés étrangères d'une table |
+| `SELECT * FROM "_prisma_migrations";` | Migrations appliquées selon Prisma             |
+| `\q`                                  | Quitter                                        |
 
 Les noms de tables Prisma sont en PascalCase, donc il faut les **guillemets** : `"User"`, pas `User`.
 
@@ -282,12 +282,12 @@ Les noms de tables Prisma sont en PascalCase, donc il faut les **guillemets** : 
 
 ## 6. Erreurs déjà rencontrées
 
-| Symptôme | Cause | Solution |
-|---|---|---|
-| `P1012 ... missing an opposite relation field on the model User` | Relation déclarée d'un seul côté | Ajouter `casinos Casino[]` dans `User` |
-| `migrate status` ne trouve pas `DATABASE_URL` | `.env` non chargé : il est à la racine, pas dans `backend/` | `dotenv.config({ path: "../.env" })` dans `prisma7.config.ts` |
-| Connexion refusée / hôte inconnu | `DATABASE_URL` avec un mauvais hôte | Utiliser `127.0.0.1:5432` |
-| Pas de dossier `prisma/migrations` | Schéma modifié mais `migrate dev` jamais lancé | `make migrate name=...` |
-| Le schéma dit `Cascade`, la base fait `RESTRICT` | `onDelete` ajouté **après** la migration | Nouvelle migration : `make migrate name=...` |
-| Warning « column will be lost » sur un renommage | Prisma fait `DROP` + `ADD` | `--create-only` puis `RENAME COLUMN` à la main |
-| `permission denied` sur le socket Docker | User absent du groupe `docker` | `sudo usermod -aG docker $USER` puis se reconnecter |
+| Symptôme                                                         | Cause                                                       | Solution                                                      |
+| ---------------------------------------------------------------- | ----------------------------------------------------------- | ------------------------------------------------------------- |
+| `P1012 ... missing an opposite relation field on the model User` | Relation déclarée d'un seul côté                            | Ajouter `casinos Casino[]` dans `User`                        |
+| `migrate status` ne trouve pas `DATABASE_URL`                    | `.env` non chargé : il est à la racine, pas dans `backend/` | `dotenv.config({ path: "../.env" })` dans `prisma7.config.ts` |
+| Connexion refusée / hôte inconnu                                 | `DATABASE_URL` avec un mauvais hôte                         | Utiliser `127.0.0.1:5432`                                     |
+| Pas de dossier `prisma/migrations`                               | Schéma modifié mais `migrate dev` jamais lancé              | `make migrate name=...`                                       |
+| Le schéma dit `Cascade`, la base fait `RESTRICT`                 | `onDelete` ajouté **après** la migration                    | Nouvelle migration : `make migrate name=...`                  |
+| Warning « column will be lost » sur un renommage                 | Prisma fait `DROP` + `ADD`                                  | `--create-only` puis `RENAME COLUMN` à la main                |
+| `permission denied` sur le socket Docker                         | User absent du groupe `docker`                              | `sudo usermod -aG docker $USER` puis se reconnecter           |
