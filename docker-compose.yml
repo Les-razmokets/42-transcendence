@@ -30,7 +30,7 @@ services:
     ports:
       - 127.0.0.1:3000:3000
     restart: unless-stopped
- frontend:
+  frontend:
     build: ./frontend
     healthcheck:
       test: ["CMD-SHELL", "wget --spider -q http://127.0.0.1:5173/"]
