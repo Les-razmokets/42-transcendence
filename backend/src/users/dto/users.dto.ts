@@ -40,7 +40,7 @@ export class UsersCreationDto {
   @IsString()
   @MinLength(1)
   @MaxLength(20)
-  @Matches(/^[a-z0-9_-]+/, {
+  @Matches(/^[a-z0-9_-]+$/, {
     message: 'pseudo: letters, numbers, "_" and "-" only',
   })
   pseudo: string;
