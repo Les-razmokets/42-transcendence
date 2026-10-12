@@ -11,7 +11,7 @@ export class TablesService {
         ...dto,
         seats: { createMany: { data : Array.from({ length: dto.maxSeats }, (i: number) => ({seatNumber: i + 1}))
       }, include: {seats: true} }
-	  }
-	})
+      }
+    })
   }
 }
