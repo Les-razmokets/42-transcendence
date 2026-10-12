@@ -68,6 +68,8 @@ Le `&&` garantit que le serveur ne démarre pas si la migration échoue. Un `ent
 **Service `backend` dans `docker-compose.yml`**
 - `build: ./backend` (et non `image:`) : l'image est construite localement, pas téléchargée.
 - `depends_on: db: condition: service_healthy` : attend que Postgres soit prêt (pas juste démarré) avant de lancer le backend, pour éviter que les migrations échouent au premier essai.
+- `healthcheck` : interroge `127.0.0.1:$PORT/api/health` avec `wget --spider` (déjà présent dans l'image, pas besoin d'installer `curl`). Sans ce `healthcheck`, Docker considère le service prêt dès que le conteneur démarre, pas quand les migrations et Nest ont vraiment fini — `--wait` dans `make up`/`make all` ne peut attendre que ce qu'il sait vérifier.
+- Piège rencontré en écrivant ce `healthcheck` : utiliser `localhost` au lieu de `127.0.0.1` échoue avec `Connection refused`. Dans le conteneur, `localhost` résout en `::1` (IPv6, voir `/etc/hosts`), mais le serveur n'écoute qu'en IPv4 (`app.listen(port, '0.0.0.0')`). Rien n'écoute sur `::1`, donc la connexion est refusée. D'où `127.0.0.1` explicitement dans le test.
 - `environment: DATABASE_URL=...@db:5432/...` : surcharge la valeur du `.env`. Le `.env` contient volontairement `127.0.0.1` pour pouvoir aussi lancer le backend hors Docker (`npm run start:dev`) ; dans le conteneur, l'hôte de la base doit être `db` (le nom du service), pas `127.0.0.1` (qui désignerait le conteneur backend lui-même).
 - `ports: 127.0.0.1:3000:3000` : le port n'est exposé que sur la machine locale, pas sur le réseau.
 
@@ -85,5 +87,5 @@ Avant, `all` installait les dépendances et générait le client Prisma sur la m
 - Les cibles `check-node`, `generate`, `deploy` et `$(BACKDIR)/node_modules` existent encore dans le Makefile mais ne sont plus appelées par `all`. Elles peuvent rester comme utilitaires pour qui veut travailler avec Node en local, ou être nettoyées si elles ne servent à personne.
 - Le texte de `make help` pour `all` n'a pas encore été mis à jour (il décrit encore l'ancien comportement).
 - Pas de multi-stage build : l'image finale est plus grande que nécessaire.
-- Pas d'utilisateur non-root dans le conteneur, pas de `HEALTHCHECK` Docker sur le service `backend` (seul `/api/health` applicatif existe pour l'instant).
+- Pas d'utilisateur non-root dans le conteneur.
 - Le port `3000` du backend est publié sur `127.0.0.1` pour pouvoir le tester directement. Une fois `nginx` en place comme unique point d'entrée (ticket à venir), ce `ports:` pourra être retiré : seul `nginx` aura besoin d'un port publié, et il parlera au backend via le réseau Docker interne.
