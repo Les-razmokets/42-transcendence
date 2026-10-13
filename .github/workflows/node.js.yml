@@ -11,37 +11,30 @@ on:
 
 jobs:
   lint:
-
     runs-on: ubuntu-latest
-
-    # strategy:
-    #   matrix:
-    #     node-version: 24
-    #     # See supported Node.js release schedule at https://nodejs.org/en/about/releases/
 
     steps:
     - uses: actions/checkout@v4
 
-    - uses: action/setup-node@v4
-     with:
-      node-versions: '24.x'
+    - uses: actions/setup-node@v4
+      with:
+        node-version: '24.x'
 
-    - name: Install deps #backend
+    - name: Install deps (backend)
       working-directory: backend
-      run: npm run ci
+      run: npm ci
 
-    - name: Lint #backend
-      workind-directory: backend
+    - name: Lint (backend)
+      working-directory: backend
       run: npm run lint
 
-    - name: Install deps #frontend
-      workind-directory: frontend
-      run: npm run ci
+    - name: Install deps (frontend)
+      working-directory: frontend
+      run: npm ci
 
-    - name: Lint #frontend
+    - name: Lint (frontend)
       working-directory: frontend
       run: npm run lint
 
-        cache: 'npm'
-    - run: npm ci
-    - run: npm run lint
+  buid:
+    runs-on: ubuntu-latest
