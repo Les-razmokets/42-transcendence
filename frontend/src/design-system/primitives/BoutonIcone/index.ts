@@ -1,0 +1,1 @@
+export { BoutonIcone } from "./BoutonIcone";

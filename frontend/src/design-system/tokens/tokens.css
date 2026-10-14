@@ -1,0 +1,208 @@
+/* ==========================================================================
+   Floor — Design tokens « Bandes rétro »
+   Généré depuis les variables et styles du fichier Figma « Floor ».
+   Source de vérité : Figma. Si une valeur change, on la change dans Figma
+   puis on régénère ce fichier. On ne l'édite pas à la main.
+
+   Règle d'or : dans les composants, on n'utilise QUE les tokens sémantiques
+   (fond-, texte-, bordure-, action-, accent-, chaise-…). Jamais une
+   primitive (bleu-500, creme-500…), jamais une valeur en dur.
+   ========================================================================== */
+
+:root {
+    /* ---------------------------------------------------------------------
+       Polices — chargées dans main.tsx via @fontsource :
+         import "@fontsource/monoton";
+         import "@fontsource/space-grotesk/400.css";
+         import "@fontsource/space-grotesk/500.css";
+         import "@fontsource/space-grotesk/700.css";
+       --------------------------------------------------------------------- */
+    --police-logo: "Monoton", "Space Grotesk", system-ui, sans-serif;
+    --police-interface: "Space Grotesk", system-ui, -apple-system, "Segoe UI", sans-serif;
+
+    /* ---------------------------------------------------------------------
+       Couleurs primitives — la palette brute.
+       NE JAMAIS les utiliser directement dans un composant.
+       --------------------------------------------------------------------- */
+    --bleu-500: #284074;
+    --bleu-700: #22355f;
+    --bleu-900: #121c36;
+    --bleu-alpha-60: rgb(18 28 54 / 60%);
+
+    --rouge-200: #f4a3a3;
+    --rouge-300: #e8676a;
+    --rouge-500: #d72e2f;
+    --rouge-700: #a81f22;
+    --rouge-900: #86181a;
+    --rouge-alpha-40: rgb(215 46 47 / 40%);
+    --rouge-alpha-65: rgb(215 46 47 / 65%);
+
+    --creme-300: #fdf4c9;
+    --creme-500: #fceea6;
+    --creme-700: #e9d57a;
+    --creme-900: #716b4b;
+    --creme-alpha-12: rgb(252 238 166 / 12%);
+    --creme-alpha-35: rgb(252 238 166 / 35%);
+    --creme-alpha-60: rgb(252 238 166 / 60%);
+    --creme-alpha-75: rgb(252 238 166 / 75%);
+
+    --noir-alpha-30: rgb(0 0 0 / 30%);
+    --noir-alpha-35: rgb(0 0 0 / 35%);
+    --noir-alpha-40: rgb(0 0 0 / 40%);
+
+    /* ---------------------------------------------------------------------
+       Couleurs sémantiques — les SEULES à utiliser dans les composants.
+       --------------------------------------------------------------------- */
+
+    /* Fonds */
+    --fond-page: var(--bleu-500);          /* Fond de toutes les pages et des panneaux */
+    --fond-surface: var(--bleu-700);       /* Surfaces surélevées : cartes, colonne profil, survol des boutons contour */
+    --fond-profond: var(--bleu-900);       /* Derrière les scènes 3D ; champ désactivé */
+    --fond-inverse: var(--creme-500);      /* Fond crème : QR code uniquement */
+    --fond-voile: var(--bleu-alpha-60);    /* Voile derrière une fenêtre ouverte */
+
+    /* Textes */
+    --texte-principal: var(--creme-500);   /* Tout texte important sur fond bleu */
+    --texte-secondaire: var(--creme-alpha-75); /* Détails, aides, légendes */
+    --texte-inverse: var(--bleu-500);      /* Texte sur fond crème (bouton principal, filtre actif, avatar) */
+    --texte-accent: var(--rouge-500);      /* Rouge : uniquement ≥ 24 px ou sur fond crème */
+    --texte-erreur: var(--rouge-200);      /* Messages d'erreur sous les champs */
+
+    /* Bordures */
+    --bordure-forte: var(--creme-500);     /* Boutons secondaires, filtres, champs actifs */
+    --bordure-defaut: var(--creme-alpha-60); /* Champs et lignes d'info au repos */
+    --bordure-subtile: var(--creme-alpha-12); /* Séparations discrètes, contours de cartes */
+    --bordure-erreur: var(--rouge-300);    /* Contour d'un champ en erreur */
+
+    /* Actions */
+    --action-principal: var(--creme-500);         /* Bouton principal, filtre actif, avatar */
+    --action-principal-survol: var(--creme-300);
+    --action-principal-presse: var(--creme-700);
+    --accent-defaut: var(--rouge-700);            /* Bouton Accent (paiement), slider, onglet actif */
+    --accent-survol: var(--rouge-500);
+    --accent-presse: var(--rouge-900);
+
+    /* Contrôles */
+    --controle-piste: var(--creme-alpha-35);      /* Piste non remplie du slider, interrupteur désactivé */
+    --etat-focus: var(--creme-500);               /* Anneau de focus clavier */
+
+    /* Bandes */
+    --bande-1: var(--rouge-500);
+    --bande-2: var(--creme-500);
+    --bande-3: var(--rouge-500);
+
+    /* Table et chaises (aussi utilisées par les matériaux Three.js, voir tokens3d.ts) */
+    --table-tapis: var(--bleu-500);
+    --table-rail: var(--rouge-500);
+    --table-ligne: var(--creme-500);
+    --chaise-libre: var(--creme-500);             /* Place disponible */
+    --chaise-occupee: var(--creme-900);           /* Place prise */
+    --chaise-selection: var(--rouge-500);         /* Ta place */
+
+    /* Couleurs des effets (utilisées par les ombres ci-dessous) */
+    --effet-ombre: var(--noir-alpha-35);
+    --effet-ombre-forte: var(--noir-alpha-40);
+    --effet-ombre-legere: var(--noir-alpha-30);
+    --effet-halo: var(--rouge-alpha-40);
+    --effet-halo-survol: var(--rouge-alpha-65);
+
+    /* ---------------------------------------------------------------------
+       Espacements — grille de 4 px
+       --------------------------------------------------------------------- */
+    --espace-4: 4px;    /* Icône ↔ texte, lignes d'un même groupe */
+    --espace-8: 8px;    /* Écart interne d'un bouton, libellé ↔ champ */
+    --espace-12: 12px;  /* Entre éléments d'un groupe, boutons côte à côte */
+    --espace-16: 16px;  /* Padding compact (cartes, lignes, champs), entre champs */
+    --espace-20: 20px;  /* Marge de page mobile, padding horizontal des lignes */
+    --espace-24: 24px;  /* Padding des boutons, des tiroirs mobiles */
+    --espace-32: 32px;  /* Padding des fenêtres et panneaux desktop */
+    --espace-40: 40px;  /* Marge de page desktop */
+
+    /* ---------------------------------------------------------------------
+       Rayons
+       --------------------------------------------------------------------- */
+    --rayon-m: 16px;          /* Champs, options, lignes de menu, cartes de paiement */
+    --rayon-l: 24px;          /* Panneaux, fenêtres, tiroirs, cartes réservation */
+    --rayon-pastille: 999px;  /* Boutons, filtres, avatars, badges, interrupteur */
+
+    /* ---------------------------------------------------------------------
+       Effets (valeurs de box-shadow)
+       --------------------------------------------------------------------- */
+    --ombre-table-repos: 0 16px 30px 0 var(--effet-ombre), 0 0 60px 0 var(--effet-halo);
+    --ombre-table-survol: 0 22px 36px 0 var(--effet-ombre-forte), 0 0 90px 0 var(--effet-halo-survol);
+    --ombre-carte: 0 8px 20px 0 var(--effet-ombre-legere);
+    --lueur-neon: 0 0 8px 0 var(--effet-halo-survol), 0 0 24px 0 var(--effet-halo);
+    --lueur-chaise-survol: 0 0 16px 0 var(--etat-focus);
+    /* L'ombre listée en premier est dessinée au-dessus : l'anneau bleu fin
+       (espace) doit donc venir avant l'anneau crème. */
+    --anneau-focus: 0 0 0 2px var(--fond-profond), 0 0 0 5px var(--etat-focus);
+
+    /* ---------------------------------------------------------------------
+       Mise en page
+       --------------------------------------------------------------------- */
+    --marge-page-desktop: var(--espace-40);
+    --marge-page-mobile: var(--espace-20);
+    --point-rupture: 768px;       /* Info : les media queries ne lisent pas les variables CSS */
+
+    --hauteur-bouton: 48px;
+    --hauteur-bouton-icone: 44px; /* Aussi la zone tactile minimale */
+    --hauteur-filtre: 36px;
+    --hauteur-champ: 52px;
+    --hauteur-interrupteur: 28px;
+
+    --icone-s: 16px;
+    --icone-m: 20px;
+    --icone-l: 24px;
+
+    /* ---------------------------------------------------------------------
+       Animations
+       --------------------------------------------------------------------- */
+    --duree-survol: 200ms;
+    --duree-table-survol: 250ms;
+    --duree-fenetre: 300ms;
+    --duree-zoom-table: 700ms;
+    --courbe-sortie: cubic-bezier(0.22, 1, 0.36, 1);      /* ease-out */
+    --courbe-entree-sortie: cubic-bezier(0.65, 0, 0.35, 1); /* ease-in-out */
+}
+
+/* ==========================================================================
+   Typographie — une classe par style de texte Figma.
+   Usage : <h1 className="typo-titre-1">…</h1>
+   Ou dans un .module.css : composes: typo-texte-fort from global;
+   si une police ne se charge pas la police sans-serfi sera prise par défault
+   ========================================================================== */
+
+/* Monoton : logo et grands chiffres uniquement (≥ 36 px) */
+.typo-logo-xl        { font-family: var(--police-logo), sans-serif; font-weight: 400; font-size: 5.5rem;    line-height: 6rem; }     /* 88 / 96 */
+.typo-logo-l         { font-family: var(--police-logo), sans-serif; font-weight: 400; font-size: 3.25rem;   line-height: 3.75rem; }  /* 52 / 60 */
+.typo-logo-m         { font-family: var(--police-logo), sans-serif; font-weight: 400; font-size: 2.25rem;   line-height: 2.75rem; }  /* 36 / 44 */
+.typo-affiche-titre  { font-family: var(--police-logo), sans-serif; font-weight: 400; font-size: 3rem;      line-height: 3.5rem; }   /* 48 / 56 */
+
+/* Space Grotesk : toute l'interface */
+.typo-titre-1        { font-family: var(--police-interface), sans-serif; font-weight: 700; font-size: 2rem;      line-height: 2.5rem; letter-spacing: -0.01em; }   /* 32 / 40 */
+.typo-titre-2        { font-family: var(--police-interface), sans-serif; font-weight: 700; font-size: 1.5rem;    line-height: 2rem;   letter-spacing: -0.005em; }  /* 24 / 32 */
+.typo-titre-3        { font-family: var(--police-interface), sans-serif; font-weight: 700; font-size: 1.125rem;  line-height: 1.5rem; }  /* 18 / 24 */
+.typo-texte-base     { font-family: var(--police-interface), sans-serif; font-weight: 400; font-size: 1rem;      line-height: 1.5rem; }  /* 16 / 24 */
+.typo-texte-fort     { font-family: var(--police-interface), sans-serif; font-weight: 500; font-size: 1rem;      line-height: 1.5rem; }  /* 16 / 24 */
+.typo-texte-petit    { font-family: var(--police-interface), sans-serif; font-weight: 400; font-size: 0.875rem;  line-height: 1.25rem; } /* 14 / 20 */
+.typo-libelle        { font-family: var(--police-interface), sans-serif; font-weight: 500; font-size: 0.8125rem; line-height: 1rem; }    /* 13 / 16 */
+.typo-libelle-fort   { font-family: var(--police-interface), sans-serif; font-weight: 700; font-size: 0.8125rem; line-height: 1rem; }    /* 13 / 16 */
+.typo-legende        { font-family: var(--police-interface), sans-serif; font-weight: 400; font-size: 0.75rem;   line-height: 1rem; }    /* 12 / 16 */
+.typo-legende-forte  { font-family: var(--police-interface), sans-serif; font-weight: 700; font-size: 0.75rem;   line-height: 1rem; }    /* 12 / 16 */
+.typo-surtitre       { font-family: var(--police-interface), sans-serif; font-weight: 700; font-size: 0.6875rem; line-height: 1rem; letter-spacing: 0.12em; text-transform: uppercase; } /* 11 / 16 */
+
+/* ==========================================================================
+   Base minimale de la page
+   ========================================================================== */
+html {
+    background: var(--fond-page);
+    color: var(--texte-principal);
+    font-family: var(--police-interface), sans-serif;
+    -webkit-font-smoothing: antialiased;
+}
+
+/* Anneau de focus clavier par défaut : visible uniquement au clavier */
+:focus-visible {
+    outline: none;
+    box-shadow: var(--anneau-focus);
+}

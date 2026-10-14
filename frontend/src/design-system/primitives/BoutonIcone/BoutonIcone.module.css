@@ -1,0 +1,18 @@
+.boutonIcone {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: var(--hauteur-bouton-icone);
+    height: var(--hauteur-bouton-icone);
+    padding: 0;
+    border: solid 1.5px var(--bordure-forte);
+    border-radius: var(--rayon-pastille);
+    background: transparent;
+    color: var(--texte-principal);
+    cursor: pointer;
+    transition: background-color var(--duree-survol) var(--courbe-sortie);
+}
+
+.boutonIcone:hover:not(:disabled) {
+    background-color: var(--fond-surface);
+}

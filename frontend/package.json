@@ -9,7 +9,8 @@
     "lint": "oxlint",
     "preview": "vite preview",
     "storybook": "storybook dev -p 6006",
-    "build-storybook": "storybook build"
+    "build-storybook": "storybook build",
+    "test": "vitest --project unit"
   },
   "dependencies": {
     "@fontsource/monoton": "^5.3.0",
