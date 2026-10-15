@@ -2,6 +2,7 @@ import { BadRequestException, Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateTableDto } from './dto/create-table.dto';
 import { PokerVariant } from '../generated/prisma/enums';
+import { Prisma } from '../generated/prisma/client';
 
 @Injectable()
 export class TablesService {
@@ -9,21 +10,31 @@ export class TablesService {
   async create(dto: CreateTableDto) {
     this.assertValidBlinds(dto.smallBlind, dto.bigBlind);
     this.assertValidSeats(dto.variant, dto.maxSeats);
-    return this.prismaService.pokerTable.create({
-      data: {
-        ...dto,
-        seats: {
-          createMany: {
-            data: Array.from({ length: dto.maxSeats }, (_, i) => ({
-              seatNumber: i + 1,
-            })),
+
+    try {
+      return await this.prismaService.pokerTable.create({
+        data: {
+          ...dto,
+          seats: {
+            createMany: {
+              data: Array.from({ length: dto.maxSeats }, (_, i) => ({
+                seatNumber: i + 1,
+              })),
+            },
           },
         },
-      },
-      include: { seats: true },
-    });
+        include: { seats: true },
+      });
+    } catch (error) {
+      if (
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        error.code === 'P2003'
+      ) {
+        throw new BadRequestException('casinoId does not match any casino');
+      }
+      throw error;
+    }
   }
-
   private assertValidBlinds(smallBlind: number, bigBlind: number) {
     if (bigBlind < smallBlind) {
       throw new BadRequestException(
