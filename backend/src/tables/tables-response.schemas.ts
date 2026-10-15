@@ -7,6 +7,10 @@ export const seatSchema = z.object({
   status: z.enum(['FREE', 'OCCUPIED'])
 });
 
+// response schema for a poker table
+// dates are not exposed:
+// - createdAt / updatedAt / moneyUpdatedAt: not needed by the front for now
+// - deletedAt: deleted tables and seats are never returned, so always null
 export const tableSchema = z.object({
   id: z.string(),
   casinoId: z.string(),
