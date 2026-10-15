@@ -1,4 +1,29 @@
 .filtre {
     display: inline-flex;
-    
+    height: var(--hauteur-filtre);
+    padding: var(--espace-8) var(--espace-16);
+    align-items: center;
+    gap: var(--espace-4);
+    border-radius: var(--rayon-pastille);
+    border: 1.5px solid var(--bordure-forte);
+    background: transparent;
+    color: var(--texte-principal);
+    white-space: nowrap;
+    cursor: pointer;
+    transition: background-color var(--duree-survol) var(--courbe-sortie);
+}
+
+.filtre:hover {
+    background-color: var(--fond-surface);
+}
+
+.filtre[aria-expended='true'] {
+    transform: rotate(180);
+}
+
+.actif,
+.actif:hover {
+    background-color: var(--action-principal);
+    border-color: transparent;
+    color: var(--texte-inverse);
 }
