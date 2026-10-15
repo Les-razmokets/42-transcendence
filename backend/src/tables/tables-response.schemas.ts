@@ -4,7 +4,7 @@ import { z } from 'zod';
 export const seatSchema = z.object({
   id: z.string(),
   seatNumber: z.number(),
-  status: z.enum(['FREE', 'OCCUPIED'])
+  status: z.enum(['FREE', 'OCCUPIED']),
 });
 
 // response schema for a poker table
@@ -21,6 +21,6 @@ export const tableSchema = z.object({
   status: z.enum(['OPEN', 'PAUSED']),
   moneyOnTable: z.number(),
   seats: z.array(seatSchema),
-  variant: z.enum(['TEXAS_HOLDEM', 'OMAHA'])
+  variant: z.enum(['TEXAS_HOLDEM', 'OMAHA']),
 });
 export type Table = z.infer<typeof tableSchema>;

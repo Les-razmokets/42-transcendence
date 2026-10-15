@@ -30,6 +30,6 @@ export class CreateTableDto {
 
   @IsInt()
   @Min(2)
-  @Max(9)
+  @Max(10)
   maxSeats: number;
 }
