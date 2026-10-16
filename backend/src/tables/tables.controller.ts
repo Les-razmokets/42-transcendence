@@ -9,7 +9,11 @@ import {
 } from '@nestjs/common';
 import { TablesService } from './tables.service';
 import { CreateTableDto } from './dto/create-table.dto';
-import { tableSchema, Table } from './tables-response.schemas';
+import {
+  tableSchema,
+  tableSchemaArray,
+  Table,
+} from './tables-response.schemas';
 
 @SerializeOptions({ schema: tableSchema })
 @Controller('tables')
@@ -24,5 +28,11 @@ export class TablesController {
   @Get(':id')
   async findOne(@Param('id', new ParseUUIDPipe()) id: string): Promise<Table> {
     return await this.tablesService.findById(id);
+  }
+
+  @SerializeOptions({ schema: tableSchemaArray })
+  @Get()
+  async findAll(): Promise<Table[]> {
+    return await this.tablesService.findAll();
   }
 }

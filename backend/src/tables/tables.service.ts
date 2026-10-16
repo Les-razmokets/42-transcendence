@@ -8,6 +8,10 @@ import { CreateTableDto } from './dto/create-table.dto';
 import { PokerVariant } from '../generated/prisma/enums';
 import { Prisma } from '../generated/prisma/client';
 
+const tableWithSeats = {
+  seats: { where: { deletedAt: null }, orderBy: { seatNumber: 'asc' } },
+} satisfies Prisma.PokerTableInclude;
+
 @Injectable()
 export class TablesService {
   constructor(private readonly prismaService: PrismaService) {}
@@ -27,9 +31,7 @@ export class TablesService {
             },
           },
         },
-        include: {
-          seats: { where: { deletedAt: null }, orderBy: { seatNumber: 'asc' } },
-        },
+        include: tableWithSeats,
       });
     } catch (error) {
       if (
@@ -45,14 +47,21 @@ export class TablesService {
   async findById(id: string) {
     const table = await this.prismaService.pokerTable.findUnique({
       where: { id, deletedAt: null },
-      include: {
-        seats: { where: { deletedAt: null }, orderBy: { seatNumber: 'asc' } },
-      },
+      include: tableWithSeats,
     });
     if (!table) {
       throw new NotFoundException(`Table with ID ${id} not found`);
     }
     return table;
+  }
+
+  async findAll() {
+    const tables = await this.prismaService.pokerTable.findMany({
+      where: { deletedAt: null },
+      orderBy: { name: 'asc' },
+      include: tableWithSeats,
+    });
+    return tables;
   }
 
   private assertValidBlinds(smallBlind: number, bigBlind: number) {
