@@ -1,4 +1,12 @@
-import { Body, Controller, Post, SerializeOptions } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  ParseUUIDPipe,
+  Post,
+  Get,
+  Param,
+  SerializeOptions,
+} from '@nestjs/common';
 import { TablesService } from './tables.service';
 import { CreateTableDto } from './dto/create-table.dto';
 import { tableSchema, Table } from './tables-response.schemas';
@@ -11,5 +19,10 @@ export class TablesController {
   @Post()
   createTable(@Body() dto: CreateTableDto): Promise<Table> {
     return this.tablesService.create(dto);
+  }
+
+  @Get(':id')
+  async findOne(@Param('id', new ParseUUIDPipe()) id: string): Promise<Table> {
+    return await this.tablesService.findById(id);
   }
 }
