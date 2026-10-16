@@ -25,4 +25,3 @@ export const tableSchema = z.object({
 });
 export type Table = z.infer<typeof tableSchema>;
 
-export const tableSchemaArray = z.array(tableSchema);

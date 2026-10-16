@@ -11,7 +11,6 @@ import { TablesService } from './tables.service';
 import { CreateTableDto } from './dto/create-table.dto';
 import {
   tableSchema,
-  tableSchemaArray,
   Table,
 } from './tables-response.schemas';
 
@@ -30,7 +29,6 @@ export class TablesController {
     return await this.tablesService.findById(id);
   }
 
-  @SerializeOptions({ schema: tableSchemaArray })
   @Get()
   async findAll(): Promise<Table[]> {
     return await this.tablesService.findAll();
