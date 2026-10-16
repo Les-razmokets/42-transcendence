@@ -1,8 +1,10 @@
 export const icones = {
   "fleche-gauche": "M19 12H5M11 6l-6 6 6 6",
   "fleche-droite": "M5 12h14M13 6l6 6-6 6",
-  "chevron-bas": "M6 9l6 6 6-6",
-  "chevron-droit": "M9 6l6 6-6 6",
+  "chevron-haut":   "M6 15l6-6 6 6",
+  "chevron-bas":    "M6 9l6 6 6-6",
+  "chevron-gauche": "M15 6l-6 6 6 6",
+  "chevron-droit":  "M9 6l6 6-6 6",
   plus: "M12 5v14M5 12h14",
   coche: "M5 12.5l5 5L19 7",
   fermer: "M6 6l12 12M18 6L6 18",
