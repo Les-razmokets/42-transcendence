@@ -1,4 +1,8 @@
-import { BadRequestException, Injectable } from '@nestjs/common';
+import {
+  BadRequestException,
+  NotFoundException,
+  Injectable,
+} from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateTableDto } from './dto/create-table.dto';
 import { PokerVariant } from '../generated/prisma/enums';
@@ -23,7 +27,9 @@ export class TablesService {
             },
           },
         },
-        include: { seats: true },
+        include: {
+          seats: { where: { deletedAt: null }, orderBy: { seatNumber: 'asc' } },
+        },
       });
     } catch (error) {
       if (
@@ -35,6 +41,20 @@ export class TablesService {
       throw error;
     }
   }
+
+  async findById(id: string) {
+    const table = await this.prismaService.pokerTable.findUnique({
+      where: { id, deletedAt: null },
+      include: {
+        seats: { where: { deletedAt: null }, orderBy: { seatNumber: 'asc' } },
+      },
+    });
+    if (!table) {
+      throw new NotFoundException(`Table with ID ${id} not found`);
+    }
+    return table;
+  }
+
   private assertValidBlinds(smallBlind: number, bigBlind: number) {
     if (bigBlind < smallBlind) {
       throw new BadRequestException(
