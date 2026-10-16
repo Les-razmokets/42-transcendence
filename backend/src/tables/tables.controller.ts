@@ -6,13 +6,13 @@ import {
   Get,
   Param,
   SerializeOptions,
+  Patch,
+  Delete,
+  HttpCode,
 } from '@nestjs/common';
 import { TablesService } from './tables.service';
 import { CreateTableDto } from './dto/create-table.dto';
-import {
-  tableSchema,
-  Table,
-} from './tables-response.schemas';
+import { tableSchema, Table } from './tables-response.schemas';
 
 @SerializeOptions({ schema: tableSchema })
 @Controller('tables')
@@ -32,5 +32,11 @@ export class TablesController {
   @Get()
   async findAll(): Promise<Table[]> {
     return await this.tablesService.findAll();
+  }
+
+  @Delete(':id')
+  @HttpCode(204)
+  async deleteTable(@Param('id', new ParseUUIDPipe()) id: string) {
+    await this.tablesService.deleteTable(id);
   }
 }

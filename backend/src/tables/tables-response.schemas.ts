@@ -24,4 +24,3 @@ export const tableSchema = z.object({
   variant: z.enum(['TEXAS_HOLDEM', 'OMAHA']),
 });
 export type Table = z.infer<typeof tableSchema>;
-

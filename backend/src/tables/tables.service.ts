@@ -64,6 +64,16 @@ export class TablesService {
     return tables;
   }
 
+  async deleteTable(id: string) {
+    const { count } = await this.prismaService.pokerTable.updateMany({
+      where: { id, deletedAt: null },
+      data: { deletedAt: new Date() },
+    });
+    if (count === 0) {
+      throw new NotFoundException(`Table with ID ${id} not found`);
+    }
+  }
+
   private assertValidBlinds(smallBlind: number, bigBlind: number) {
     if (bigBlind < smallBlind) {
       throw new BadRequestException(
