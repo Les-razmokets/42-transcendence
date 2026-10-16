@@ -1,0 +1,28 @@
+.onglet {
+    display: inline-flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--espace-8);
+    padding: var(--espace-8);
+    border: none;
+    background: none;
+    color: var(--texte-secondaire);
+    cursor: pointer;
+}
+
+.onglet::after {
+    content: '';
+    align-self: stretch;
+    height: 4px;
+    border-radius: var(--rayon-pastille);
+    background: transparent;
+    transition: background-color var(--duree-survol) var(--courbe-sortie);
+}
+
+.onglet[aria-selected='true'] {
+    color: var(--texte-principal);
+}
+
+.onglet[aria-selected='true']::after {
+    background: var(--accent-defaut);
+}
