@@ -124,4 +124,33 @@ describe('TablesService (intégration)', () => {
       expect.objectContaining({ name: `${prefix}-deleted` }),
     );
   });
+
+  it('deleteTable fait un soft delete : la ligne reste en base avec un deletedAt', async () => {
+    const created = await service.create(makeDto('soft'));
+
+    await service.deleteTable(created.id);
+
+    await expect(service.findById(created.id)).rejects.toBeInstanceOf(
+      NotFoundException,
+    );
+    const row = await prisma.pokerTable.findUnique({
+      where: { id: created.id },
+    });
+    expect(row?.deletedAt).toBeInstanceOf(Date);
+  });
+
+  it('deleteTable lève NotFoundException pour une table déjà supprimée', async () => {
+    const created = await service.create(makeDto('twice'));
+    await service.deleteTable(created.id);
+
+    await expect(service.deleteTable(created.id)).rejects.toBeInstanceOf(
+      NotFoundException,
+    );
+  });
+
+  it('deleteTable lève NotFoundException pour un id inconnu', async () => {
+    await expect(
+      service.deleteTable('00000000-0000-4000-8000-000000000000'),
+    ).rejects.toBeInstanceOf(NotFoundException);
+  });
 });

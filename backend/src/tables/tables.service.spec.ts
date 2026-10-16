@@ -14,6 +14,7 @@ describe('TablesService', () => {
       create: jest.fn(),
       findUnique: jest.fn(),
       findMany: jest.fn(),
+      updateMany: jest.fn(),
     },
   };
 
@@ -155,6 +156,26 @@ describe('TablesService', () => {
           where: { deletedAt: null },
           orderBy: { name: 'asc' },
         }),
+      );
+    });
+  });
+
+  describe('deleteTable', () => {
+    it('marque la table comme supprimée si elle ne l’est pas déjà', async () => {
+      prismaMock.pokerTable.updateMany.mockResolvedValue({ count: 1 });
+
+      await expect(service.deleteTable('table-1')).resolves.toBeUndefined();
+      expect(prismaMock.pokerTable.updateMany).toHaveBeenCalledWith({
+        where: { id: 'table-1', deletedAt: null },
+        data: { deletedAt: expect.any(Date) },
+      });
+    });
+
+    it('lève NotFoundException si aucune table n’a été modifiée', async () => {
+      prismaMock.pokerTable.updateMany.mockResolvedValue({ count: 0 });
+
+      await expect(service.deleteTable('inconnue')).rejects.toBeInstanceOf(
+        NotFoundException,
       );
     });
   });
