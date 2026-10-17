@@ -4,9 +4,10 @@ import {
   Injectable,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import { CreateTableDto } from './dto/create-table.dto';
-import { PokerVariant } from '../generated/prisma/enums';
 import { Prisma } from '../generated/prisma/client';
+import { CreateTableDto } from './dto/create-table.dto';
+import { UpdateTableDto } from './dto/update-table.dto';
+import { PokerVariant } from '../generated/prisma/enums';
 
 const tableWithSeats = {
   seats: { where: { deletedAt: null }, orderBy: { seatNumber: 'asc' } },
@@ -62,6 +63,24 @@ export class TablesService {
       include: tableWithSeats,
     });
     return tables;
+  }
+
+  async updateTable(id: string, dto: UpdateTableDto) {
+    const table = await this.findById(id);
+    const smallBlind = dto.smallBlind ?? table.smallBlind;
+    const bigBlind = dto.bigBlind ?? table.bigBlind;
+    const variant = dto.variant ?? table.variant;
+    this.assertValidBlinds(smallBlind, bigBlind);
+    this.assertValidSeats(variant, table.maxSeats);
+
+    return await this.prismaService.pokerTable.update({
+      where: { id },
+      data: {
+        ...dto,
+        ...(dto.moneyOnTable !== undefined && { moneyUpdatedAt: new Date() }),
+      },
+      include: tableWithSeats,
+    });
   }
 
   async deleteTable(id: string) {
