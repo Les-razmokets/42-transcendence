@@ -125,6 +125,38 @@ describe('TablesService (intégration)', () => {
     );
   });
 
+  it('updateTable ne modifie que les champs envoyés et renvoie les sièges', async () => {
+    const created = await service.create(makeDto('update', { maxSeats: 3 }));
+
+    const updated = await service.updateTable(created.id, { bigBlind: 4 });
+
+    expect(updated.bigBlind).toBe(4);
+    expect(updated.smallBlind).toBe(created.smallBlind);
+    expect(updated.variant).toBe(created.variant);
+    expect(updated.moneyUpdatedAt).toBeNull();
+    expect(updated.seats.map((seat) => seat.seatNumber)).toEqual([1, 2, 3]);
+  });
+
+  it('updateTable horodate moneyUpdatedAt quand moneyOnTable change', async () => {
+    const created = await service.create(makeDto('money'));
+
+    const updated = await service.updateTable(created.id, {
+      moneyOnTable: 500,
+    });
+
+    expect(updated.moneyOnTable).toBe(500);
+    expect(updated.moneyUpdatedAt).toBeInstanceOf(Date);
+  });
+
+  it('updateTable lève NotFoundException pour une table supprimée', async () => {
+    const created = await service.create(makeDto('update-deleted'));
+    await service.deleteTable(created.id);
+
+    await expect(
+      service.updateTable(created.id, { smallBlind: 1 }),
+    ).rejects.toBeInstanceOf(NotFoundException);
+  });
+
   it('deleteTable fait un soft delete : la ligne reste en base avec un deletedAt', async () => {
     const created = await service.create(makeDto('soft'));
 

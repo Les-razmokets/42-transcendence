@@ -14,6 +14,7 @@ describe('TablesService', () => {
       create: jest.fn(),
       findUnique: jest.fn(),
       findMany: jest.fn(),
+      update: jest.fn(),
       updateMany: jest.fn(),
     },
   };
@@ -155,6 +156,76 @@ describe('TablesService', () => {
         expect.objectContaining({
           where: { deletedAt: null },
           orderBy: { name: 'asc' },
+        }),
+      );
+    });
+  });
+
+  describe('updateTable', () => {
+    // Table telle que renvoyée par findById avant la mise à jour
+    const existingTable = {
+      id: 'table-1',
+      variant: PokerVariant.TEXAS_HOLDEM,
+      smallBlind: 5,
+      bigBlind: 10,
+      maxSeats: 6,
+    };
+
+    beforeEach(() => {
+      prismaMock.pokerTable.findUnique.mockResolvedValue(existingTable);
+    });
+
+    it('lève NotFoundException sans appeler update si la table n’existe pas', async () => {
+      prismaMock.pokerTable.findUnique.mockResolvedValue(null);
+
+      await expect(
+        service.updateTable('inconnue', { smallBlind: 1 }),
+      ).rejects.toBeInstanceOf(NotFoundException);
+      expect(prismaMock.pokerTable.update).not.toHaveBeenCalled();
+    });
+
+    it('rejette une bigBlind inférieure à la smallBlind déjà en base', async () => {
+      await expect(
+        service.updateTable('table-1', { bigBlind: 2 }),
+      ).rejects.toBeInstanceOf(BadRequestException);
+      expect(prismaMock.pokerTable.update).not.toHaveBeenCalled();
+    });
+
+    it('rejette le passage en OMAHA d’une table de plus de 8 sièges', async () => {
+      prismaMock.pokerTable.findUnique.mockResolvedValue({
+        ...existingTable,
+        maxSeats: 9,
+      });
+
+      await expect(
+        service.updateTable('table-1', { variant: PokerVariant.OMAHA }),
+      ).rejects.toBeInstanceOf(BadRequestException);
+      expect(prismaMock.pokerTable.update).not.toHaveBeenCalled();
+    });
+
+    it('renvoie la table mise à jour sans toucher moneyUpdatedAt si moneyOnTable est absent', async () => {
+      const updated = { id: 'table-1' };
+      prismaMock.pokerTable.update.mockResolvedValue(updated);
+
+      await expect(
+        service.updateTable('table-1', { smallBlind: 2, bigBlind: 4 }),
+      ).resolves.toBe(updated);
+      expect(prismaMock.pokerTable.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { id: 'table-1' },
+          data: { smallBlind: 2, bigBlind: 4 },
+        }),
+      );
+    });
+
+    it('met à jour moneyUpdatedAt quand moneyOnTable est fourni, même à 0', async () => {
+      prismaMock.pokerTable.update.mockResolvedValue({ id: 'table-1' });
+
+      await service.updateTable('table-1', { moneyOnTable: 0 });
+
+      expect(prismaMock.pokerTable.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: { moneyOnTable: 0, moneyUpdatedAt: expect.any(Date) },
         }),
       );
     });
