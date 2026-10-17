@@ -1,10 +1,15 @@
 import { z } from 'zod';
+import {
+  PokerVariant,
+  SeatStatus,
+  TableStatus,
+} from '../generated/prisma/enums';
 
 // response schema for a seat inside a table
 export const seatSchema = z.object({
   id: z.string(),
   seatNumber: z.number(),
-  status: z.enum(['FREE', 'OCCUPIED']),
+  status: z.enum(SeatStatus),
 });
 
 // response schema for a poker table
@@ -18,9 +23,9 @@ export const tableSchema = z.object({
   smallBlind: z.number(),
   bigBlind: z.number(),
   maxSeats: z.number(),
-  status: z.enum(['OPEN', 'PAUSED']),
+  status: z.enum(TableStatus),
   moneyOnTable: z.number(),
   seats: z.array(seatSchema),
-  variant: z.enum(['TEXAS_HOLDEM', 'OMAHA']),
+  variant: z.enum(PokerVariant),
 });
 export type Table = z.infer<typeof tableSchema>;
