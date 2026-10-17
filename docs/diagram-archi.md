@@ -8,13 +8,13 @@
 flowchart TB
     Client["Navigateur (hôte)"]
 
-    subgraph Compose["docker compose — réseau transcendence_default"]
+    subgraph Compose["docker compose — réseau par défaut du projet"]
         direction LR
-        Frontend["frontend\nVite dev server · :5173\nhealthcheck: wget /"]
-        Backend["backend\nNestJS · :3000/api\nhealthcheck: wget /api/health"]
-        DB["db\nPostgreSQL 18 · :5432\nhealthcheck: pg_isready"]
+        Frontend["frontend<br/>Vite dev server · :5173<br/>healthcheck: wget /"]
+        Backend["backend<br/>NestJS · :3000/api<br/>healthcheck: wget /api/health"]
+        DB["db<br/>PostgreSQL 18 · :5432<br/>healthcheck: pg_isready"]
 
-        Backend -- "DATABASE_URL\n(db:5432)" --> DB
+        Backend -- "DATABASE_URL<br/>(db:5432)" --> DB
     end
 
     Client -- "HTTP :5173" --> Frontend
@@ -29,36 +29,38 @@ flowchart TB
 
 ## Architecture cible
 
-Ce que le `docker-compose.yml` doit devenir d'après `docs/architecture.md`, une fois tous les modules du périmètre DevOps faits (pas encore implémenté — `nginx`, `vault`, `prometheus`, `grafana` n'existent pas encore dans le repo).
+Ce que le `docker-compose.yml` doit devenir une fois tous les modules du périmètre DevOps faits. Les services viennent de l'arborescence `infra/` de `docs/architecture.md` ; les flux entre eux sont déduits et restent à valider par l'équipe (pas encore implémenté — `nginx`, `vault`, `prometheus`, `grafana` n'existent pas encore dans le repo).
 
 ```mermaid
 flowchart TB
     Client["Navigateur"]
+    Stripe["Stripe<br/>(service externe)"]
 
     Client -- "HTTPS" --> Nginx
+    Stripe -- "webhooks HTTPS" --> Nginx
 
     subgraph Compose["docker compose"]
-        Nginx["nginx\nreverse proxy · HTTPS\nseul point d'entrée"]
-        Frontend["frontend\nReact (build statique)"]
-        Backend["backend\nNestJS\nREST + WebSocket"]
-        DB["db\nPostgreSQL"]
-        Vault["vault\nsecrets"]
-        Prometheus["prometheus\nmétriques"]
-        Grafana["grafana\ndashboards"]
+        Nginx["nginx<br/>reverse proxy · HTTPS<br/>seul point d'entrée<br/>sert le build du frontend"]
+        Backend["backend<br/>NestJS<br/>REST + WebSocket"]
+        DB["db<br/>PostgreSQL"]
+        Vault["vault<br/>secrets"]
+        Prometheus["prometheus<br/>métriques"]
+        Grafana["grafana<br/>dashboards"]
 
-        Nginx -- "statique" --> Frontend
         Nginx -- "/api" --> Backend
+        Nginx -- "WebSocket (Upgrade)" --> Backend
         Backend -- "Prisma" --> DB
         Vault -. "secrets" .-> Backend
-        Backend -. "/health" .-> Prometheus
-        Prometheus --> Grafana
+        Prometheus -. "scrape /metrics" .-> Backend
+        Grafana -- "requêtes" --> Prometheus
     end
 
-    Backend -- "paiement" --> Stripe["Stripe\n(service externe)"]
+    Backend -- "API paiement" --> Stripe
 ```
 
 Différences principales avec l'état actuel :
 - Un seul point d'entrée (`nginx`, HTTPS) au lieu de deux ports publiés directement.
-- Le frontend passe du serveur de dev Vite à un vrai build statique (`vite build`), servi par `nginx`.
-- Le backend gagne une passerelle WebSocket (temps réel) en plus du REST.
-- Trois nouveaux services : `vault` (secrets), `prometheus` + `grafana` (observabilité) — correspondent aux modules 5 et 6 du périmètre DevOps, pas encore commencés.
+- Le frontend passe du serveur de dev Vite à un vrai build statique (`vite build`). Choix à valider : `nginx` sert lui-même les fichiers du build (copiés dans son image), il n'y a donc plus de conteneur `frontend` en production.
+- Le backend gagne une passerelle WebSocket (temps réel) en plus du REST : `nginx` doit transmettre les en-têtes `Upgrade` / `Connection` sur cette route.
+- Stripe appelle aussi le backend (webhooks de paiement), en passant par `nginx` comme le navigateur.
+- Trois nouveaux services : `vault` (secrets), `prometheus` + `grafana` (observabilité) — correspondent aux modules 5 et 6 du périmètre DevOps, pas encore commencés. `prometheus` vient lire les métriques du backend (pull), et `grafana` interroge `prometheus`.
