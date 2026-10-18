@@ -5,7 +5,7 @@ import {
   StandardSchemaSerializerInterceptor,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { Schema } from './common/missing-response.schema'
+import { missingResponseSchema } from './common/missing-response.schema';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
@@ -24,8 +24,9 @@ async function bootstrap() {
     }),
   );
   app.useGlobalInterceptors(
-    new StandardSchemaSerializerInterceptor(app.get(Reflector), { // all roads needs to declare hos own schema, the default refuses by default alland dont give any info
-      schema: Schema,
+    new StandardSchemaSerializerInterceptor(app.get(Reflector), {
+      // Closed by default: every route returning an object must declare its own, response schema with @SerializeOptions, otherwise the request fails with 500
+      schema: missingResponseSchema,
     }),
   );
   await app.listen(parseInt(port, 10), '0.0.0.0');
