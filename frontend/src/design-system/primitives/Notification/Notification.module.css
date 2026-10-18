@@ -1,0 +1,14 @@
+.notification {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--espace-12);
+  padding: var(--espace-12) var(--espace-20);
+  border-radius: var(--rayon-pastille);
+  box-shadow: var(--ombre-carte);
+  max-width: min(560px, calc(100vw - 2 * var(--marge-page-mobile)));
+}
+
+.notification svg { flex-shrink: 0; }
+
+.succes { background: var(--fond-inverse);  color: var(--texte-inverse); }
+.erreur { background: var(--accent-defaut); color: var(--texte-principal); }
