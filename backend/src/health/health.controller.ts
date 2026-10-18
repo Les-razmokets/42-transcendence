@@ -1,10 +1,4 @@
-import {
-  Controller,
-  Get,
-  Post,
-  Body,
-  SerializeOptions,
-} from '@nestjs/common';
+import { Controller, Get, Post, Body, SerializeOptions } from '@nestjs/common';
 import { HealthService } from './health.service';
 import { HealthDto } from './dto/health.dto';
 import {
