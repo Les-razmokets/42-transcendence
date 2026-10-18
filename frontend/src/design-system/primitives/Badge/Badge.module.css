@@ -1,0 +1,11 @@
+.badge {
+    display: inline-flex;
+    align-items: center;
+    padding: var(--espace-4) var(--espace-12);
+    border-radius: var(--rayon-pastille);
+    white-space: nowrap;
+}
+
+.neutre { background: var(--fond-surface);     color: var(--texte-principal); }
+.info   { background: var(--action-principal); color: var(--texte-inverse); }
+.alerte { background: var(--accent-defaut);    color: var(--texte-principal); }
