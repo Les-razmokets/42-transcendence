@@ -2,6 +2,7 @@ import {
   Controller,
   Get,
   INestApplication,
+  Logger,
   SerializeOptions,
   StandardSchemaSerializerInterceptor,
 } from '@nestjs/common';
@@ -47,10 +48,19 @@ describe('missingResponseSchema (global default)', () => {
   afterAll(() => app.close());
 
   it('route sans @SerializeOptions → 500 sans fuite', async () => {
+    // Nest logs the exception before answering 500: capture it instead of printing it.
+    const logSpy = jest
+      .spyOn(Logger.prototype, 'error')
+      .mockImplementation(() => {});
+
     const res = await request(app.getHttpServer()).get('/no-schema');
 
     expect(res.status).toBe(500);
     expect(res.text).not.toContain('leak');
+    expect(String(logSpy.mock.calls[0][0])).toContain(
+      'Route without @SerializeOptions',
+    );
+    logSpy.mockRestore();
   });
 
   it('route avec @SerializeOptions → 200 filtrée', async () => {
