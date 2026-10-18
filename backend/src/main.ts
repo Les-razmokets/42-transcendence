@@ -25,7 +25,8 @@ async function bootstrap() {
   );
   app.useGlobalInterceptors(
     new StandardSchemaSerializerInterceptor(app.get(Reflector), {
-      // Closed by default: every route returning an object must declare its own, response schema with @SerializeOptions, otherwise the request fails with 500
+      // Closed by default: every route returning an object must declare its own
+      // response schema with @SerializeOptions, otherwise the request fails with 500.
       schema: missingResponseSchema,
     }),
   );
