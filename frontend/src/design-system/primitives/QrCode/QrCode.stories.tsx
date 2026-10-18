@@ -8,5 +8,5 @@ const meta: Meta<typeof QrCode> = {
 };
 export default meta;
 type Story = StoryObj<typeof QrCode>;
-export const Confirmation: Story = { args: { valeur: 'FLR-1610-0042' } };
-export const Miniature: Story = { args: { valeur: 'FLR-1610-0042', taille: 72 } };
+export const Confirmation: Story = { args: { valeur: 'FLR-1610-0042', libelle: "Réservation" } };
+export const Miniature: Story = { args: { valeur: 'FLR-1610-0042',libelle: "Qr code de réservation" ,taille: 72 } };
