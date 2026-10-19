@@ -16,7 +16,8 @@ type SliderProps = {
 export function Slider(props: SliderProps) {
     const {valeur, min, max, step, onChange, libelle, texteValeur, texteMin, texteMax} = props;
 
-    const p = ((valeur - min) / (max - min)) * 100;
+    const diff = max - min;
+    const p = diff === 0 ? 0 : Math.max(0, Math.min(100, ((valeur - min) / diff) * 100));
 
     return (
         <div className={styles.slider}>

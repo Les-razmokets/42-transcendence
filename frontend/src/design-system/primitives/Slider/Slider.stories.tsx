@@ -12,7 +12,7 @@ export default meta;
 type Story = StoryObj<typeof Slider>;
 
 function SliderDemo() {
-  const [valeur, setValeur] = useState(200);
+  const [valeur, setValeur] = useState(150);
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
       <span className="typo-affiche-titre">{valeur} CHF</span>
