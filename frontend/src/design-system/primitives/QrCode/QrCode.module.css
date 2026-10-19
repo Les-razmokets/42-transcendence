@@ -1,0 +1,7 @@
+.qrcode {
+  display: inline-flex;
+  padding: var(--espace-12);
+  border-radius: var(--rayon-m);
+  background: var(--fond-inverse);
+  color: var(--texte-inverse);
+}
