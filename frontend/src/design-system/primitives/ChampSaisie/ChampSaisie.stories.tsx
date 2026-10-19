@@ -49,6 +49,7 @@ function ChampAvecValidation() {
       type="email"
       placeholder="vous@exemple.ch"
       value={email}
+      aide="Veuillez mettre votre adresse mail"
       onChange={(e) => setEmail(e.target.value)}
       erreur={invalide ? 'Il manque le @' : undefined}
     />

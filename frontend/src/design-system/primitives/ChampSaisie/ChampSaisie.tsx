@@ -13,7 +13,7 @@ export function ChampSaisie (props: ChampSaisieProps) {
     const idAuto = useId();
     const idChamp = id ?? idAuto;
     const idMessage = `${idChamp}-message`;
-    const message = erreur ?? aide;
+    const message = erreur || aide;
 
     return (
         <div className={`${styles.champ} ${className ?? ''}`}>
