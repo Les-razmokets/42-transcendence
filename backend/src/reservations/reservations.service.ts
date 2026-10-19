@@ -26,16 +26,20 @@ export class ReservationsService {
         if (error.code === 'P2002') {
           const indexName = this.getConstraintIndex(error);
           if (indexName === 'Reservation_active_seat_key')
-            throw new ConflictException('This seat already has an active reservation');
+            throw new ConflictException(
+              'This seat already has an active reservation',
+            );
           if (indexName === 'Reservation_active_user_key')
-            throw new ConflictException('This user already has an active reservation');
+            throw new ConflictException(
+              'This user already has an active reservation',
+            );
           throw error;
         }
         if (error.code === 'P2003') {
           throw new BadRequestException('userId does not match any user');
         }
       }
-	  throw error;
+      throw error;
     }
   }
 
