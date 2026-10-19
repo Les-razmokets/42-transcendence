@@ -2,7 +2,7 @@ import { Type } from 'class-transformer';
 import { IsUUID, IsDate, MinDate } from 'class-validator';
 
 export class CreateReservationDto {
-  //TODO (auth): replace with the user id taken from the JWT once auth is merged
+  // TODO(auth): replace with the user id taken from the JWT once auth is merged
   @IsUUID()
   userId: string;
 
