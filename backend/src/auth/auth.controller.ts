@@ -4,7 +4,7 @@ import { myProfileUserSchema } from '../users/users-response.schemas';
 import { UsersCreationDto } from '../users/dto/users.dto';
 import { Public } from './public.decorator';
 
-@Controller()
+@Controller('auth')
 export class AuthController {
   constructor(private readonly auth: AuthService) {}
 
