@@ -11,6 +11,7 @@ import {
   IsNotEmpty,
   IsOptional,
   Matches,
+  IsISO8601,
 } from 'class-validator';
 
 const trim = ({ value }: { value: unknown }) =>
@@ -56,6 +57,7 @@ export class UsersCreationDto {
   password: string;
 
   @Type(() => Date)
+  @IsISO8601({ strict: true })
   @IsDate()
   @MaxDate(eighteenYearsAgo, {
     message: 'You must be eighteen to register.',
