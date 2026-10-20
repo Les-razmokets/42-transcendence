@@ -1,0 +1,19 @@
+.avatar {
+    display: inline-grid;
+    place-content: center;
+    flex-shrink: 0;
+    border-radius: var(--rayon-pastille);
+    background: var(--action-principal);
+    color: var(--texte-inverse);
+    user-select: none;
+}
+
+.m {
+    width: var(--hauteur-bouton-icone);
+    height: var(--hauteur-bouton-icone);
+}
+
+.l {
+    width: 64px;
+    height: 64px;
+}

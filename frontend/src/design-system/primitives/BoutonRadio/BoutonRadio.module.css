@@ -1,0 +1,26 @@
+.radio {
+  appearance: none;
+  display: inline-grid;
+  place-content: center;
+  width: 24px;
+  height: 24px;
+  margin: 0;
+  border: 2px solid var(--bordure-forte);
+  border-radius: var(--rayon-pastille);
+  background: var(--fond-page);
+  cursor: pointer;
+}
+
+.radio::before {
+  content: '';
+  width: 12px;
+  height: 12px;
+  border-radius: var(--rayon-pastille);
+  background: var(--action-principal);
+  transform: scale(0);
+  transition: transform var(--duree-survol) var(--courbe-sortie);
+}
+
+.radio:checked::before {
+  transform: scale(1);
+}

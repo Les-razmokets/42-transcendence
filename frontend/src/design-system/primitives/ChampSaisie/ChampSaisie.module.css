@@ -1,0 +1,42 @@
+.champ {
+  display: flex;
+  flex-direction: column;
+  gap: var(--espace-8);
+  color: var(--texte-principal);
+}
+
+.saisie {
+  box-sizing: border-box;
+  width: 100%;
+  height: var(--hauteur-champ);
+  padding: 0 var(--espace-16);
+  border: 1.5px solid var(--bordure-defaut);
+  border-radius: var(--rayon-m);
+  background: var(--fond-page);
+  color: var(--texte-principal);
+  transition: border-color var(--duree-survol) var(--courbe-sortie);
+}
+
+.saisie::placeholder {
+  color: var(--texte-secondaire);
+}
+
+.saisie:focus {
+  border-color: var(--bordure-forte);
+  outline: none;
+  box-shadow: var(--anneau-focus);
+}
+
+.saisie[aria-invalid='true'] {
+  border-color: var(--bordure-erreur);
+}
+
+.saisie:disabled {
+  border-color: var(--bordure-subtile);
+  background: var(--fond-profond);
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.aide   { margin: 0; color: var(--texte-secondaire); }
+.erreur { margin: 0; color: var(--texte-erreur); }
