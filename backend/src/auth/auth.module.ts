@@ -5,8 +5,8 @@ import { UsersModule } from '../users/users.module';
 import { Argon2Hasher } from './argon2-hasher.service';
 
 @Module({
-	imports: [UsersModule],
-	controllers: [AuthController],
-	providers: [AuthService,  Argon2Hasher],
+  imports: [UsersModule],
+  controllers: [AuthController],
+  providers: [AuthService, Argon2Hasher],
 })
 export class AuthModule {}
