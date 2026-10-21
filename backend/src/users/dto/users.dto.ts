@@ -1,4 +1,4 @@
-import { Transform, Type } from 'class-transformer';
+import { Transform } from 'class-transformer';
 import {
   IsString,
   IsEmail,
@@ -16,7 +16,7 @@ import {
 
 const trim = ({ value }: { value: unknown }) =>
   typeof value === 'string' ? value.trim() : value;
-const trimToLower = ({ value }: { value: unknown }) =>
+export const trimToLower = ({ value }: { value: unknown }) =>
   typeof value === 'string' ? value.trim().toLowerCase() : value;
 const eighteenYearsAgo = () => {
   const date = new Date();
