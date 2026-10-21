@@ -1,7 +1,8 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { UsersService } from '../users/users.service';
 import { UsersCreationDto } from '../users/dto/users.dto';
 import { Argon2Hasher } from './argon2-hasher.service';
+import { LoginDto } from './dto/login.dto';
 
 @Injectable()
 export class AuthService {
@@ -21,5 +22,12 @@ export class AuthService {
 			phone: dto.phone,
 			passwordHash,
 		});
+	}
+
+	async login(dto: LoginDto) {
+		const user = await this.users.findByEmail(dto.email);
+		const ok = await this.hasher.verify(dto.password, user?.passwordHash);
+		if (!user || !user.passwordHash || user.deletedAt || !ok)
+			throw new UnauthorizedException('Invalid credentials');
 	}
 }
