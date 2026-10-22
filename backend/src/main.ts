@@ -1,11 +1,6 @@
 import { NestFactory, Reflector } from '@nestjs/core';
 import { AppModule } from './app.module';
-import {
-  ValidationPipe,
-  StandardSchemaSerializerInterceptor,
-} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { missingResponseSchema } from './common/missing-response.schema';
 import { configureApp } from './app.config';
 
 async function bootstrap() {
