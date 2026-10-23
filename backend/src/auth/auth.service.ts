@@ -3,12 +3,15 @@ import { UsersService } from '../users/users.service';
 import { UsersCreationDto } from '../users/dto/users.dto';
 import { Argon2Hasher } from './argon2-hasher.service';
 import { LoginDto } from './dto/login.dto';
+import { JwtService } from '@nestjs/jwt';
+import { JwtPayload } from './utils/jwt.payload';
 
 @Injectable()
 export class AuthService {
   constructor(
     private readonly users: UsersService,
     private readonly hasher: Argon2Hasher,
+    private readonly jwt: JwtService,
   ) {}
 
   async register(dto: UsersCreationDto) {
@@ -34,5 +37,9 @@ export class AuthService {
       await this.users.updatePasswordHash(user.id, newHash);
     }
     return user;
+  }
+
+  async issueToken(payload: JwtPayload): Promise<string> {
+    return this.jwt.signAsync({ sub:payload.sub, role: payload.role});
   }
 }

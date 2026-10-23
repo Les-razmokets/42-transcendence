@@ -1,6 +1,5 @@
 import {
   Controller,
-  Get,
   Post,
   Body,
   SerializeOptions,
@@ -10,8 +9,10 @@ import {
 import { AuthService } from './auth.service';
 import { myProfileUserSchema } from '../users/users-response.schemas';
 import { UsersCreationDto } from '../users/dto/users.dto';
-import { Public } from './public.decorator';
+import { Public } from './utils/public.decorator';
 import { LoginDto } from './dto/login.dto';
+import { Res } from '@nestjs/common';
+import type { Response } from 'express';
 
 @Controller('auth')
 export class AuthController {
@@ -28,7 +29,9 @@ export class AuthController {
   @SerializeOptions({ schema: myProfileUserSchema })
   @HttpCode(HttpStatus.OK)
   @Post('login')
-  login(@Body() dto: LoginDto) {
-    return this.auth.login(dto);
+  async login(@Body() dto: LoginDto, @Res({ passthrough: true }) res: Response) {
+    const user = await this.auth.login(dto);
+    const token = await this.auth.issueToken({ sub: user.id, role: user.role });
+    return user;
   }
 }

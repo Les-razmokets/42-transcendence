@@ -1,6 +1,7 @@
 import { INestApplication, ValidationPipe, StandardSchemaSerializerInterceptor } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { missingResponseSchema } from './common/missing-response.schema';
+import cookieParser from 'cookie-parser';
 
 export function configureApp(app: INestApplication) {
   app.setGlobalPrefix('api');
@@ -18,4 +19,5 @@ export function configureApp(app: INestApplication) {
       schema: missingResponseSchema,
     }),
   );
+  app.use(cookieParser());
 }
