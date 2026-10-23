@@ -1,0 +1,39 @@
+.interrupteur {
+  appearance: none;
+  position: relative;
+  flex-shrink: 0;
+  width: 48px;
+  height: var(--hauteur-interrupteur);
+  margin: 0;
+  border-radius: var(--rayon-pastille);
+  background: var(--controle-piste);
+  cursor: pointer;
+  transition: background-color var(--duree-survol) var(--courbe-sortie);
+}
+
+.interrupteur::before {
+  content: '';
+  position: absolute;
+  top: 4px;
+  left: 4px;
+  width: 20px;
+  height: 20px;
+  border-radius: var(--rayon-pastille);
+  background: var(--texte-principal);
+  transition:
+    transform var(--duree-survol) var(--courbe-sortie),
+    background-color var(--duree-survol) var(--courbe-sortie);
+}
+
+.interrupteur:checked {
+  background: var(--action-principal);
+}
+.interrupteur:checked::before {
+  transform: translateX(20px);
+  background: var(--fond-page);
+}
+
+.interrupteur:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}

@@ -1,0 +1,37 @@
+.ligne {
+    display: flex;
+    align-items: center;
+    gap: var(--espace-12);
+    width: 100%;
+    padding: var(--espace-16);
+    border: none;
+    border-radius: var(--rayon-m);
+    background: transparent;
+    color: var(--texte-principal);
+    text-align: left;
+    text-decoration: none;
+    cursor: pointer;
+    transition: background-color var(--duree-survol) var(--courbe-sortie);
+}
+
+.ligne:hover {
+    background-color: var(--fond-surface);
+}
+
+.actif {
+  background-color: var(--fond-surface);
+  box-shadow: inset 4px 0 0 var(--accent-defaut);
+}
+
+.danger {
+    color: var(--texte-erreur);
+}
+
+.libelle {
+    flex: 1;
+}
+
+.chevron {
+  display: inline-flex;
+  color: var(--texte-secondaire);
+}
