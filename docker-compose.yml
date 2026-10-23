@@ -43,5 +43,11 @@ services:
     ports:
       - 127.0.0.1:5173:5173
     restart: unless-stopped
+  genere-certif:
+    image: alpine:3.24
+    command:
+      ["sh", "-c", "apk add --no-cache openssl && openssl req -x509 -newkey rsa:2048 -keyout  /infra/nginx/certs/rsa.key -out /infra/nginx/certs/certifssl.crt -days 365 -nodes -subj '/CN=localhost'"]
+    volumes:
+      - ./infra/nginx/certs:/infra/nginx/certs
 volumes:
   db_data:
