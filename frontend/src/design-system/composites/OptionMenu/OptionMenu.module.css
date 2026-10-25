@@ -1,0 +1,22 @@
+.option {
+    display: flex;
+    align-items: center;
+    gap: var(--espace-12);
+    width: 100%;
+    padding: var(--espace-12);
+    border: none;
+    border-radius: var(--rayon-m);
+    background: transparent;
+    color: var(--texte-principal);
+    text-align: left;
+    cursor: pointer;
+    transition: background-color var(--duree-survol) var(--courbe-sortie);
+}
+
+.option:hover {
+    background-color: var(--fond-page);
+}
+
+.libelle {
+    flex: 1;
+}
