@@ -55,7 +55,7 @@ services:
       frontend:
           condition: service_healthy
     healthcheck:
-      test: ["CMD-SHELL", "wget --no-check-certificate --spider -q https://127.0.0.1:443/"]
+      test: ["CMD-SHELL", "wget --no-check-certificate --spider -q https://127.0.0.1:443/ && wget --no-check-certificate --spider -q https://127.0.0.1:443/api/health"]
       interval: 5s
       timeout: 3s
       retries: 10
