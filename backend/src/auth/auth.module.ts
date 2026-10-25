@@ -13,7 +13,7 @@ import { Argon2Hasher } from './argon2-hasher.service';
     JwtModule.registerAsync({
       inject: [ConfigService],
       useFactory: (config: ConfigService) => {
-          const expiresIn = Number(config.getOrThrow<string>('JWT_EXPIRES_IN'));
+          const expiresIn = Number(config.getOrThrow<string>('JWT_EXPIRES_IN_SECONDS'));
           if (!Number.isInteger(expiresIn) || expiresIn <= 0)
             throw new Error('JWT_EXPIRES_IN_SECONDS must be a positive integer');
           return {
