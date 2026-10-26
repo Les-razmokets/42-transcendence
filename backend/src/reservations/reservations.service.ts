@@ -7,7 +7,11 @@ import {
 import { CreateReservationDto } from './dto/create-reservation.dto';
 import { PrismaService } from '../prisma/prisma.service';
 import { Prisma } from '../generated/prisma/client';
-import { ReservationStatus } from '../generated/prisma/enums';
+import {
+  ReservationStatus,
+  TableStatus,
+  SeatStatus,
+} from '../generated/prisma/enums';
 
 @Injectable()
 export class ReservationsService {
@@ -45,11 +49,21 @@ export class ReservationsService {
 
   private async assertSeatAvailable(seatId: string) {
     const seat = await this.prismaService.seat.findFirst({
-      where: { id: seatId, deletedAt: null, table: { deletedAt: null }},
-      include: {table: true, include:{casino: true}},
+      where: {
+        id: seatId,
+        deletedAt: null,
+        table: { deletedAt: null, casino: { deletedAt: null } },
+      },
+      include: { table: true },
     });
     if (!seat) {
       throw new NotFoundException(`Seat with ID ${seatId} not found`);
+    }
+    if (seat.table.status !== TableStatus.OPEN) {
+      throw new ConflictException('This table is not open');
+    }
+    if (seat.status !== SeatStatus.FREE) {
+      throw new ConflictException('This seat is already occupied');
     }
   }
 
