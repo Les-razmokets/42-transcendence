@@ -17,6 +17,7 @@ import {
 export class ReservationsService {
   constructor(private readonly prismaService: PrismaService) {}
   async create(dto: CreateReservationDto) {
+    await this.assertUserActive(dto.userId);
     await this.assertSeatAvailable(dto.seatId);
     try {
       return await this.prismaService.reservation.create({
@@ -64,6 +65,16 @@ export class ReservationsService {
     }
     if (seat.status !== SeatStatus.FREE) {
       throw new ConflictException('This seat is already occupied');
+    }
+  }
+
+  private async assertUserActive(userId: string) {
+    const user = await this.prismaService.user.findFirst({
+	  where: {id: userId, deletedAt:null},
+      select: { id: true },
+    });
+    if (!user) {
+      throw new BadRequestException('userId does not match any user');
     }
   }
 
