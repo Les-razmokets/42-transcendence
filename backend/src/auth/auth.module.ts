@@ -13,16 +13,18 @@ import { Argon2Hasher } from './argon2-hasher.service';
     JwtModule.registerAsync({
       inject: [ConfigService],
       useFactory: (config: ConfigService) => {
-          const expiresIn = Number(config.getOrThrow<string>('JWT_EXPIRES_IN_SECONDS'));
-          if (!Number.isInteger(expiresIn) || expiresIn <= 0)
-            throw new Error('JWT_EXPIRES_IN_SECONDS must be a positive integer');
-          return {
-            secret: config.getOrThrow<string>('JWT_SECRET'),
-            signOptions: { algorithm: 'HS256', expiresIn },
-        }
-      }
+        const expiresIn = Number(
+          config.getOrThrow<string>('JWT_EXPIRES_IN_SECONDS'),
+        );
+        if (!Number.isInteger(expiresIn) || expiresIn <= 0)
+          throw new Error('JWT_EXPIRES_IN_SECONDS must be a positive integer');
+        return {
+          secret: config.getOrThrow<string>('JWT_SECRET'),
+          signOptions: { algorithm: 'HS256', expiresIn },
+        };
+      },
     }),
-    PassportModule
+    PassportModule,
   ],
   controllers: [AuthController],
   providers: [AuthService, Argon2Hasher],

@@ -20,8 +20,8 @@ import { ConfigService } from '@nestjs/config';
 @Controller('auth')
 export class AuthController {
   constructor(
-	private readonly auth: AuthService,
-	private readonly config: ConfigService,
+    private readonly auth: AuthService,
+    private readonly config: ConfigService,
   ) {}
 
   private cookieOptions() {
@@ -42,7 +42,10 @@ export class AuthController {
   @SerializeOptions({ schema: myProfileUserSchema })
   @HttpCode(HttpStatus.OK)
   @Post('login')
-  async login(@Body() dto: LoginDto, @Res({ passthrough: true }) res: Response) {
+  async login(
+    @Body() dto: LoginDto,
+    @Res({ passthrough: true }) res: Response,
+  ) {
     const user = await this.auth.login(dto);
     const token = await this.auth.issueToken({ sub: user.id, role: user.role });
     res.cookie(COOKIE_NAME, token, this.cookieOptions());

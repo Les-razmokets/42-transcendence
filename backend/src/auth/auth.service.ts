@@ -40,6 +40,6 @@ export class AuthService {
   }
 
   async issueToken(payload: JwtPayload): Promise<string> {
-    return this.jwt.signAsync({ sub:payload.sub, role: payload.role});
+    return this.jwt.signAsync({ sub: payload.sub, role: payload.role });
   }
 }
