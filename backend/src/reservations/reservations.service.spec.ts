@@ -5,7 +5,11 @@ import {
 } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import { Prisma } from '../generated/prisma/client';
-import { ReservationStatus } from '../generated/prisma/enums';
+import {
+  ReservationStatus,
+  SeatStatus,
+  TableStatus,
+} from '../generated/prisma/enums';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateReservationDto } from './dto/create-reservation.dto';
 import { ReservationsService } from './reservations.service';
@@ -41,7 +45,12 @@ describe('ReservationsService', () => {
 
   beforeEach(async () => {
     jest.clearAllMocks();
-    prismaMock.seat.findFirst.mockResolvedValue({ id: 'seat-1' });
+    // Par défaut : place libre sur une table ouverte
+    prismaMock.seat.findFirst.mockResolvedValue({
+      id: 'seat-1',
+      status: SeatStatus.FREE,
+      table: { status: TableStatus.OPEN },
+    });
     const moduleRef = await Test.createTestingModule({
       providers: [
         ReservationsService,
@@ -68,14 +77,19 @@ describe('ReservationsService', () => {
       });
     });
 
-    it('cherche une place non supprimée sur une table non supprimée', async () => {
+    it('cherche une place non supprimée sur une table et un casino non supprimés', async () => {
       prismaMock.reservation.create.mockResolvedValue({ id: 'reservation-1' });
       const dto = makeDto();
 
       await service.create(dto);
 
       expect(prismaMock.seat.findFirst).toHaveBeenCalledWith({
-        where: { id: dto.seatId, deletedAt: null, table: { deletedAt: null } },
+        where: {
+          id: dto.seatId,
+          deletedAt: null,
+          table: { deletedAt: null, casino: { deletedAt: null } },
+        },
+        include: { table: true },
       });
     });
 
@@ -84,6 +98,32 @@ describe('ReservationsService', () => {
 
       await expect(service.create(makeDto())).rejects.toBeInstanceOf(
         NotFoundException,
+      );
+      expect(prismaMock.reservation.create).not.toHaveBeenCalled();
+    });
+
+    it('lève ConflictException sans créer de réservation si la table est en pause', async () => {
+      prismaMock.seat.findFirst.mockResolvedValue({
+        id: 'seat-1',
+        status: SeatStatus.FREE,
+        table: { status: TableStatus.PAUSED },
+      });
+
+      await expect(service.create(makeDto())).rejects.toBeInstanceOf(
+        ConflictException,
+      );
+      expect(prismaMock.reservation.create).not.toHaveBeenCalled();
+    });
+
+    it('lève ConflictException sans créer de réservation si la place est occupée', async () => {
+      prismaMock.seat.findFirst.mockResolvedValue({
+        id: 'seat-1',
+        status: SeatStatus.OCCUPIED,
+        table: { status: TableStatus.OPEN },
+      });
+
+      await expect(service.create(makeDto())).rejects.toBeInstanceOf(
+        ConflictException,
       );
       expect(prismaMock.reservation.create).not.toHaveBeenCalled();
     });
