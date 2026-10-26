@@ -45,7 +45,8 @@ export class ReservationsService {
 
   private async assertSeatAvailable(seatId: string) {
     const seat = await this.prismaService.seat.findFirst({
-      where: { id: seatId, deletedAt: null, table: { deletedAt: null } },
+      where: { id: seatId, deletedAt: null, table: { deletedAt: null }},
+      include: {table: true, include:{casino: true}},
     });
     if (!seat) {
       throw new NotFoundException(`Seat with ID ${seatId} not found`);
