@@ -17,7 +17,7 @@
     background-color: var(--fond-surface);
 }
 
-.filtre[aria-expended='true'] {
+.filtre[aria-expanded='true'] {
     transform: rotate(180);
 }
 
