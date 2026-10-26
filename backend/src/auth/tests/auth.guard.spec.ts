@@ -3,12 +3,12 @@ import { ExecutionContext, NotFoundException, UnauthorizedException } from '@nes
 import { Reflector } from '@nestjs/core';
 import { JwtModule, JwtService } from '@nestjs/jwt';
 import { Test } from '@nestjs/testing';
-import { AuthGuard } from './auth.guard'; // adjust paths / extensions to your project
-import { UsersService } from '../users/users.service';
-import { Public } from './utils/public.decorator';
-import { COOKIE_NAME } from './utils/cookie';
-import type { AuthenticatedRequest } from './utils/auth-request';
-import { Role } from '../generated/prisma/client'; // value import: we use Role.USER / Role.ADMIN
+import { AuthGuard } from '../auth.guard'; // adjust paths / extensions to your project
+import { UsersService } from '../../users/users.service';
+import { Public } from '../utils/public.decorator';
+import { COOKIE_NAME } from '../utils/cookie';
+import type { AuthenticatedRequest } from '../utils/auth-request';
+import { Role } from '../../generated/prisma/client'; // value import: we use Role.USER / Role.ADMIN
 
 /*
  * Real JwtService (fake secret), real Reflector, real @Public() decorator,

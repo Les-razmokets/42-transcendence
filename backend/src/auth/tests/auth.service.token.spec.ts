@@ -1,11 +1,11 @@
 import { describe, it, expect, beforeAll } from '@jest/globals';
 import { Test } from '@nestjs/testing';
 import { JwtModule, JwtService } from '@nestjs/jwt';
-import { AuthService } from './auth.service'; // adjust paths / extensions to your project
-import { Argon2Hasher } from './argon2-hasher.service';
-import { UsersService } from '../users/users.service';
-import { JwtPayload } from './utils/jwt.payload';
-import { Role } from '../generated/prisma/client'; // value import: we use Role.ADMIN below
+import { AuthService } from '../auth.service'; // adjust paths / extensions to your project
+import { Argon2Hasher } from '../argon2-hasher.service';
+import { UsersService } from '../../users/users.service';
+import { JwtPayload } from '../utils/jwt.payload';
+import { Role } from '../../generated/prisma/client'; // value import: we use Role.ADMIN below
 
 /*
  * Uses a REAL JwtModule (not a mocked JwtService), otherwise the test would only prove
