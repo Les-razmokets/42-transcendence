@@ -173,18 +173,22 @@ describe('ReservationsService', () => {
       );
     });
 
-    it('laisse passer un P2002 sur un autre index', async () => {
-      const error = makePrismaError('P2002', 'Reservation_other_key');
-      prismaMock.reservation.create.mockRejectedValue(error);
+    it('convertit un P2002 sur un autre index en ConflictException générique', async () => {
+      prismaMock.reservation.create.mockRejectedValue(
+        makePrismaError('P2002', 'Reservation_other_key'),
+      );
 
-      await expect(service.create(makeDto())).rejects.toBe(error);
+      await expect(service.create(makeDto())).rejects.toBeInstanceOf(
+        ConflictException,
+      );
     });
 
-    it('laisse passer un P2002 sans meta (forme inattendue)', async () => {
-      const error = makePrismaError('P2002');
-      prismaMock.reservation.create.mockRejectedValue(error);
+    it('convertit un P2002 sans meta (forme inattendue) en ConflictException générique', async () => {
+      prismaMock.reservation.create.mockRejectedValue(makePrismaError('P2002'));
 
-      await expect(service.create(makeDto())).rejects.toBe(error);
+      await expect(service.create(makeDto())).rejects.toBeInstanceOf(
+        ConflictException,
+      );
     });
 
     it('convertit P2003 (userId inconnu) en BadRequestException', async () => {

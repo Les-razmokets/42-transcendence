@@ -38,7 +38,7 @@ export class ReservationsService {
             throw new ConflictException(
               'This user already has an active reservation',
             );
-          throw error;
+          throw new ConflictException('This reservation conflicts with an existing one');
         }
         if (error.code === 'P2003') {
           throw new BadRequestException('userId does not match any user');
@@ -70,7 +70,7 @@ export class ReservationsService {
 
   private async assertUserActive(userId: string) {
     const user = await this.prismaService.user.findFirst({
-	  where: {id: userId, deletedAt:null},
+      where: { id: userId, deletedAt: null },
       select: { id: true },
     });
     if (!user) {
