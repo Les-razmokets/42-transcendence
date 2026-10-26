@@ -29,7 +29,10 @@ VALUES
   ('a0000000-0000-4000-8000-000000000005', 'c0000000-0000-4000-8000-000000000002', 'Table Vieux-Port', 'TEXAS_HOLDEM', 2, 2, 9, 'OPEN', 800,   now(), NULL),
   ('a0000000-0000-4000-8000-000000000006', 'c0000000-0000-4000-8000-000000000002', 'Omaha Pot-Limit',  'OMAHA',        10, 20, 6, 'OPEN', 9000, now(), NULL),
   -- table supprimée (soft delete) : GET /tables ne doit pas la renvoyer, GET /tables/:id → 404
-  ('a0000000-0000-4000-8000-000000000007', 'c0000000-0000-4000-8000-000000000001', 'Ancienne table', 'TEXAS_HOLDEM', 5, 10, 6, 'OPEN', 0, now(), now())
+  ('a0000000-0000-4000-8000-000000000007', 'c0000000-0000-4000-8000-000000000001', 'Ancienne table', 'TEXAS_HOLDEM', 5, 10, 6, 'OPEN', 0, now(), now()),
+  -- Paris (casino supprimé) : table et sièges non supprimés eux-mêmes,
+  -- POST /reservations sur un de ces sièges → 404 via le casino
+  ('a0000000-0000-4000-8000-000000000008', 'c0000000-0000-4000-8000-000000000003', 'Table Paris',    'TEXAS_HOLDEM', 1, 2, 6, 'OPEN', 0, now(), NULL)
 ON CONFLICT (id) DO NOTHING;
 
 -- ─── Sièges ─────────────────────────────────────────────────
