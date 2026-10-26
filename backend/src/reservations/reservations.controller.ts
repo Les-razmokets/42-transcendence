@@ -9,10 +9,10 @@ import {
 @SerializeOptions({ schema: reservationSchema })
 @Controller('reservations')
 export class ReservationsController {
-  constructor(private readonly ReservationsService: ReservationsService) {}
+  constructor(private readonly reservationsService: ReservationsService) {}
 
   @Post()
   createReservation(@Body() dto: CreateReservationDto): Promise<Reservation> {
-    return this.ReservationsService.create(dto);
+    return this.reservationsService.create(dto);
   }
 }

@@ -22,7 +22,9 @@ export class ReservationsService {
     try {
       return await this.prismaService.reservation.create({
         data: {
-          ...dto,
+          userId: dto.userId,
+          seatId: dto.seatId,
+          arrivalAt: dto.arrivalAt,
           status: ReservationStatus.PENDING_PAYMENT,
         },
       });
@@ -38,7 +40,9 @@ export class ReservationsService {
             throw new ConflictException(
               'This user already has an active reservation',
             );
-          throw new ConflictException('This reservation conflicts with an existing one');
+          throw new ConflictException(
+            'This reservation conflicts with an existing one',
+          );
         }
         if (error.code === 'P2003') {
           throw new ConflictException('userId or seatId no longer exists');
