@@ -40,16 +40,22 @@ Trouvé en testant réellement dans Safari (pas en théorie) : un certificat qui
 **`proxy_set_header Host localhost;` sur la route `/`**
 Trouvé en testant en live (`docker exec ... wget` directement vers `frontend:5173`, 403 avant même que `nginx` n'intervienne) : Vite 8 rejette les requêtes dont le header `Host` n'est pas dans sa liste de confiance (protection anti DNS-rebinding). Par défaut, `nginx` transmet `Host: frontend:5173` au service interne — pas dans la liste de Vite. Plutôt que de modifier le code du frontend (pas notre rôle), le correctif reste côté `nginx` : on force le `Host` envoyé à `localhost`, une valeur que Vite accepte nativement.
 
+**`proxy_http_version 1.1;` + `proxy_set_header Upgrade $http_upgrade;` + `proxy_set_header Connection "upgrade";` sur `/`**
+Trouvé en code review par Fred (PR TSK-40), puis vérifié en direct dans un vrai navigateur : le hot-reload de Vite (HMR) ouvre une connexion WebSocket vers la page qu'il a chargée. Sans ces 3 directives, nginx ne relaie pas la demande d'upgrade HTTP → WebSocket vers `frontend` (il parle HTTP/1.0 par défaut en interne, qui ne supporte pas ce mécanisme) : la connexion WebSocket du HMR échouait silencieusement, et le fallback direct vers `localhost:5173` échouait aussi puisque ce port n'est plus publié. Confirmé réparé en éditant un fichier dans `frontend/src` : la page se met à jour sans rechargement manuel.
+
 **`healthcheck` en HTTPS avec `--no-check-certificate`**
 Même raisonnement que pour `backend`/`frontend` (TSK-22) : sans `healthcheck:`, `--wait` croirait `nginx` prêt dès le démarrage du conteneur. Le flag `--no-check-certificate` est nécessaire parce que `wget`, comme un navigateur, refuserait sinon la connexion à cause du certificat auto-signé.
+
+**Second bloc `server { }` dédié pour la redirection HTTP → HTTPS**
+`default.conf` contient deux blocs `server { }` séparés : celui en `443`/`ssl` (le vrai trafic), et un second qui écoute sur le port `80` en clair, sans `location`, avec une seule ligne — `return 301 https://$host$request_uri;` — qui redirige tout vers la version HTTPS. Choix volontaire de ne rien mélanger dans le même bloc : ce second `server` n'a qu'un seul travail, rediriger, rien d'autre (pas de `proxy_pass`, pas de certificat). Port `80` publié en plus du `443` dans `docker-compose.yml`.
 
 **Plus aucun `ports:` sur `backend` et `frontend`**
 Ils communiquent avec `nginx` uniquement via le réseau interne de Compose (résolution par nom de service : `backend:3000`, `frontend:5173`) — plus besoin d'être joignables depuis l'hôte. `nginx` est le seul service qui publie un port (`127.0.0.1:443:443`), confirmant l'objectif du ticket : un seul point d'entrée.
 
 ## Limites connues / à faire plus tard
 
-- Seul le port `443` est publié : pas de `80` ni de redirection HTTP → HTTPS pour l'instant. Facile à ajouter plus tard (une ligne `ports:` + un petit `server` dédié dans la config).
+- ~~Seul le port `443` est publié~~ : fait, le port `80` est publié et redirige en `301` vers `https://$host$request_uri` (second bloc `server { }` dans `default.conf`, dédié, sans `location`).
 - Certificat auto-signé, donc avertissement navigateur systématique — acceptable sans nom de domaine public, à revoir si le projet en obtient un.
-- Pas de gestion des headers `Upgrade`/`Connection` pour le WebSocket (prévu dans `docs/diagram-archi.md` pour le temps réel des réservations) : à ajouter sur la route `/api` quand le backend aura sa passerelle WebSocket.
+- Les headers `Upgrade`/`Connection` sont gérés sur `/` (nécessaires au hot-reload Vite, trouvé via la review de Fred). Pas encore sur `/api` (prévu dans `docs/diagram-archi.md` pour le temps réel des réservations) : à ajouter quand le backend aura sa passerelle WebSocket.
 - Le frontend continue d'être servi par le serveur de dev Vite (pas un build de production) à travers `nginx` — limite déjà documentée dans `docs/frontend-docker.md`, toujours vraie.
 - Certificat valide 1 an, pas de renouvellement automatique — un `make re` complet le régénère de toute façon à chaque fois que le volume est recréé.
