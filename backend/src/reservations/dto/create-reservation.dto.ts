@@ -1,5 +1,7 @@
 import { Type } from 'class-transformer';
-import { IsUUID, IsDate, MinDate } from 'class-validator';
+import { IsUUID, IsDate, MinDate, MaxDate } from 'class-validator';
+
+const MAX_DAYS_AHEAD = 7;
 
 export class CreateReservationDto {
   // TODO(auth): replace with the user id taken from the JWT once auth is merged
@@ -11,6 +13,9 @@ export class CreateReservationDto {
 
   @IsDate()
   @MinDate(() => new Date(), { message: 'The date must be in the future.' })
+  @MaxDate(() => new Date(Date.now() + MAX_DAYS_AHEAD * 24 * 60 * 60 * 1000), {
+    message: `The date must be within ${MAX_DAYS_AHEAD} days.`,
+  })
   @Type(() => Date)
   arrivalAt: Date;
 }
