@@ -191,11 +191,11 @@ describe('ReservationsService', () => {
       );
     });
 
-    it('convertit P2003 (userId inconnu) en BadRequestException', async () => {
+    it('convertit P2003 (user ou place supprimé entre-temps) en ConflictException', async () => {
       prismaMock.reservation.create.mockRejectedValue(makePrismaError('P2003'));
 
       await expect(service.create(makeDto())).rejects.toThrow(
-        new BadRequestException('userId does not match any user'),
+        new ConflictException('userId or seatId no longer exists'),
       );
     });
 

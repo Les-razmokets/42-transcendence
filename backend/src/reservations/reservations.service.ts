@@ -41,7 +41,7 @@ export class ReservationsService {
           throw new ConflictException('This reservation conflicts with an existing one');
         }
         if (error.code === 'P2003') {
-          throw new BadRequestException('userId does not match any user');
+          throw new ConflictException('userId or seatId no longer exists');
         }
       }
       throw error;
