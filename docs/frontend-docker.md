@@ -10,7 +10,7 @@ Prérequis : Docker + Docker Compose. Pas besoin d'installer Node, nvm ou les d�
 make all
 ```
 
-Puis ouvrir `http://localhost:5173` dans le navigateur. Le serveur de dev Vite tourne avec le hot-reload : modifier un fichier dans `frontend/src` met à jour la page sans recharger.
+Puis ouvrir `https://localhost` dans le navigateur (plus `http://localhost:5173` directement : `nginx` est désormais l'unique point d'entrée, voir `docs/nginx.md`). Le serveur de dev Vite tourne avec le hot-reload : modifier un fichier dans `frontend/src` met à jour la page sans recharger.
 
 Commandes utiles : voir `docs/backend-docker.md` (`make down`, `make ps`, `make logs`, `docker compose logs frontend`, `make fclean`, `make re`).
 
@@ -49,6 +49,6 @@ Pas de variable `FRONTEND_PORT` : le port par défaut de Vite suffit pour l'inst
 ## Limites connues / à faire plus tard
 
 - Pas de mode production (`vite build` + serveur statique) : seul le mode dev (hot-reload) est conteneurisé pour l'instant. À revoir avec le ticket `nginx`.
-- Le port `5173` est publié directement sur `127.0.0.1`, comme le `3000` du backend. Une fois `nginx` en place comme unique point d'entrée, ce `ports:` pourra être retiré.
+- ~~Le port `5173` est publié directement sur `127.0.0.1`~~ : fait, `nginx` est désormais l'unique point d'entrée (voir `docs/nginx.md`), ce `ports:` a été retiré.
 - Pas encore de variable `VITE_*` pour donner au frontend l'URL de l'API backend : à ajouter quand le frontend appellera réellement le backend.
 - Pas de multi-stage build, pas d'utilisateur non-root dans le conteneur (mêmes limites que le backend, voir `docs/backend-docker.md`).
