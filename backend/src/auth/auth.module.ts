@@ -6,6 +6,8 @@ import { AuthService } from './auth.service';
 import { AuthController } from './auth.controller';
 import { UsersModule } from '../users/users.module';
 import { Argon2Hasher } from './argon2-hasher.service';
+import { APP_GUARD } from '@nestjs/core';
+import { AuthGuard } from './auth.guard';
 
 @Module({
   imports: [
@@ -27,6 +29,10 @@ import { Argon2Hasher } from './argon2-hasher.service';
     PassportModule,
   ],
   controllers: [AuthController],
-  providers: [AuthService, Argon2Hasher],
+  providers: [
+    AuthService,
+    Argon2Hasher,
+    { provide: APP_GUARD, useClass: AuthGuard },
+  ],
 })
 export class AuthModule {}
