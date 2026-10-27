@@ -7,7 +7,11 @@ import {
   SerializeOptions,
 } from '@nestjs/common';
 import { UsersService } from './users.service';
-import { publicUserSchema, PublicUser, myProfileUserSchema } from './users-response.schemas';
+import {
+  publicUserSchema,
+  PublicUser,
+  myProfileUserSchema,
+} from './users-response.schemas';
 import { Public } from '../auth/utils/public.decorator';
 import { CurrentUser } from '../auth/utils/current-user.decorator';
 import type { AuthenticatedUser } from '../auth/utils/auth-request';
@@ -22,7 +26,6 @@ export class UsersController {
     const currentUser = this.usersService.findById(user.id);
     return currentUser;
   }
-
 
   // basic response when we try GET /api/users/:id
   @SerializeOptions({ schema: publicUserSchema })

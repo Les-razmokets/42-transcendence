@@ -1,10 +1,16 @@
 import type { AuthenticatedUser, AuthenticatedRequest } from './auth-request';
-import { createParamDecorator, ExecutionContext, InternalServerErrorException } from '@nestjs/common';
+import {
+  createParamDecorator,
+  ExecutionContext,
+  InternalServerErrorException,
+} from '@nestjs/common';
 
-export const currentUserFactory = (_data:unknown, ctx: ExecutionContext): AuthenticatedUser => {
+export const currentUserFactory = (
+  _data: unknown,
+  ctx: ExecutionContext,
+): AuthenticatedUser => {
   const req = ctx.switchToHttp().getRequest<AuthenticatedRequest>();
-  if (!req.user)
-    throw new InternalServerErrorException();
+  if (!req.user) throw new InternalServerErrorException();
   return req.user;
 };
 
