@@ -1,0 +1,39 @@
+.option {
+    display: flex;
+    align-items: center;
+    gap: var(--espace-12);
+    padding: var(--espace-16);
+    border: 1.5px solid var(--bordure-defaut);
+    border-radius: var(--rayon-m);
+    color: var(--texte-principal);
+    cursor: pointer;
+    transition:
+        background-color var(--duree-survol) var(--courbe-sortie),
+        border-color var(--duree-survol) var(--courbe-sortie);
+}
+
+.option:hover {
+    background-color: var(--fond-surface);
+}
+
+.option:has(input:checked) {
+    border-color: var(--bordure-forte);
+}
+
+.option:has(input:focus-visible) {
+    box-shadow: var(--anneau-focus);
+}
+
+.option input:focus-visible {
+    box-shadow: none;
+}
+
+.texte {
+    display: flex;
+    flex-direction: column;
+    gap: var(--espace-4);
+}
+
+.description {
+    color: var(--texte-secondaire);
+}

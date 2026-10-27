@@ -1,0 +1,22 @@
+.ligne {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: var(--espace-16);
+    min-height: 48px;
+    padding: var(--espace-12) var(--espace-20);
+    border: 1.5px solid var(--bordure-defaut);
+    border-radius: var(--rayon-pastille);
+}
+
+.libelle {
+    margin: 0;
+    color: var(--texte-secondaire);
+    white-space: nowrap;
+}
+
+.valeur {
+    margin: 0;
+    color: var(--texte-principal);
+    text-align: right;
+}

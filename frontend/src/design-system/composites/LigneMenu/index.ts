@@ -1,0 +1,1 @@
+export { LigneMenu } from './LigneMenu';
