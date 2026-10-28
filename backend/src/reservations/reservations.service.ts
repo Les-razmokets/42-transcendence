@@ -12,7 +12,7 @@ import {
   TableStatus,
   SeatStatus,
 } from '../generated/prisma/enums';
-import { isCasinoClosed } from './casino-day';
+import { isCasinoClosed, casinoDay } from './casino-day';
 
 @Injectable()
 export class ReservationsService {
@@ -23,8 +23,9 @@ export class ReservationsService {
         'Casinos are closed between 5:00 and 8:00 (Paris time)',
       );
     }
+    const isToday = casinoDay(dto.arrivalAt) === casinoDay(new Date());
     const userActivePromise = this.assertUserActive(dto.userId);
-    const seatAvailablePromise = this.assertSeatAvailable(dto.seatId);
+    const seatAvailablePromise = this.assertSeatAvailable(dto.seatId, isToday);
     await Promise.all([userActivePromise, seatAvailablePromise]);
     try {
       return await this.prismaService.reservation.create({
@@ -59,7 +60,7 @@ export class ReservationsService {
     }
   }
 
-  private async assertSeatAvailable(seatId: string) {
+  private async assertSeatAvailable(seatId: string, isToday: boolean) {
     const seat = await this.prismaService.seat.findFirst({
       where: {
         id: seatId,
@@ -71,10 +72,10 @@ export class ReservationsService {
     if (!seat) {
       throw new NotFoundException(`Seat with ID ${seatId} not found`);
     }
-    if (seat.table.status !== TableStatus.OPEN) {
+    if (seat.table.status !== TableStatus.OPEN && isToday) {
       throw new ConflictException('This table is not open');
     }
-    if (seat.status !== SeatStatus.FREE) {
+    if (seat.status !== SeatStatus.FREE && isToday) {
       throw new ConflictException('This seat is already occupied');
     }
   }
