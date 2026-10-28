@@ -17,8 +17,9 @@ import {
 export class ReservationsService {
   constructor(private readonly prismaService: PrismaService) {}
   async create(dto: CreateReservationDto) {
-    await this.assertUserActive(dto.userId);
-    await this.assertSeatAvailable(dto.seatId);
+    const userActivePromise = this.assertUserActive(dto.userId);
+    const seatAvailablePromise = this.assertSeatAvailable(dto.seatId);
+    await Promise.all([userActivePromise, seatAvailablePromise]);
     try {
       return await this.prismaService.reservation.create({
         data: {
@@ -45,7 +46,7 @@ export class ReservationsService {
           );
         }
         if (error.code === 'P2003') {
-          throw new ConflictException('userId or seatId no longer exists');
+          throw new BadRequestException('userId or seatId no longer exists');
         }
       }
       throw error;
@@ -59,7 +60,7 @@ export class ReservationsService {
         deletedAt: null,
         table: { deletedAt: null, casino: { deletedAt: null } },
       },
-      include: { table: true },
+      select: { table: { select: { status: true } }, status: true },
     });
     if (!seat) {
       throw new NotFoundException(`Seat with ID ${seatId} not found`);
