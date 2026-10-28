@@ -217,6 +217,21 @@ describe('ReservationsService', () => {
       expect(prismaMock.reservation.create).not.toHaveBeenCalled();
     });
 
+    it('ignore les statuts restés de la nuit si la demande arrive pendant la fermeture', async () => {
+      // 05:30 UTC = 06:30 à Paris : casino fermé, journée casino du 1er déjà commencée
+      jest.setSystemTime(new Date('2030-01-01T05:30:00Z'));
+      prismaMock.seat.findFirst.mockResolvedValue({
+        id: 'seat-1',
+        status: SeatStatus.OCCUPIED,
+        table: { status: TableStatus.PAUSED },
+      });
+      prismaMock.reservation.create.mockResolvedValue({ id: 'reservation-1' });
+
+      await expect(service.create(makeDto())).resolves.toEqual({
+        id: 'reservation-1',
+      });
+    });
+
     it('convertit P2002 sur Reservation_active_seat_key en ConflictException « place »', async () => {
       prismaMock.reservation.create.mockRejectedValue(
         makePrismaError('P2002', 'Reservation_active_seat_key'),

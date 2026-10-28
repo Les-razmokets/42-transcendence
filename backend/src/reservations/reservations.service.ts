@@ -23,7 +23,11 @@ export class ReservationsService {
         'Casinos are closed between 5:00 and 8:00 (Paris time)',
       );
     }
-    const isToday = casinoDay(dto.arrivalAt) === casinoDay(new Date());
+    // Pendant la fermeture (5h-8h), les statuts table/place datent encore de la nuit :
+    // ils ne disent rien de la journée qui commence
+    const now = new Date();
+    const isToday =
+      !isCasinoClosed(now) && casinoDay(dto.arrivalAt) === casinoDay(now);
     const userActivePromise = this.assertUserActive(dto.userId);
     const seatAvailablePromise = this.assertSeatAvailable(dto.seatId, isToday);
     await Promise.all([userActivePromise, seatAvailablePromise]);
