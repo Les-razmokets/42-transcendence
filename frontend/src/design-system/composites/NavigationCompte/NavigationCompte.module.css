@@ -1,0 +1,45 @@
+.navigation {
+    display: flex;
+    flex-direction: column;
+    gap: var(--espace-16);
+    padding: var(--espace-24);
+    border-radius: var(--rayon-l);
+    background: var(--fond-surface);
+    color: var(--texte-principal);
+}
+
+.profil {
+    display: flex;
+    align-items: center;
+    gap: var(--espace-16);
+}
+
+.identite {
+    display: flex;
+    flex-direction: column;
+    gap: var(--espace-4);
+    min-width: 0;
+}
+
+.identite span {
+    overflow-wrap: anywhere;
+}
+
+.points {
+    display: flex;
+    flex-direction: column;
+    gap: var(--espace-4);
+    padding: var(--espace-16);
+    border-radius: var(--rayon-m);
+    background: var(--fond-page);
+}
+
+.menu {
+    display: flex;
+    flex-direction: column;
+    gap: var(--espace-4);
+}
+
+.secondaire {
+    color: var(--texte-secondaire);
+}

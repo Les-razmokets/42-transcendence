@@ -15,7 +15,6 @@ export function Filtre(props: FiltreProps) {
         <button
             {...reste}
             aria-pressed={chevron ? undefined : actif}
-            aria-haspopup={chevron ? 'menu' : undefined}
             aria-expanded={chevron ? ouvert : undefined}
             className={`${styles.filtre} ${actif ? styles.actif : ''} typo-libelle ${className ?? ''}`}
         >
