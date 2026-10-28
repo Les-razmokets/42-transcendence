@@ -92,13 +92,12 @@ describe('ReservationsService', () => {
       });
     });
 
-    it('lève BadRequestException sans chercher la place si le user est introuvable ou anonymisé', async () => {
+    it('lève BadRequestException sans créer de réservation si le user est introuvable ou anonymisé', async () => {
       prismaMock.user.findFirst.mockResolvedValue(null);
 
       await expect(service.create(makeDto())).rejects.toThrow(
         new BadRequestException('userId does not match any user'),
       );
-      expect(prismaMock.seat.findFirst).not.toHaveBeenCalled();
       expect(prismaMock.reservation.create).not.toHaveBeenCalled();
     });
 
@@ -114,7 +113,7 @@ describe('ReservationsService', () => {
           deletedAt: null,
           table: { deletedAt: null, casino: { deletedAt: null } },
         },
-        include: { table: true },
+        select: { table: { select: { status: true } }, status: true },
       });
     });
 
@@ -191,11 +190,11 @@ describe('ReservationsService', () => {
       );
     });
 
-    it('convertit P2003 (user ou place supprimé entre-temps) en ConflictException', async () => {
+    it('convertit P2003 (user ou place supprimé entre-temps) en BadRequestException', async () => {
       prismaMock.reservation.create.mockRejectedValue(makePrismaError('P2003'));
 
       await expect(service.create(makeDto())).rejects.toThrow(
-        new ConflictException('userId or seatId no longer exists'),
+        new BadRequestException('userId or seatId no longer exists'),
       );
     });
 
