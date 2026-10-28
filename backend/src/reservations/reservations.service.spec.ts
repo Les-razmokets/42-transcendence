@@ -61,6 +61,13 @@ describe('ReservationsService', () => {
       ],
     }).compile();
     service = moduleRef.get(ReservationsService);
+    // Horloge figée sur la journée casino du DTO par défaut (13h à Paris le 2030-01-01) :
+    // les contrôles table OPEN / place FREE ne s'appliquent qu'aux arrivées du jour
+    jest.useFakeTimers({ now: new Date('2030-01-01T12:00:00Z') });
+  });
+
+  afterEach(() => {
+    jest.useRealTimers();
   });
 
   describe('create', () => {
@@ -159,6 +166,52 @@ describe('ReservationsService', () => {
       });
 
       await expect(service.create(makeDto())).rejects.toBeInstanceOf(
+        ConflictException,
+      );
+      expect(prismaMock.reservation.create).not.toHaveBeenCalled();
+    });
+
+    it('crée la réservation pour un autre jour même si la place est occupée aujourd’hui', async () => {
+      prismaMock.seat.findFirst.mockResolvedValue({
+        id: 'seat-1',
+        status: SeatStatus.OCCUPIED,
+        table: { status: TableStatus.OPEN },
+      });
+      prismaMock.reservation.create.mockResolvedValue({ id: 'reservation-1' });
+      const dto = makeDto({ arrivalAt: new Date('2030-01-04T20:00:00Z') });
+
+      await expect(service.create(dto)).resolves.toEqual({
+        id: 'reservation-1',
+      });
+      expect(prismaMock.reservation.create).toHaveBeenCalled();
+    });
+
+    it('crée la réservation pour un autre jour même si la table est en pause aujourd’hui', async () => {
+      prismaMock.seat.findFirst.mockResolvedValue({
+        id: 'seat-1',
+        status: SeatStatus.FREE,
+        table: { status: TableStatus.PAUSED },
+      });
+      prismaMock.reservation.create.mockResolvedValue({ id: 'reservation-1' });
+      const dto = makeDto({ arrivalAt: new Date('2030-01-04T20:00:00Z') });
+
+      await expect(service.create(dto)).resolves.toEqual({
+        id: 'reservation-1',
+      });
+      expect(prismaMock.reservation.create).toHaveBeenCalled();
+    });
+
+    it('applique les contrôles du jour à une arrivée après minuit de la même journée casino', async () => {
+      // 23:30 UTC = 00:30 le 2 à Paris, 01:00 UTC = 02:00 le 2 : journée casino du 1er dans les deux cas
+      jest.setSystemTime(new Date('2030-01-01T23:30:00Z'));
+      prismaMock.seat.findFirst.mockResolvedValue({
+        id: 'seat-1',
+        status: SeatStatus.OCCUPIED,
+        table: { status: TableStatus.OPEN },
+      });
+      const dto = makeDto({ arrivalAt: new Date('2030-01-02T01:00:00Z') });
+
+      await expect(service.create(dto)).rejects.toBeInstanceOf(
         ConflictException,
       );
       expect(prismaMock.reservation.create).not.toHaveBeenCalled();
