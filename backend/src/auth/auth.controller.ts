@@ -16,6 +16,7 @@ import { getJwtLifetimeSeconds } from './utils/jwt.lifetime';
 import { Res } from '@nestjs/common';
 import type { Response } from 'express';
 import { ConfigService } from '@nestjs/config';
+import { Throttle } from '@nestjs/throttler';
 
 @Controller('auth')
 export class AuthController {
@@ -41,6 +42,7 @@ export class AuthController {
   @Public()
   @SerializeOptions({ schema: myProfileUserSchema })
   @HttpCode(HttpStatus.OK)
+  @Throttle({ default: { limit: 5, ttl: 60000 } })
   @Post('login')
   async login(
     @Body() dto: LoginDto,
