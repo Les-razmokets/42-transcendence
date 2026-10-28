@@ -91,16 +91,20 @@ ON CONFLICT (id) DO NOTHING;
 
 -- ─── Réservations ───────────────────────────────────────────
 -- Index partiels : une seule réservation active (PENDING_PAYMENT, CONFIRMED,
--- SEATED) par place ET par joueur.
+-- SEATED) par place ET par joueur, pour une même journée casino
+-- (8h → 5h le lendemain, heure de Paris ; une arrivée à 2h compte pour la veille).
 --
--- Actives (servent aux tests de conflit 409) :
---   Léo   CONFIRMED       Table 2 #5      → réserver Table 2 #5 = 409 « place prise »
---                                          → Léo réserve ailleurs = 409 « joueur déjà réservé »
+-- Actives (servent aux tests de conflit 409, avec une arrivée le même soir) :
+--   Léo   CONFIRMED       Table 2 #5      → réserver Table 2 #5 ce soir = 409 « place prise »
+--                                          → Léo réserve ailleurs ce soir = 409 « joueur déjà réservé »
+--                                          → les mêmes réservations un autre jour = 201
 --   Lylah PENDING_PAYMENT Omaha High #1
---   Lucas SEATED          Table 2 #4      (siège OCCUPIED)
+--   Lucas SEATED          Table 2 #4      (siège OCCUPIED : 409 ce soir, 201 un autre jour)
 -- Libres pour POST /reservations : Frédéric et Dusan (historique seulement).
 --
 -- Dates relatives à now() au premier import : `make re` pour les rafraîchir.
+-- Lancé entre 3h et 8h (Paris), les arrivées actives peuvent tomber pendant la
+-- fermeture ou sur la journée suivante : les 409 ci-dessus ne se reproduisent plus.
 INSERT INTO "Reservation"
   (id, "userId", "seatId", status, "arrivalAt", "seatedAt", "leftAt", "cancelledAt", "createdAt", "updatedAt")
 SELECT r.id, r.user_id, s.id, r.status::"ReservationStatus",
