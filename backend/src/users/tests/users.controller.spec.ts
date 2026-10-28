@@ -5,9 +5,9 @@ import { StandardSchemaSerializerInterceptor } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { Test } from '@nestjs/testing';
 import request from 'supertest';
-import { AppModule } from '../app.module';
-import { PrismaService } from '../prisma/prisma.service';
-import { UsersService } from './users.service';
+import { AppModule } from '../../app.module';
+import { PrismaService } from '../../prisma/prisma.service';
+import { UsersService } from '../users.service';
 
 // Test de bout en bout : vraie base de dev (DATABASE_URL), jamais la prod.
 describe('GET /api/users/:id', () => {

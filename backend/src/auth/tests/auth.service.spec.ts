@@ -1,9 +1,10 @@
 import { describe, it, expect, beforeEach, jest } from '@jest/globals';
 import { ConflictException } from '@nestjs/common';
-import { AuthService } from './auth.service'; // adjust paths / extensions to your project
-import { Argon2Hasher } from './argon2-hasher.service';
-import { UsersService } from '../users/users.service';
-import { UsersCreationDto } from '../users/dto/users.dto';
+import { AuthService } from '../auth.service'; // adjust paths / extensions to your project
+import { Argon2Hasher } from '../argon2-hasher.service';
+import { UsersService } from '../../users/users.service';
+import { UsersCreationDto } from '../../users/dto/users.dto';
+import { JwtService } from '@nestjs/jwt';
 
 // In ESM mode (--experimental-vm-modules) `jest` is not a global: it must be imported from @jest/globals.
 
@@ -23,11 +24,13 @@ describe('AuthService.register', () => {
 
   let users: { create: jest.Mock<UsersService['create']> };
   let hasher: { hash: jest.Mock<Argon2Hasher['hash']> };
+  let jwt: { sign: jest.Mock<JwtService['sign']> };
   let service: AuthService;
 
   beforeEach(() => {
     users = { create: jest.fn<UsersService['create']>() };
     hasher = { hash: jest.fn<Argon2Hasher['hash']>() };
+    jwt = { sign: jest.fn<JwtService['sign']>() };
 
     hasher.hash.mockResolvedValue(FAKE_HASH);
     users.create.mockResolvedValue(
@@ -37,6 +40,7 @@ describe('AuthService.register', () => {
     service = new AuthService(
       users as unknown as UsersService,
       hasher as unknown as Argon2Hasher,
+      jwt as unknown as JwtService,
     );
   });
 
