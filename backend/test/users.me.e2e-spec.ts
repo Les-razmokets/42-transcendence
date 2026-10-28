@@ -10,21 +10,11 @@ import { INestApplication } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { Test } from '@nestjs/testing';
 import request from 'supertest';
-import { AppModule } from '../src/app.module'; // adjust
-import { configureApp } from '../src/app.config'; // or inline the same setup as in your other e2e specs
-import { PrismaService } from '../src/prisma/prisma.service'; // adjust
-import { COOKIE_NAME } from '../src/auth/utils/cookie'; // adjust
+import { AppModule } from '../src/app.module';
+import { configureApp } from '../src/app.config';
+import { PrismaService } from '../src/prisma/prisma.service';
+import { COOKIE_NAME } from '../src/auth/utils/cookie';
 import { Role } from '../src/generated/prisma/client'; // value import: Role.USER / Role.ADMIN
-
-/*
- * ASSUMPTIONS TO CHECK:
- *  - GET /api/users/me exists, is NOT @Public(), is declared before /users/:id, and returns the
- *    "my profile" view.
- *  - Role.USER and Role.ADMIN exist in your Prisma enum.
- *  - JwtService can be retrieved with { strict: false } (provided by JwtModule inside AuthModule).
- *  - NODE_ENV is not "production" in tests (otherwise the cookie is Secure and the agent will not send it).
- *  - Run against a TEST database: beforeEach wipes the User table.
- */
 
 describe('GET /api/users/me (e2e): the whole auth chain', () => {
   let app: INestApplication;

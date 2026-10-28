@@ -14,7 +14,7 @@ import {
 import { Reflector } from '@nestjs/core';
 import { JwtModule, JwtService } from '@nestjs/jwt';
 import { Test } from '@nestjs/testing';
-import { AuthGuard } from '../auth.guard'; // adjust paths / extensions to your project
+import { AuthGuard } from '../auth.guard';
 import { UsersService } from '../../users/users.service';
 import { Public } from '../utils/public.decorator';
 import { COOKIE_NAME } from '../utils/cookie';
@@ -24,14 +24,6 @@ import { Role } from '../../generated/prisma/client'; // value import: we use Ro
 /*
  * Real JwtService (fake secret), real Reflector, real @Public() decorator,
  * stubbed UsersService. We build the guard by hand, we do not register it globally.
- *
- * ASSUMPTIONS TO CHECK:
- *  - Role.USER and Role.ADMIN exist in your Prisma enum.
- *  - The guard throws a bare UnauthorizedException for EVERY failure (same body).
- *    The "same body" test fails while one branch still has its own message.
- *  - The "token without sub" test only passes if you added the optional sub check.
- *    Delete that test if you decided not to.
- *  - experimentalDecorators is on (it is in a Nest project): the fake controllers below use @Public().
  */
 
 const SECRET = 'test-secret-only-for-unit-tests-0123456789abcdef';

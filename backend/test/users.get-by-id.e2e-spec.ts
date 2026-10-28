@@ -10,20 +10,9 @@ import { randomUUID } from 'node:crypto';
 import { INestApplication } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import request from 'supertest';
-import { AppModule } from '../src/app.module'; // adjust
-import { configureApp } from '../src/app.config'; // or inline the same setup as in your other e2e specs
-import { PrismaService } from '../src/prisma/prisma.service'; // adjust
-
-/*
- * ASSUMPTIONS TO CHECK:
- *  - USERS_ID_IS_PUBLIC: is GET /users/:id marked @Public()? Set it to match your decision.
- *    true  -> anonymous visitors get 200
- *    false -> anonymous visitors get 401 (logged-in users only)
- *  - ids are UUIDs (your JWT "sub" looked like one) and malformed ids are rejected with 400.
- *  - The public view contains only `pseudo`.
- *  - Requests below are sent by a logged-in user, so they work whether the route is public or not.
- *  - Run against a TEST database: beforeEach wipes the User table.
- */
+import { AppModule } from '../src/app.module';
+import { configureApp } from '../src/app.config';
+import { PrismaService } from '../src/prisma/prisma.service';
 
 const USERS_ID_IS_PUBLIC = true;
 

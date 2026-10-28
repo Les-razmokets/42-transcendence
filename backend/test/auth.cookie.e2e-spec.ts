@@ -11,10 +11,10 @@ import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import { Test } from '@nestjs/testing';
 import request from 'supertest';
-import { AppModule } from '../src/app.module'; // adjust
-import { configureApp } from '../src/app.config'; // or inline the same setup as in your other e2e specs
-import { PrismaService } from '../src/prisma/prisma.service'; // adjust
-import { COOKIE_NAME } from '../src/auth/utils/cookie'; // adjust
+import { AppModule } from '../src/app.module';
+import { configureApp } from '../src/app.config';
+import { PrismaService } from '../src/prisma/prisma.service';
+import { COOKIE_NAME } from '../src/auth/utils/cookie';
 
 /*
  * ASSUMPTIONS TO CHECK:

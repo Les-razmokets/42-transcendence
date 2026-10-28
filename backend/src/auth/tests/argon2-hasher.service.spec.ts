@@ -1,6 +1,6 @@
 import { Test } from '@nestjs/testing';
 import * as argon2 from 'argon2';
-import { Argon2Hasher } from '../argon2-hasher.service'; // adjust the path / extension to your project
+import { Argon2Hasher } from '../argon2-hasher.service';
 
 describe('Argon2Hasher', () => {
   let hasher: Argon2Hasher;

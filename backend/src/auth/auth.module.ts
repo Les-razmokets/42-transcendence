@@ -12,16 +12,21 @@ import { AuthGuard } from './auth.guard';
 @Module({
   imports: [
     UsersModule,
+    // Asynchronously configure the JwtModule using environment variables from ConfigService
     JwtModule.registerAsync({
       inject: [ConfigService],
       useFactory: (config: ConfigService) => {
+        // Retrieve and parse the token expiration time in seconds from environment variables
         const expiresIn = Number(
           config.getOrThrow<string>('JWT_EXPIRES_IN_SECONDS'),
         );
+        // Validate that the expiration is a valid positive integer
         if (!Number.isInteger(expiresIn) || expiresIn <= 0)
           throw new Error('JWT_EXPIRES_IN_SECONDS must be a positive integer');
         return {
+          // Load the secret key used to sign and verify JWTs securely
           secret: config.getOrThrow<string>('JWT_SECRET'),
+          // Enforce the HS256 algorithm and apply the validated expiration duration
           signOptions: { algorithm: 'HS256', expiresIn },
         };
       },

@@ -1,6 +1,5 @@
 import { randomUUID } from 'node:crypto';
 import { INestApplication, ValidationPipe } from '@nestjs/common';
-// Copie ici l'import de StandardSchemaSerializerInterceptor tel qu'il est dans main.ts
 import { StandardSchemaSerializerInterceptor } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { Test } from '@nestjs/testing';

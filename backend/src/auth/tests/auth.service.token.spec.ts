@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeAll } from '@jest/globals';
 import { Test } from '@nestjs/testing';
 import { JwtModule, JwtService } from '@nestjs/jwt';
-import { AuthService } from '../auth.service'; // adjust paths / extensions to your project
+import { AuthService } from '../auth.service';
 import { Argon2Hasher } from '../argon2-hasher.service';
 import { UsersService } from '../../users/users.service';
 import { JwtPayload } from '../utils/jwt.payload';
@@ -9,13 +9,8 @@ import { Role } from '../../generated/prisma/client'; // value import: we use Ro
 
 /*
  * Uses a REAL JwtModule (not a mocked JwtService), otherwise the test would only prove
- * that a mock was called. The options mirror your registerAsync factory; the real factory
+ * that a mock was called. The options mirror our registerAsync factory; the real factory
  * (ConfigService, getOrThrow) is covered by the e2e login test.
- *
- * ASSUMPTIONS TO CHECK:
- *  - AuthService only needs UsersService, Argon2Hasher and JwtService. If its constructor
- *    has more dependencies, add them as { provide: X, useValue: {} } below.
- *  - Role.ADMIN exists in your Prisma enum; use another value if not.
  */
 
 const SECRET = 'test-secret-only-for-unit-tests-0123456789abcdef';

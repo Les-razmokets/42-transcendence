@@ -9,19 +9,11 @@ import {
 import { INestApplication, ValidationPipe } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import request from 'supertest';
-import { AppModule } from '../src/app.module'; // adjust
-import { PrismaService } from '../src/prisma/prisma.service'; // adjust
+import { AppModule } from '../src/app.module';
+import { PrismaService } from '../src/prisma/prisma.service';
 import { StandardSchemaSerializerInterceptor } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { missingResponseSchema } from '../src/common/missing-response.schema';
-
-/*
- * ASSUMPTIONS TO CHECK (I can't see your main.ts / prisma setup):
- *  1. The app setup below must mirror main.ts. Best practice: extract it into one
- *     function (e.g. configureApp(app)) used by both main.ts and this test.
- *  2. PrismaService exposes `user` (the Prisma model delegate).
- *  3. Run against a TEST database: beforeEach wipes the User table.
- */
 
 describe('POST /api/auth/register (e2e)', () => {
   let app: INestApplication;

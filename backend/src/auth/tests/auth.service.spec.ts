@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, jest } from '@jest/globals';
 import { ConflictException } from '@nestjs/common';
-import { AuthService } from '../auth.service'; // adjust paths / extensions to your project
+import { AuthService } from '../auth.service';
 import { Argon2Hasher } from '../argon2-hasher.service';
 import { UsersService } from '../../users/users.service';
 import { UsersCreationDto } from '../../users/dto/users.dto';
