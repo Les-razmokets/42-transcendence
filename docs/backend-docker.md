@@ -12,11 +12,11 @@ Prérequis : Docker + Docker Compose. Rien d'autre à installer sur la machine (
    make all
    ```
    Équivalent direct : `docker compose up -d --build --wait`.
-3. Vérifier que le backend répond :
+3. Vérifier que le backend répond, via `nginx` (seul point d'entrée depuis le ticket `nginx`, voir `docs/nginx.md`) :
    ```bash
-   curl -i http://127.0.0.1:3000/api/health
+   curl -ik https://localhost/api/health
    ```
-   Réponse attendue : `200 OK` avec `{"status":"Database connection ok"}`. Un `503` veut dire que la base n'est pas joignable.
+   (`-k` ignore l'avertissement de certificat auto-signé.) Réponse attendue : `200 OK` avec `{"status":"Database connection ok"}`. Un `503` veut dire que la base n'est pas joignable.
 
 Autres commandes utiles :
 
@@ -71,7 +71,7 @@ Le `&&` garantit que le serveur ne démarre pas si la migration échoue. Un `ent
 - `healthcheck` : interroge `127.0.0.1:$PORT/api/health` avec `wget --spider` (déjà présent dans l'image, pas besoin d'installer `curl`). Sans ce `healthcheck`, Docker considère le service prêt dès que le conteneur démarre, pas quand les migrations et Nest ont vraiment fini — `--wait` dans `make up`/`make all` ne peut attendre que ce qu'il sait vérifier.
 - Piège rencontré en écrivant ce `healthcheck` : utiliser `localhost` au lieu de `127.0.0.1` échoue avec `Connection refused`. Dans le conteneur, `localhost` résout en `::1` (IPv6, voir `/etc/hosts`), mais le serveur n'écoute qu'en IPv4 (`app.listen(port, '0.0.0.0')`). Rien n'écoute sur `::1`, donc la connexion est refusée. D'où `127.0.0.1` explicitement dans le test.
 - `environment: DATABASE_URL=...@db:5432/...` : surcharge la valeur du `.env`. Le `.env` contient volontairement `127.0.0.1` pour pouvoir aussi lancer le backend hors Docker (`npm run start:dev`) ; dans le conteneur, l'hôte de la base doit être `db` (le nom du service), pas `127.0.0.1` (qui désignerait le conteneur backend lui-même).
-- `ports: 127.0.0.1:3000:3000` : le port n'est exposé que sur la machine locale, pas sur le réseau.
+- Plus de `ports:` sur ce service depuis le ticket `nginx` (voir `docs/nginx.md`) : le backend n'est plus joignable directement depuis l'hôte, seul `nginx` publie un port désormais.
 
 **Makefile : `all` ne dépend plus de l'hôte**
 ```
@@ -88,4 +88,4 @@ Avant, `all` installait les dépendances et générait le client Prisma sur la m
 - Le texte de `make help` pour `all` n'a pas encore été mis à jour (il décrit encore l'ancien comportement).
 - Pas de multi-stage build : l'image finale est plus grande que nécessaire.
 - Pas d'utilisateur non-root dans le conteneur.
-- Le port `3000` du backend est publié sur `127.0.0.1` pour pouvoir le tester directement. Une fois `nginx` en place comme unique point d'entrée (ticket à venir), ce `ports:` pourra être retiré : seul `nginx` aura besoin d'un port publié, et il parlera au backend via le réseau Docker interne.
+- ~~Le port `3000` du backend est publié sur `127.0.0.1`~~ : fait, `nginx` est désormais l'unique point d'entrée (voir `docs/nginx.md`), ce `ports:` a été retiré.

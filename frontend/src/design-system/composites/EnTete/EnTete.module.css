@@ -1,0 +1,45 @@
+.enTete {
+    display: flex;
+    flex-direction: column;
+    gap: var(--espace-12);
+    background: var(--fond-page);
+}
+
+.barre {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: var(--espace-24) var(--marge-page-desktop);
+}
+
+.linkAccount {
+    display: inline-flex;
+    border-radius: var(--rayon-pastille);
+}
+
+.mobile {
+    display: none;
+}
+
+.desktop {
+    display: inline-flex;
+}
+
+.infos {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--espace-4);
+    text-align: center;
+}
+
+.titre {
+    font-family: var(--police-interface);
+    font-weight: 700;
+    font-size: 1.125rem;
+    line-height: 1.5rem;
+}
+
+.details {
+    color: var(--texte-secondaire);
+}
