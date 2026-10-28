@@ -24,6 +24,7 @@ describe('ReservationsService (intégration)', () => {
   // Préfixe unique par exécution, pour ne nettoyer que nos propres données
   const prefix = `r-${Date.now().toString(36)}`;
   const arrivalAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
+  arrivalAt.setUTCHours(18, 0, 0, 0);
 
   // Un joueur par test : un joueur ne peut avoir qu'une réservation active
   const createUser = async (name: string) =>

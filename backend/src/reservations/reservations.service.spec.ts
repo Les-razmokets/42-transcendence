@@ -80,6 +80,18 @@ describe('ReservationsService', () => {
       });
     });
 
+    it('lève BadRequestException sans toucher à la base si l’arrivée tombe pendant la fermeture (5h-8h Paris)', async () => {
+      // 05:30 UTC = 06:30 à Paris en hiver
+      const dto = makeDto({ arrivalAt: new Date('2030-01-01T05:30:00Z') });
+
+      await expect(service.create(dto)).rejects.toBeInstanceOf(
+        BadRequestException,
+      );
+      expect(prismaMock.user.findFirst).not.toHaveBeenCalled();
+      expect(prismaMock.seat.findFirst).not.toHaveBeenCalled();
+      expect(prismaMock.reservation.create).not.toHaveBeenCalled();
+    });
+
     it('cherche un user non supprimé', async () => {
       prismaMock.reservation.create.mockResolvedValue({ id: 'reservation-1' });
       const dto = makeDto();
