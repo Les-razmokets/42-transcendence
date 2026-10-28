@@ -55,7 +55,7 @@ describe('POST /api/auth/login (e2e)', () => {
     });
  
     beforeEach(async () => {
-        await prisma.user.deleteMany();
+        await prisma.user.deleteMany({});
         await registerUser();
     });
  

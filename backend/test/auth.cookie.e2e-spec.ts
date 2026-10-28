@@ -64,7 +64,7 @@ describe('Auth cookie: register / login / logout (e2e)', () => {
     });
 
     beforeEach(async () => {
-        await prisma.user.deleteMany();
+        await prisma.user.deleteMany({});
         await register().expect(201);
     });
 

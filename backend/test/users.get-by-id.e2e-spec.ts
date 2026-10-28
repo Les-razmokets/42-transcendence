@@ -60,7 +60,7 @@ describe('GET /api/users/:id (e2e)', () => {
     });
 
     beforeEach(async () => {
-        await prisma.user.deleteMany();
+        await prisma.user.deleteMany({});
 
         await register(VIEWER);
         targetId = (await register(TARGET)).id;
