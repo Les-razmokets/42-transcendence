@@ -19,6 +19,7 @@ import { PaymentsModule } from './payments/payments.module';
 import { PrismaModule } from './prisma/prisma.module';
 import { APP_GUARD } from '@nestjs/core';
 import { AuthGuard } from './auth/auth.guard';
+import { ThrottlerModule } from '@nestjs/throttler';
 
 @Module({
   imports: [
@@ -26,6 +27,12 @@ import { AuthGuard } from './auth/auth.guard';
       envFilePath: '../.env', // TODO: A changer quand nos docker seront en place
       isGlobal: true,
     }),
+    ThrottlerModule.forRoot([
+     {
+      ttl: 600000,
+      limit: 5,
+     }
+    ]),
     HealthModule,
     AuthModule,
     UsersModule,

@@ -11,7 +11,7 @@ import {
   IsNotEmpty,
   IsOptional,
   Matches,
-  IsISO8601,
+  MinDate,
 } from 'class-validator';
 
 const trim = ({ value }: { value: unknown }) =>
@@ -67,6 +67,7 @@ export class UsersCreationDto {
   @MaxDate(eighteenYearsAgo, {
     message: 'You must be eighteen to register.',
   })
+  @MinDate(new Date('1900-01-01'), { message: 'birthDate is too far in the past' })
   birthDate: Date;
 
   @IsOptional()

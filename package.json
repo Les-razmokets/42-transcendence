@@ -1,7 +1,5 @@
 {
   "dependencies": {
-    "@nestjs/throttler": "^6.7.1",
-    "argon": "^2.0.21",
     "zod": "^4.6.7"
   }
 }
