@@ -1,0 +1,1 @@
+export { CarteTable } from './CarteTable';

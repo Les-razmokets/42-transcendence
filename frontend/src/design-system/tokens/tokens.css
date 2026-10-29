@@ -163,6 +163,8 @@
     --duree-zoom-table: 700ms;
     --courbe-sortie: cubic-bezier(0.22, 1, 0.36, 1);      /* ease-out */
     --courbe-entree-sortie: cubic-bezier(0.65, 0, 0.35, 1); /* ease-in-out */
+    --filtre-table-repos: drop-shadow(0 16px 30px var(--effet-ombre));
+    --filtre-table-survol: drop-shadow(0 22px 36px var(--effet-ombre-forte)) drop-shadow(0 0 90px var(--effet-halo-survol));
 }
 
 /* ==========================================================================

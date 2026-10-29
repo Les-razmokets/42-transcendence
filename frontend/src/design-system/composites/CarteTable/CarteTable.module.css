@@ -1,0 +1,59 @@
+.chaise {
+    display: block;
+    width: 100%;
+    height: auto;
+    user-select: none;
+}
+
+.vue {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 312 / 220;
+}
+
+.imageTable {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+}
+
+.place {
+    position: absolute;
+    width: 12.5%;
+}
+
+.carte {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--espace-12);
+    padding: var(--espace-16);
+    border-radius: var(--rayon-l);
+    color: var(--texte-principal);
+    text-align: center;
+    text-decoration: none;
+}
+
+.cadreTable {
+    width: 100%;
+    filter: var(--filtre-table-repos);
+    transition: 
+        filter var(--duree-table-survol) var(--courbe-sortie),
+        transform var(--duree-table-survol) var(--courbe-sortie);
+}
+
+.carte:hover .cadreTable {
+    filter: var(--filtre-table-survol);
+    transform: translateY(-4px);
+}
+
+.details {
+    color: var(--texte-secondaire);
+}
+
+.complete .cadreTable,
+.complete:hover .cadreTable {
+    filter: none;
+    transform: none;
+}
