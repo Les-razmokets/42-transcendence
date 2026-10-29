@@ -1,0 +1,54 @@
+.modale {
+    width: min(520px, calc(100vw - 2 * var(--marge-page-desktop)));
+    max-width: 100%;
+    max-height: calc(100dvh - 2 * var(--espace-40));
+    padding: 0;
+    border: 1px solid var(--bordure-subtile);
+    border-radius: var(--rayon-l);
+    background: var(--fond-page);
+    color: var(--texte-principal);
+    overflow: auto;
+}
+
+.modale::backdrop {
+    background: var(--fond-voile);
+}
+
+.contenu {
+    display: flex;
+    flex-direction: column;
+    gap: var(--espace-16);
+    padding: var(--espace-32);
+}
+
+.contenu h2 {
+    margin: 0;
+}
+
+.actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--espace-12);
+    margin-top: var(--espace-8);
+}
+
+.actions > * {
+    flex: 1 1 auto;
+}
+
+:global(body:has(dialog[open])) {
+    overflow: hidden;
+}
+
+@media (max-width: 767px) {
+    .modale {
+        width: 100%;
+        margin: auto 0 0;
+        border-bottom: none;
+        border-radius: var(--rayon-l) var(--rayon-l) 0 0;
+    }
+
+    .contenu {
+        padding: var(--espace-24);
+    }
+}
