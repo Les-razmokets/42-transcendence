@@ -1,8 +1,4 @@
-import {
-  BadRequestException,
-  ConflictException,
-  NotFoundException,
-} from '@nestjs/common';
+import { BadRequestException, ConflictException } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import { Prisma } from '../generated/prisma/client';
 import {
@@ -136,11 +132,11 @@ describe('ReservationsService', () => {
       });
     });
 
-    it('lève NotFoundException sans créer de réservation si la place est introuvable', async () => {
+    it('lève BadRequestException sans créer de réservation si la place est introuvable', async () => {
       prismaMock.seat.findFirst.mockResolvedValue(null);
 
       await expect(service.create(makeDto())).rejects.toBeInstanceOf(
-        NotFoundException,
+        BadRequestException,
       );
       expect(prismaMock.reservation.create).not.toHaveBeenCalled();
     });

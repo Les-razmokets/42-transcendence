@@ -1,8 +1,4 @@
-import {
-  BadRequestException,
-  ConflictException,
-  NotFoundException,
-} from '@nestjs/common';
+import { BadRequestException, ConflictException } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { AppModule } from '../app.module';
 import {
@@ -240,7 +236,7 @@ describe('ReservationsService (intégration)', () => {
     ).resolves.toBe(1);
   });
 
-  it('lève NotFoundException pour une place supprimée', async () => {
+  it('lève BadRequestException pour une place supprimée', async () => {
     const user = await createUser('seat-deleted');
     await prisma.seat.update({
       where: { id: seatIds[8] },
@@ -249,10 +245,10 @@ describe('ReservationsService (intégration)', () => {
 
     await expect(
       service.create({ userId: user.id, seatId: seatIds[8], arrivalAt }),
-    ).rejects.toBeInstanceOf(NotFoundException);
+    ).rejects.toBeInstanceOf(BadRequestException);
   });
 
-  it('lève NotFoundException pour une place dont la table est supprimée', async () => {
+  it('lève BadRequestException pour une place dont la table est supprimée', async () => {
     const user = await createUser('table-deleted');
 
     await expect(
@@ -261,10 +257,10 @@ describe('ReservationsService (intégration)', () => {
         seatId: seatOnDeletedTableId,
         arrivalAt,
       }),
-    ).rejects.toBeInstanceOf(NotFoundException);
+    ).rejects.toBeInstanceOf(BadRequestException);
   });
 
-  it('lève NotFoundException pour un seatId inconnu', async () => {
+  it('lève BadRequestException pour un seatId inconnu', async () => {
     const user = await createUser('seat-unknown');
 
     await expect(
@@ -273,7 +269,7 @@ describe('ReservationsService (intégration)', () => {
         seatId: '00000000-0000-4000-8000-000000000000',
         arrivalAt,
       }),
-    ).rejects.toBeInstanceOf(NotFoundException);
+    ).rejects.toBeInstanceOf(BadRequestException);
   });
 
   it('lève BadRequestException pour un userId inconnu sans rien écrire', async () => {
