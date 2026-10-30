@@ -17,7 +17,7 @@ import { isCasinoClosed, casinoDay } from './casino-day';
 @Injectable()
 export class ReservationsService {
   constructor(private readonly prismaService: PrismaService) {}
-  async create(userId: string,dto: CreateReservationDto) {
+  async create(userId: string, dto: CreateReservationDto) {
     if (isCasinoClosed(dto.arrivalAt)) {
       throw new BadRequestException(
         'Casinos are closed between 5:00 and 8:00 (Paris time)',
