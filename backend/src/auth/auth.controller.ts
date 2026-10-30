@@ -36,7 +36,7 @@ export class AuthController {
   // Register endpoint with custom response schema.
   @Public()
   @SerializeOptions({ schema: myProfileUserSchema })
-  @Throttle({ default: { limit: 5, ttl: 60000 } })
+  @Throttle({ default: { limit: 3, ttl: 60000 } })
   @Post('register')
   register(@Body() dto: UsersCreationDto) {
     return this.auth.register(dto);

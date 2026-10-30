@@ -27,8 +27,8 @@ import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
       isGlobal: true,
     }),
     ThrottlerModule.forRoot({
-      throttlers: [{ ttl: 600000, limit: 5 }],
-      skipIf: () => process.env.THROTTLER_DISABLED === 'true',
+      throttlers: [{ ttl: 600000, limit: 100 }],
+      skipIf: () => process.env.THROTTLE_DISABLED === 'true',
     }),
     HealthModule,
     AuthModule,

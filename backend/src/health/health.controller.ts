@@ -6,7 +6,9 @@ import {
   HealthResponse,
 } from './health-response.schemas';
 import { Public } from '../auth/utils/public.decorator';
+import { SkipThrottle } from '@nestjs/throttler';
 
+@SkipThrottle()
 @SerializeOptions({ schema: healthResponseSchema })
 @Controller('health')
 export class HealthController {
