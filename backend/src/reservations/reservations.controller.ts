@@ -14,7 +14,10 @@ export class ReservationsController {
   constructor(private readonly reservationsService: ReservationsService) {}
 
   @Post()
-  createReservation(@CurrentUser() user:AuthenticatedUser, @Body() dto: CreateReservationDto): Promise<Reservation> {
+  createReservation(
+    @CurrentUser() user: AuthenticatedUser,
+    @Body() dto: CreateReservationDto,
+  ): Promise<Reservation> {
     return this.reservationsService.create(user.id, dto);
   }
 }

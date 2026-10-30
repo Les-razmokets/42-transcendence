@@ -4,7 +4,6 @@ import { IsUUID, IsDate, MinDate, MaxDate } from 'class-validator';
 const MAX_DAYS_AHEAD = 7;
 
 export class CreateReservationDto {
-
   @IsUUID()
   seatId: string;
 
