@@ -21,10 +21,11 @@ describe('ReservationsService', () => {
     reservation: { create: jest.fn() },
   };
 
+  const USER_ID = 'b0000000-0000-4000-8000-000000000001';
+
   const makeDto = (
     overrides: Partial<CreateReservationDto> = {},
   ): CreateReservationDto => ({
-    userId: 'b0000000-0000-4000-8000-000000000001',
     seatId: 'd1288a92-100e-4abe-8271-f8c19abe4998',
     arrivalAt: new Date('2030-01-01T20:00:00Z'),
     ...overrides,
@@ -72,10 +73,10 @@ describe('ReservationsService', () => {
       prismaMock.reservation.create.mockResolvedValue(fakeReservation);
       const dto = makeDto();
 
-      await expect(service.create(dto)).resolves.toBe(fakeReservation);
+      await expect(service.create(USER_ID, dto)).resolves.toBe(fakeReservation);
       expect(prismaMock.reservation.create).toHaveBeenCalledWith({
         data: {
-          userId: dto.userId,
+          userId: USER_ID,
           seatId: dto.seatId,
           arrivalAt: dto.arrivalAt,
           status: ReservationStatus.PENDING_PAYMENT,
@@ -87,7 +88,7 @@ describe('ReservationsService', () => {
       // 05:30 UTC = 06:30 à Paris en hiver
       const dto = makeDto({ arrivalAt: new Date('2030-01-01T05:30:00Z') });
 
-      await expect(service.create(dto)).rejects.toBeInstanceOf(
+      await expect(service.create(USER_ID, dto)).rejects.toBeInstanceOf(
         BadRequestException,
       );
       expect(prismaMock.user.findFirst).not.toHaveBeenCalled();
@@ -99,10 +100,10 @@ describe('ReservationsService', () => {
       prismaMock.reservation.create.mockResolvedValue({ id: 'reservation-1' });
       const dto = makeDto();
 
-      await service.create(dto);
+      await service.create(USER_ID, dto);
 
       expect(prismaMock.user.findFirst).toHaveBeenCalledWith({
-        where: { id: dto.userId, deletedAt: null },
+        where: { id: USER_ID, deletedAt: null },
         select: { id: true },
       });
     });
@@ -110,7 +111,7 @@ describe('ReservationsService', () => {
     it('lève BadRequestException sans créer de réservation si le user est introuvable ou anonymisé', async () => {
       prismaMock.user.findFirst.mockResolvedValue(null);
 
-      await expect(service.create(makeDto())).rejects.toThrow(
+      await expect(service.create(USER_ID, makeDto())).rejects.toThrow(
         new BadRequestException('userId does not match any user'),
       );
       expect(prismaMock.reservation.create).not.toHaveBeenCalled();
@@ -120,7 +121,7 @@ describe('ReservationsService', () => {
       prismaMock.reservation.create.mockResolvedValue({ id: 'reservation-1' });
       const dto = makeDto();
 
-      await service.create(dto);
+      await service.create(USER_ID, dto);
 
       expect(prismaMock.seat.findFirst).toHaveBeenCalledWith({
         where: {
@@ -135,7 +136,7 @@ describe('ReservationsService', () => {
     it('lève BadRequestException sans créer de réservation si la place est introuvable', async () => {
       prismaMock.seat.findFirst.mockResolvedValue(null);
 
-      await expect(service.create(makeDto())).rejects.toBeInstanceOf(
+      await expect(service.create(USER_ID, makeDto())).rejects.toBeInstanceOf(
         BadRequestException,
       );
       expect(prismaMock.reservation.create).not.toHaveBeenCalled();
@@ -148,7 +149,7 @@ describe('ReservationsService', () => {
         table: { status: TableStatus.PAUSED },
       });
 
-      await expect(service.create(makeDto())).rejects.toBeInstanceOf(
+      await expect(service.create(USER_ID, makeDto())).rejects.toBeInstanceOf(
         ConflictException,
       );
       expect(prismaMock.reservation.create).not.toHaveBeenCalled();
@@ -161,7 +162,7 @@ describe('ReservationsService', () => {
         table: { status: TableStatus.OPEN },
       });
 
-      await expect(service.create(makeDto())).rejects.toBeInstanceOf(
+      await expect(service.create(USER_ID, makeDto())).rejects.toBeInstanceOf(
         ConflictException,
       );
       expect(prismaMock.reservation.create).not.toHaveBeenCalled();
@@ -176,7 +177,7 @@ describe('ReservationsService', () => {
       prismaMock.reservation.create.mockResolvedValue({ id: 'reservation-1' });
       const dto = makeDto({ arrivalAt: new Date('2030-01-04T20:00:00Z') });
 
-      await expect(service.create(dto)).resolves.toEqual({
+      await expect(service.create(USER_ID, dto)).resolves.toEqual({
         id: 'reservation-1',
       });
       expect(prismaMock.reservation.create).toHaveBeenCalled();
@@ -191,7 +192,7 @@ describe('ReservationsService', () => {
       prismaMock.reservation.create.mockResolvedValue({ id: 'reservation-1' });
       const dto = makeDto({ arrivalAt: new Date('2030-01-04T20:00:00Z') });
 
-      await expect(service.create(dto)).resolves.toEqual({
+      await expect(service.create(USER_ID, dto)).resolves.toEqual({
         id: 'reservation-1',
       });
       expect(prismaMock.reservation.create).toHaveBeenCalled();
@@ -207,7 +208,7 @@ describe('ReservationsService', () => {
       });
       const dto = makeDto({ arrivalAt: new Date('2030-01-02T01:00:00Z') });
 
-      await expect(service.create(dto)).rejects.toBeInstanceOf(
+      await expect(service.create(USER_ID, dto)).rejects.toBeInstanceOf(
         ConflictException,
       );
       expect(prismaMock.reservation.create).not.toHaveBeenCalled();
@@ -223,7 +224,7 @@ describe('ReservationsService', () => {
       });
       prismaMock.reservation.create.mockResolvedValue({ id: 'reservation-1' });
 
-      await expect(service.create(makeDto())).resolves.toEqual({
+      await expect(service.create(USER_ID, makeDto())).resolves.toEqual({
         id: 'reservation-1',
       });
     });
@@ -233,7 +234,7 @@ describe('ReservationsService', () => {
         makePrismaError('P2002', 'Reservation_active_seat_key'),
       );
 
-      await expect(service.create(makeDto())).rejects.toThrow(
+      await expect(service.create(USER_ID, makeDto())).rejects.toThrow(
         new ConflictException('This seat already has an active reservation'),
       );
     });
@@ -243,7 +244,7 @@ describe('ReservationsService', () => {
         makePrismaError('P2002', 'Reservation_active_user_key'),
       );
 
-      await expect(service.create(makeDto())).rejects.toThrow(
+      await expect(service.create(USER_ID, makeDto())).rejects.toThrow(
         new ConflictException('This user already has an active reservation'),
       );
     });
@@ -253,7 +254,7 @@ describe('ReservationsService', () => {
         makePrismaError('P2002', 'Reservation_other_key'),
       );
 
-      await expect(service.create(makeDto())).rejects.toBeInstanceOf(
+      await expect(service.create(USER_ID, makeDto())).rejects.toBeInstanceOf(
         ConflictException,
       );
     });
@@ -261,7 +262,7 @@ describe('ReservationsService', () => {
     it('convertit un P2002 sans meta (forme inattendue) en ConflictException générique', async () => {
       prismaMock.reservation.create.mockRejectedValue(makePrismaError('P2002'));
 
-      await expect(service.create(makeDto())).rejects.toBeInstanceOf(
+      await expect(service.create(USER_ID, makeDto())).rejects.toBeInstanceOf(
         ConflictException,
       );
     });
@@ -269,7 +270,7 @@ describe('ReservationsService', () => {
     it('convertit P2003 (user ou place supprimé entre-temps) en BadRequestException', async () => {
       prismaMock.reservation.create.mockRejectedValue(makePrismaError('P2003'));
 
-      await expect(service.create(makeDto())).rejects.toThrow(
+      await expect(service.create(USER_ID, makeDto())).rejects.toThrow(
         new BadRequestException('userId or seatId no longer exists'),
       );
     });
@@ -278,14 +279,14 @@ describe('ReservationsService', () => {
       const error = makePrismaError('P2025');
       prismaMock.reservation.create.mockRejectedValue(error);
 
-      await expect(service.create(makeDto())).rejects.toBe(error);
+      await expect(service.create(USER_ID, makeDto())).rejects.toBe(error);
     });
 
     it('laisse passer telles quelles les erreurs qui ne viennent pas de Prisma', async () => {
       const error = new Error('connexion perdue');
       prismaMock.reservation.create.mockRejectedValue(error);
 
-      await expect(service.create(makeDto())).rejects.toBe(error);
+      await expect(service.create(USER_ID, makeDto())).rejects.toBe(error);
     });
   });
 });

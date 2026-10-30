@@ -109,8 +109,7 @@ describe('ReservationsService (intégration)', () => {
   it('crée une réservation PENDING_PAYMENT sur une place libre', async () => {
     const user = await createUser('ok');
 
-    const created = await service.create({
-      userId: user.id,
+    const created = await service.create(user.id, {
       seatId: seatIds[1],
       arrivalAt,
     });
@@ -125,10 +124,10 @@ describe('ReservationsService (intégration)', () => {
   it('refuse une 2ᵉ réservation active sur la même place (409 place)', async () => {
     const first = await createUser('seat-a');
     const second = await createUser('seat-b');
-    await service.create({ userId: first.id, seatId: seatIds[2], arrivalAt });
+    await service.create(first.id, { seatId: seatIds[2], arrivalAt });
 
     await expect(
-      service.create({ userId: second.id, seatId: seatIds[2], arrivalAt }),
+      service.create(second.id, { seatId: seatIds[2], arrivalAt }),
     ).rejects.toThrow(
       new ConflictException('This seat already has an active reservation'),
     );
@@ -139,10 +138,10 @@ describe('ReservationsService (intégration)', () => {
 
   it('refuse une 2ᵉ réservation active pour le même joueur (409 joueur)', async () => {
     const user = await createUser('user');
-    await service.create({ userId: user.id, seatId: seatIds[3], arrivalAt });
+    await service.create(user.id, { seatId: seatIds[3], arrivalAt });
 
     await expect(
-      service.create({ userId: user.id, seatId: seatIds[4], arrivalAt }),
+      service.create(user.id, { seatId: seatIds[4], arrivalAt }),
     ).rejects.toThrow(
       new ConflictException('This user already has an active reservation'),
     );
@@ -157,11 +156,10 @@ describe('ReservationsService (intégration)', () => {
     });
 
     await expect(
-      service.create({ userId: user.id, seatId: seatIds[10], arrivalAt }),
+      service.create(user.id, { seatId: seatIds[10], arrivalAt }),
     ).resolves.toBeDefined();
     await expect(
-      service.create({
-        userId: user.id,
+      service.create(user.id, {
         seatId: seatIds[10],
         arrivalAt: addHours(arrivalAt, 24),
       }),
@@ -174,15 +172,10 @@ describe('ReservationsService (intégration)', () => {
     // J+3 18:00 UTC (soirée) et J+4 01:00 UTC (2h ou 3h à Paris) : même journée casino.
     // Jours distincts de ceux du test précédent, qui utilise la même place.
     const evening = addHours(arrivalAt, 48);
-    await service.create({
-      userId: first.id,
-      seatId: seatIds[10],
-      arrivalAt: evening,
-    });
+    await service.create(first.id, { seatId: seatIds[10], arrivalAt: evening });
 
     await expect(
-      service.create({
-        userId: second.id,
+      service.create(second.id, {
         seatId: seatIds[10],
         arrivalAt: addHours(evening, 7),
       }),
@@ -194,8 +187,7 @@ describe('ReservationsService (intégration)', () => {
   it('une réservation annulée ne bloque ni la place ni le joueur', async () => {
     const first = await createUser('cancel-a');
     const second = await createUser('cancel-b');
-    const cancelled = await service.create({
-      userId: first.id,
+    const cancelled = await service.create(first.id, {
       seatId: seatIds[5],
       arrivalAt,
     });
@@ -209,11 +201,11 @@ describe('ReservationsService (intégration)', () => {
 
     // la place est de nouveau réservable par un autre joueur
     await expect(
-      service.create({ userId: second.id, seatId: seatIds[5], arrivalAt }),
+      service.create(second.id, { seatId: seatIds[5], arrivalAt }),
     ).resolves.toBeDefined();
     // et le joueur peut réserver une autre place
     await expect(
-      service.create({ userId: first.id, seatId: seatIds[6], arrivalAt }),
+      service.create(first.id, { seatId: seatIds[6], arrivalAt }),
     ).resolves.toBeDefined();
   });
 
@@ -222,8 +214,8 @@ describe('ReservationsService (intégration)', () => {
     const second = await createUser('race-b');
 
     const results = await Promise.allSettled([
-      service.create({ userId: first.id, seatId: seatIds[7], arrivalAt }),
-      service.create({ userId: second.id, seatId: seatIds[7], arrivalAt }),
+      service.create(first.id, { seatId: seatIds[7], arrivalAt }),
+      service.create(second.id, { seatId: seatIds[7], arrivalAt }),
     ]);
 
     const fulfilled = results.filter((r) => r.status === 'fulfilled');
@@ -244,7 +236,7 @@ describe('ReservationsService (intégration)', () => {
     });
 
     await expect(
-      service.create({ userId: user.id, seatId: seatIds[8], arrivalAt }),
+      service.create(user.id, { seatId: seatIds[8], arrivalAt }),
     ).rejects.toBeInstanceOf(BadRequestException);
   });
 
@@ -252,11 +244,7 @@ describe('ReservationsService (intégration)', () => {
     const user = await createUser('table-deleted');
 
     await expect(
-      service.create({
-        userId: user.id,
-        seatId: seatOnDeletedTableId,
-        arrivalAt,
-      }),
+      service.create(user.id, { seatId: seatOnDeletedTableId, arrivalAt }),
     ).rejects.toBeInstanceOf(BadRequestException);
   });
 
@@ -264,8 +252,7 @@ describe('ReservationsService (intégration)', () => {
     const user = await createUser('seat-unknown');
 
     await expect(
-      service.create({
-        userId: user.id,
+      service.create(user.id, {
         seatId: '00000000-0000-4000-8000-000000000000',
         arrivalAt,
       }),
@@ -274,8 +261,7 @@ describe('ReservationsService (intégration)', () => {
 
   it('lève BadRequestException pour un userId inconnu sans rien écrire', async () => {
     await expect(
-      service.create({
-        userId: '00000000-0000-4000-8000-000000000000',
+      service.create('00000000-0000-4000-8000-000000000000', {
         seatId: seatIds[9],
         arrivalAt,
       }),

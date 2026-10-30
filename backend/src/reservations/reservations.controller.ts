@@ -5,6 +5,8 @@ import {
   reservationSchema,
   Reservation,
 } from './reservations-response.schemas';
+import { CurrentUser } from '../auth/utils/current-user.decorator';
+import type { AuthenticatedUser } from '../auth/utils/auth-request';
 
 @SerializeOptions({ schema: reservationSchema })
 @Controller('reservations')
@@ -12,7 +14,7 @@ export class ReservationsController {
   constructor(private readonly reservationsService: ReservationsService) {}
 
   @Post()
-  createReservation(@Body() dto: CreateReservationDto): Promise<Reservation> {
-    return this.reservationsService.create(dto);
+  createReservation(@CurrentUser() user:AuthenticatedUser, @Body() dto: CreateReservationDto): Promise<Reservation> {
+    return this.reservationsService.create(user.id, dto);
   }
 }
