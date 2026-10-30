@@ -63,8 +63,6 @@ UPDATE "Seat" SET "deletedAt" = now()
 WHERE "tableId" = 'a0000000-0000-4000-8000-000000000001' AND "seatNumber" = 10;
 
 -- ─── Users (l'équipe) ───────────────────────────────────────
--- Pas de mot de passe (passwordHash NULL) : l'auth n'existe pas encore,
--- on passe le userId dans le body de POST /reservations.
 -- pseudo en minuscules (règle du schéma).
 -- DO UPDATE : relancer le seed remet les users dans cet état.
 INSERT INTO "User"
