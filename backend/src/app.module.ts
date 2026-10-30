@@ -18,8 +18,7 @@ import { ReservationsModule } from './reservations/reservations.module';
 import { PaymentsModule } from './payments/payments.module';
 import { PrismaModule } from './prisma/prisma.module';
 import { APP_GUARD } from '@nestjs/core';
-import { AuthGuard } from './auth/auth.guard';
-import { ThrottlerModule } from '@nestjs/throttler';
+import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
 
 @Module({
   imports: [
@@ -27,12 +26,10 @@ import { ThrottlerModule } from '@nestjs/throttler';
       envFilePath: '../.env', // TODO: A changer quand nos docker seront en place
       isGlobal: true,
     }),
-    ThrottlerModule.forRoot([
-     {
-      ttl: 600000,
-      limit: 5,
-     }
-    ]),
+    ThrottlerModule.forRoot({
+      throttlers: [{ ttl: 600000, limit: 5 }],
+      skipIf: () => process.env.THROTTLER_DISABLED === 'true',
+    }),
     HealthModule,
     AuthModule,
     UsersModule,
@@ -45,7 +42,7 @@ import { ThrottlerModule } from '@nestjs/throttler';
   controllers: [AppController],
   providers: [
     AppService,
-    { provide: APP_GUARD, useClass: AuthGuard },
+    { provide: APP_GUARD, useClass: ThrottlerGuard },
   ],
 })
 export class AppModule {}
