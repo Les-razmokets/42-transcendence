@@ -1,13 +1,12 @@
 import { randomUUID } from 'node:crypto';
 import { INestApplication, ValidationPipe } from '@nestjs/common';
-// Copie ici l'import de StandardSchemaSerializerInterceptor tel qu'il est dans main.ts
 import { StandardSchemaSerializerInterceptor } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { Test } from '@nestjs/testing';
 import request from 'supertest';
-import { AppModule } from '../app.module';
-import { PrismaService } from '../prisma/prisma.service';
-import { UsersService } from './users.service';
+import { AppModule } from '../../app.module';
+import { PrismaService } from '../../prisma/prisma.service';
+import { UsersService } from '../users.service';
 
 // Test de bout en bout : vraie base de dev (DATABASE_URL), jamais la prod.
 describe('GET /api/users/:id', () => {

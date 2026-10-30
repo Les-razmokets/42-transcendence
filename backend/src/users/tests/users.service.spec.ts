@@ -1,9 +1,9 @@
 import { ConflictException } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
-import { AppModule } from '../app.module';
-import { PrismaService } from '../prisma/prisma.service';
-import { UserInfo } from './users.struct';
-import { UsersService } from './users.service';
+import { AppModule } from '../../app.module';
+import { PrismaService } from '../../prisma/prisma.service';
+import { UserInfo } from '../users.struct';
+import { UsersService } from '../users.service';
 
 // Test d'intégration : utilise la vraie base de dev (DATABASE_URL), jamais la prod.
 describe('UsersService.create (doublons)', () => {
