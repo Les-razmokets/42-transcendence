@@ -58,4 +58,11 @@ export class UsersService {
       throw error;
     }
   }
+
+  async updatePasswordHash(id: string, newHash: string): Promise<void> {
+    await this.prisma.user.update({
+      where: { id },
+      data: { passwordHash: newHash },
+    });
+  }
 }
