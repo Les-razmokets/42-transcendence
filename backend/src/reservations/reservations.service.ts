@@ -17,7 +17,7 @@ import { isCasinoClosed, casinoDay } from './casino-day';
 @Injectable()
 export class ReservationsService {
   constructor(private readonly prismaService: PrismaService) {}
-  async create(dto: CreateReservationDto) {
+  async create(userId: string,dto: CreateReservationDto) {
     if (isCasinoClosed(dto.arrivalAt)) {
       throw new BadRequestException(
         'Casinos are closed between 5:00 and 8:00 (Paris time)',
@@ -28,13 +28,13 @@ export class ReservationsService {
     const now = new Date();
     const isToday =
       !isCasinoClosed(now) && casinoDay(dto.arrivalAt) === casinoDay(now);
-    const userActivePromise = this.assertUserActive(dto.userId);
+    const userActivePromise = this.assertUserActive(userId);
     const seatAvailablePromise = this.assertSeatAvailable(dto.seatId, isToday);
     await Promise.all([userActivePromise, seatAvailablePromise]);
     try {
       return await this.prismaService.reservation.create({
         data: {
-          userId: dto.userId,
+          userId: userId,
           seatId: dto.seatId,
           arrivalAt: dto.arrivalAt,
           status: ReservationStatus.PENDING_PAYMENT,
