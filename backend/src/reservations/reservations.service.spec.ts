@@ -16,7 +16,6 @@ import { ReservationsService } from './reservations.service';
 describe('ReservationsService', () => {
   let service: ReservationsService;
   const prismaMock = {
-    user: { findFirst: jest.fn() },
     seat: { findFirst: jest.fn() },
     reservation: { create: jest.fn() },
   };
@@ -43,8 +42,6 @@ describe('ReservationsService', () => {
 
   beforeEach(async () => {
     jest.clearAllMocks();
-    // Par défaut : user actif
-    prismaMock.user.findFirst.mockResolvedValue({ id: 'user-1' });
     // Par défaut : place libre sur une table ouverte
     prismaMock.seat.findFirst.mockResolvedValue({
       id: 'seat-1',
@@ -91,29 +88,7 @@ describe('ReservationsService', () => {
       await expect(service.create(USER_ID, dto)).rejects.toBeInstanceOf(
         BadRequestException,
       );
-      expect(prismaMock.user.findFirst).not.toHaveBeenCalled();
       expect(prismaMock.seat.findFirst).not.toHaveBeenCalled();
-      expect(prismaMock.reservation.create).not.toHaveBeenCalled();
-    });
-
-    it('cherche un user non supprimé', async () => {
-      prismaMock.reservation.create.mockResolvedValue({ id: 'reservation-1' });
-      const dto = makeDto();
-
-      await service.create(USER_ID, dto);
-
-      expect(prismaMock.user.findFirst).toHaveBeenCalledWith({
-        where: { id: USER_ID, deletedAt: null },
-        select: { id: true },
-      });
-    });
-
-    it('lève BadRequestException sans créer de réservation si le user est introuvable ou anonymisé', async () => {
-      prismaMock.user.findFirst.mockResolvedValue(null);
-
-      await expect(service.create(USER_ID, makeDto())).rejects.toThrow(
-        new BadRequestException('userId does not match any user'),
-      );
       expect(prismaMock.reservation.create).not.toHaveBeenCalled();
     });
 

@@ -1,6 +1,5 @@
 import {
   Injectable,
-  NotFoundException,
   ConflictException,
   BadRequestException,
 } from '@nestjs/common';
@@ -26,11 +25,8 @@ export class ReservationsService {
     // Pendant la fermeture (5h-8h), les statuts table/place datent encore de la nuit :
     // ils ne disent rien de la journée qui commence
     const now = new Date();
-    const isToday =
-      !isCasinoClosed(now) && casinoDay(dto.arrivalAt) === casinoDay(now);
-    const userActivePromise = this.assertUserActive(userId);
-    const seatAvailablePromise = this.assertSeatAvailable(dto.seatId, isToday);
-    await Promise.all([userActivePromise, seatAvailablePromise]);
+    const isToday = !isCasinoClosed(now) && casinoDay(dto.arrivalAt) === casinoDay(now);
+    await this.assertSeatAvailable(dto.seatId, isToday);
     try {
       return await this.prismaService.reservation.create({
         data: {
@@ -81,16 +77,6 @@ export class ReservationsService {
     }
     if (seat.status !== SeatStatus.FREE && isToday) {
       throw new ConflictException('This seat is already occupied');
-    }
-  }
-
-  private async assertUserActive(userId: string) {
-    const user = await this.prismaService.user.findFirst({
-      where: { id: userId, deletedAt: null },
-      select: { id: true },
-    });
-    if (!user) {
-      throw new BadRequestException('userId does not match any user');
     }
   }
 

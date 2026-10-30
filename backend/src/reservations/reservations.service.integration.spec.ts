@@ -258,18 +258,4 @@ describe('ReservationsService (intégration)', () => {
       }),
     ).rejects.toBeInstanceOf(BadRequestException);
   });
-
-  it('lève BadRequestException pour un userId inconnu sans rien écrire', async () => {
-    await expect(
-      service.create('00000000-0000-4000-8000-000000000000', {
-        seatId: seatIds[9],
-        arrivalAt,
-      }),
-    ).rejects.toThrow(
-      new BadRequestException('userId does not match any user'),
-    );
-    await expect(
-      prisma.reservation.count({ where: { seatId: seatIds[9] } }),
-    ).resolves.toBe(0);
-  });
 });
