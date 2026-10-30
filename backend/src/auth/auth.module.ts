@@ -8,6 +8,7 @@ import { UsersModule } from '../users/users.module';
 import { Argon2Hasher } from './argon2-hasher.service';
 import { APP_GUARD } from '@nestjs/core';
 import { AuthGuard } from './auth.guard';
+import { RolesGuard } from './roles.guard';
 
 @Module({
   imports: [
@@ -38,7 +39,8 @@ import { AuthGuard } from './auth.guard';
     AuthService,
     Argon2Hasher,
     AuthGuard,
-  { provide: APP_GUARD, useClass: AuthGuard },
+    { provide: APP_GUARD, useClass: AuthGuard },
+    { provide: APP_GUARD, useClass: RolesGuard },
   ],
   exports: [JwtModule, UsersModule, AuthGuard],
 })
