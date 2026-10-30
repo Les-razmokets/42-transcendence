@@ -4,7 +4,7 @@
 -- Rejouable : ON CONFLICT DO NOTHING, ne casse pas si déjà importé.
 --
 -- Import (après `make re`, les migrations sont appliquées au démarrage du backend) :
---   docker exec -i transcendence-db-1 sh -c 'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -v ON_ERROR_STOP=1' < backend/prisma/seed/seed_dev.sql
+-- docker exec -i transcendence-db-1 sh -c 'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -v ON_ERROR_STOP=1' < backend/prisma/seed/seed_dev.sql
 
 BEGIN;
 
