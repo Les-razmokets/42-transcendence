@@ -15,6 +15,12 @@ const PLACES = [
   { x: 27.24, y: 85.18, angle: -159.1 },
 ] as const;
 
+export const NOMBRE_PLACES = PLACES.length;
+
+export function normalisePlaces(places: EtatChaise[]): EtatChaise[] {
+    return Array.from({ length: NOMBRE_PLACES}, (_, i) => places[i] ?? 'occupee');
+}
+
 type VueTableProps = {
     places: EtatChaise[];
 };
@@ -35,7 +41,7 @@ export function VueTable(props: VueTableProps) {
                         transform: `translate(-50%, -50%) rotate(${place.angle}deg)`
                     }}
                 >
-                    <Chaise etat={places[i] ?? 'libre'}/>
+                    <Chaise etat={places[i]}/>
                 </div>
             ))}
         </div>

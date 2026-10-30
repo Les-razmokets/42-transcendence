@@ -4,7 +4,7 @@ import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Route, Routes } from 'react-router';
 import type { ReactNode } from 'react';
 import { CarteTable } from './CarteTable';
-import { VueTable } from './VueTable';
+import { VueTable, normalisePlaces, NOMBRE_PLACES } from './VueTable';
 import { Chaise, type EtatChaise } from './Chaise';
 import styles from './CarteTable.module.css';
 
@@ -50,6 +50,38 @@ describe('Chaise', () => {
   });
 });
 
+describe('normalisePlaces', () => {
+  it('compte 9 places, comme le nombre de positions de la table', () => {
+    expect(NOMBRE_PLACES).toBe(9);
+  });
+
+  it('garde un tableau de 9 places tel quel', () => {
+    expect(normalisePlaces(troisLibres)).toEqual(troisLibres);
+  });
+
+  it('complète les places manquantes en occupée', () => {
+    expect(normalisePlaces(['libre', 'libre'])).toEqual([
+      'libre', 'libre', 'occupee', 'occupee', 'occupee', 'occupee', 'occupee', 'occupee', 'occupee',
+    ]);
+  });
+
+  it('transforme un tableau vide en 9 places occupées', () => {
+    expect(normalisePlaces([])).toEqual(pleine);
+  });
+
+  it('coupe les places au-delà de 9', () => {
+    expect(normalisePlaces([...pleine, 'libre'])).toEqual(pleine);
+  });
+
+  it('ne modifie pas le tableau reçu', () => {
+    const recu: EtatChaise[] = ['libre'];
+
+    normalisePlaces(recu);
+
+    expect(recu).toEqual(['libre']);
+  });
+});
+
 describe('VueTable', () => {
   it("affiche l'image de la table, décorative", () => {
     const { container } = render(<VueTable places={troisLibres} />);
@@ -73,18 +105,8 @@ describe('VueTable', () => {
     expect(chaises(container).map((c) => (estLibre(c) ? 'libre' : 'occupee'))).toEqual(troisLibres);
   });
 
-  it('complète les places manquantes en libre', () => {
-    const { container } = render(<VueTable places={['occupee', 'occupee']} />);
-
-    const etats = chaises(container).map((c) => (estLibre(c) ? 'libre' : 'occupee'));
-
-    expect(etats).toHaveLength(9);
-    expect(etats.slice(0, 2)).toEqual(['occupee', 'occupee']);
-    expect(etats.slice(2).every((e) => e === 'libre')).toBe(true);
-  });
-
   it('ignore les places au-delà de 9', () => {
-    const { container } = render(<VueTable places={[...pleine, 'libre', 'libre']} />);
+    const { container } = render(<VueTable places={normalisePlaces([...pleine, 'libre', 'libre'])} />);
 
     expect(chaises(container)).toHaveLength(9);
     expect(chaises(container).some(estLibre)).toBe(false);
@@ -200,6 +222,15 @@ describe('CarteTable', () => {
       expect(screen.getByRole('link')).toBeInTheDocument();
     });
 
+    it('est un lien avec une seule place libre reçue, les autres comptant comme occupées', () => {
+      const { container } = renderAvecRouteur(
+        <CarteTable casino="Casino de Montreux" details="20:00" places={['libre']} link="/tables/4" />,
+      );
+
+      expect(screen.getByRole('link')).toBeInTheDocument();
+      expect(chaises(container).filter(estLibre)).toHaveLength(1);
+    });
+
     it('navigue vers la table au clic', async () => {
       render(
         <MemoryRouter initialEntries={['/']}>
@@ -248,6 +279,25 @@ describe('CarteTable', () => {
       expect(screen.getByText('Casino de Montreux')).toBeInTheDocument();
       expect(screen.getByText('Complète')).toBeInTheDocument();
       expect(chaises(container)).toHaveLength(9);
+      expect(chaises(container).some(estLibre)).toBe(false);
+    });
+
+    it("est complète sans données de places, et l'affiche", () => {
+      const { container } = renderAvecRouteur(
+        <CarteTable casino="Casino de Montreux" details="?" places={[]} link="/tables/4" />,
+      );
+
+      expect(screen.queryByRole('link')).toBeNull();
+      expect(chaises(container)).toHaveLength(9);
+      expect(chaises(container).some(estLibre)).toBe(false);
+    });
+
+    it("n'affiche pas de place libre quand les places reçues sont toutes occupées", () => {
+      const { container } = renderAvecRouteur(
+        <CarteTable casino="Casino de Montreux" details="?" places={['occupee']} link="/tables/4" />,
+      );
+
+      expect(screen.queryByRole('link')).toBeNull();
       expect(chaises(container).some(estLibre)).toBe(false);
     });
 

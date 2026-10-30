@@ -1,5 +1,5 @@
 import { Link } from "react-router";
-import { VueTable } from "./VueTable";
+import { VueTable, normalisePlaces } from "./VueTable";
 import type { EtatChaise } from "./Chaise";
 import styles from './CarteTable.module.css';
 
@@ -11,7 +11,8 @@ type CarteTableProps = {
 };
 
 export function CarteTable(props: CarteTableProps) {
-    const { casino, details, places, link} = props;
+    const { casino, details, link} = props;
+    const places = normalisePlaces(props.places);
     const complete = places.every((p) => p === 'occupee');
 
     const contenu = (
