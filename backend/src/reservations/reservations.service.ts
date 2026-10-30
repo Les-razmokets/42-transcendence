@@ -74,7 +74,7 @@ export class ReservationsService {
       select: { table: { select: { status: true } }, status: true },
     });
     if (!seat) {
-      throw new NotFoundException(`Seat with ID ${seatId} not found`);
+      throw new BadRequestException(`Seat with ID ${seatId} not found`);
     }
     if (seat.table.status !== TableStatus.OPEN && isToday) {
       throw new ConflictException('This table is not open');
