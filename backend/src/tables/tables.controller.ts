@@ -13,7 +13,7 @@ import {
 import { TablesService } from './tables.service';
 import { CreateTableDto } from './dto/create-table.dto';
 import { UpdateTableDto } from './dto/update-table.dto';
-import { tableSchema, Table } from './tables-response.schemas';
+import { tableSchema, type Table } from '@transcendence/shared';
 
 @SerializeOptions({ schema: tableSchema })
 @Controller('tables')
