@@ -1,4 +1,2 @@
-import { z } from 'zod';
-
-export const pingSchema = z.object({ ok: z.boolean() });
-export type Ping = z.infer<typeof pingSchema>;
+export * from './enums.js';
+export * from './tables.js';

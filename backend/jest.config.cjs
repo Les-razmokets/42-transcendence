@@ -14,6 +14,7 @@ const config = {
     '^.+\\.(t|j)s$': ['ts-jest', { tsconfig: { module: 'commonjs' } }],
   },
   moduleNameMapper: {
+    '^@transcendence/shared$': '<rootDir>/../shared/src/index.ts',
     '^(\\.{1,2}/.*)\\.js$': '$1',
     ...pathsToModuleNameMapper(paths, { prefix: '<rootDir>/' }),
   },
