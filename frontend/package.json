@@ -24,7 +24,8 @@
     "react-dom": "^19.2.8",
     "react-i18next": "^17.0.16",
     "react-router": "^8.4.0",
-    "three": "^0.186.1"
+    "three": "^0.186.1",
+    "@transcendence/shared": "*"
   },
   "devDependencies": {
     "@chromatic-com/storybook": "^5.4.0",
