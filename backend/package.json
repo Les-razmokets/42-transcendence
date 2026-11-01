@@ -67,14 +67,7 @@
     "passport-jwt": "^4.0.1",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.1",
-    "zod": "^4.6.5"
-  },
-  "allowScripts": {
-    "@parcel/watcher@2.6.0": true,
-    "unrs-resolver@1.12.2": true,
-    "argon2@0.45.1": true,
-    "bcrypt@6.0.0": true,
-    "prisma@7.10.1": true,
-    "@prisma/engines@7.10.1": true
+    "zod": "^4.6.7",
+	"@transcendence/shared": "*"
   }
 }
