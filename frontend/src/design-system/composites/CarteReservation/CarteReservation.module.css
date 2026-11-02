@@ -1,0 +1,39 @@
+.carte {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--espace-20);
+    padding: var(--espace-20);
+    border: 1px solid var(--bordure-subtile);
+    border-radius: var(--rayon-l);
+    background: var(--fond-surface);
+    color: var(--texte-principal);
+}
+
+.passee {
+    opacity: 0.6;
+}
+
+.contenu {
+    display: flex;
+    align-items: center;
+    gap: var(--espace-16);
+    min-width: 0;
+}
+
+.info {
+    display: flex;
+    flex-direction: column;
+    gap: var(--espace-4);
+    min-width: 0;
+}
+
+.secondaire {
+    color: var(--texte-secondaire);
+}
+
+.action {
+    display: flex;
+    gap: var(--espace-12);
+    flex-shrink: 0;
+}
