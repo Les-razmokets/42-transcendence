@@ -1,5 +1,18 @@
 {
-  "dependencies": {
-    "zod": "^4.6.7"
+  "name": "transcendence",
+  "private": true,
+  "workspaces": ["shared", "backend", "frontend"],
+  "scripts": {
+    "build:shared": "npm run build -w @transcendence/shared"
+  },
+  "allowScripts": {
+    "@parcel/watcher@2.6.0": true,
+    "unrs-resolver@1.12.2": true,
+    "argon2@0.45.1": true,
+    "bcrypt@6.0.0": true,
+    "prisma@7.10.1": true,
+    "@prisma/engines@7.10.1": true,
+    "fsevents@2.3.3": true,
+    "esbuild@0.28.2": true
   }
 }

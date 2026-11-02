@@ -16,30 +16,34 @@ jobs:
     - uses: actions/setup-node@v4
       with:
         node-version: '24.x'
+        cache: npm
 
-    - name: Install deps (backend)
-      working-directory: backend
+    # Monorepo npm workspaces : un seul lockfile a la racine
+    - name: Install deps (all workspaces)
       run: npm ci
 
+    # generate copie aussi les enums Prisma dans shared/src/enums.ts
     - name: Generate prisma (DB)
-      working-directory: backend
-      run: npx prisma generate
-      
-    - name: Lint (backend)
-      working-directory: backend
-      run: npm run lint
+      run: npm run generate -w backend
 
-    - name: Install deps (frontend)
-      working-directory: frontend
-      run: npm ci
+    - name: Check shared enums are in sync with Prisma schema
+      run: git diff --exit-code -- shared/
+
+    # Le backend et le front importent @transcendence/shared : il doit etre compile avant lint/tsc
+    - name: Build shared
+      run: npm run build:shared
+
+    - name: Lint (backend)
+      run: npm run lint -w backend
+
+    - name: Build (backend)
+      run: npm run build -w backend
 
     - name: Lint (frontend)
-      working-directory: frontend
-      run: npm run lint
+      run: npm run lint -w frontend
 
-    - name: build (front)
-      working-directory: frontend
-      run: npm run build
+    - name: Build (frontend)
+      run: npm run build -w frontend
 
   build:
     runs-on: ubuntu-latest

@@ -37,24 +37,54 @@ Version exacte (pas `latest`, pas juste `24-alpine`), pour que le build soit rep
 **Un seul stage (pas de multi-stage) pour l'instant**
 L'image finale contient encore les `devDependencies` (nécessaires à `nest build`). Choix volontaire pour avancer plus vite ; à revoir une fois le projet plus stable, pour alléger l'image finale.
 
+**Contexte de build : la racine du repo, pas `backend/`**
+Depuis TSK-45, le repo est un monorepo npm workspaces (`backend`, `frontend`, `shared`) avec **un seul** `package-lock.json`, à la racine (voir `docs/shared.md`). Le backend dépend du package `@transcendence/shared`. L'image a donc besoin de fichiers situés hors de `backend/` : le lockfile racine et le dossier `shared/`. Or Docker ne peut pas copier de fichiers en dehors du contexte de build. D'où, dans `docker-compose.yml` :
+```yaml
+build:
+  context: .
+  dockerfile: backend/Dockerfile
+```
+Conséquence : dans le Dockerfile, tous les chemins des `COPY` partent de la racine du repo (`backend/src`, `shared/src`…), pas de `backend/`.
+
 **Ordre des `COPY`/`RUN` dans le Dockerfile**
 Chaque étape lente est placée juste après les fichiers dont elle dépend réellement, et pas avant, pour que Docker mette en cache les étapes inchangées :
 ```
-COPY package.json tsconfig.json package-lock.json ./
-RUN npm ci
-COPY prisma ./prisma
+WORKDIR /app
+COPY package.json package-lock.json ./
+COPY backend/package.json backend/
+COPY frontend/package.json frontend/
+COPY shared/package.json shared/
+RUN npm ci -w backend -w @transcendence/shared
+
+COPY shared/tsconfig.json shared/
+COPY shared/src shared/src
+RUN npm run build:shared
+
+WORKDIR /app/backend
+COPY backend/nest-cli.json backend/tsconfig.build.json backend/tsconfig.json ./
+COPY backend/prisma ./prisma
+COPY backend/prisma7.config.ts ./
 RUN npx prisma generate
-COPY nest-cli.json tsconfig.build.json ./
-COPY src ./src
+
+COPY backend/src ./src
 RUN npm run build
 ```
-Résultat : modifier un fichier dans `src/` ne refait pas `npm ci` (~10s au lieu d'être instantané sinon).
+Résultat : modifier un fichier dans `backend/src/` ne refait ni `npm ci` ni le build de `shared`.
 
-**Pourquoi `tsconfig.json` est copié dès la première étape**
-Point non intuitif, documenté ici pour ne pas le reperdre : Prisma lit `tsconfig.json` au moment de `prisma generate` pour décider si le client généré doit être en CommonJS ou en ESM. Si `tsconfig.json` n'est pas encore présent à ce moment-là, Prisma part sur ESM par défaut, ce qui casse au démarrage (`ReferenceError: exports is not defined in ES module scope`) puisque le reste du projet NestJS est en CommonJS. D'où la nécessité de copier `tsconfig.json` **avant** `RUN npx prisma generate`, même si le reste du code source n'est copié que plus tard.
+Quelques points sur ce découpage :
+- **Les trois `package.json` sont copiés, même celui du frontend.** `npm ci` vérifie que le lockfile correspond à **tous** les workspaces déclarés à la racine. S'il en manque un, il refuse d'installer.
+- **`npm ci -w backend -w @transcendence/shared`** n'installe que les dépendances de ces deux workspaces : rien de React, Vite ou Storybook dans l'image backend.
+- **`npm run build:shared` avant le build du backend** : le backend importe `@transcendence/shared` via son `dist/` compilé. Sans ce build, `nest build` ne trouve pas le package.
+- **`WORKDIR /app/backend` ensuite** : les commandes suivantes (`prisma generate`, `npm run build`, le `CMD`) se lancent depuis le dossier du backend, comme en local.
 
-**`.dockerignore`**
-Exclut `node_modules`, `.env`, `src/generated/prisma` et `/dist`. Le but : ne jamais laisser une `COPY . .` écraser ce que le conteneur vient de générer lui-même (client Prisma, dépendances) avec une version qui traîne sur le disque de l'hôte.
+**Pourquoi `tsconfig.json` est copié avant `prisma generate`**
+Point non intuitif, documenté ici pour ne pas le reperdre : Prisma lit `tsconfig.json` au moment de `prisma generate` pour décider si le client généré doit être en CommonJS ou en ESM. Si `tsconfig.json` n'est pas encore présent à ce moment-là, Prisma part sur ESM par défaut, ce qui casse au démarrage (`ReferenceError: exports is not defined in ES module scope`) puisque le reste du projet NestJS est en CommonJS. D'où la nécessité de copier `backend/tsconfig.json` **avant** `RUN npx prisma generate`, même si le reste du code source n'est copié que plus tard. Ce piège est revenu pendant le passage au monorepo (TSK-45), quand l'ordre des `COPY` a été réécrit.
+
+**`.dockerignore` : un seul, à la racine**
+Le contexte de build étant la racine, c'est `.dockerignore` **à la racine** qui s'applique (les anciens `backend/.dockerignore` et `frontend/.dockerignore` n'existent plus). Il exclut :
+- `**/node_modules`, `**/dist`, `*.tsbuildinfo` et `backend/src/generated` : ne jamais laisser une copie du disque de l'hôte écraser ce que le conteneur vient d'installer ou de générer lui-même (dépendances, build, client Prisma) ;
+- `**/.env` : ne jamais embarquer de secret dans l'image ;
+- `.git`, `perso/`, `infra/` : inutiles au build, et ils alourdiraient le contexte envoyé à Docker.
 
 **`CMD` : migration puis démarrage, en une ligne**
 ```
@@ -66,7 +96,7 @@ Le `&&` garantit que le serveur ne démarre pas si la migration échoue. Un `ent
 `npm start` (`nest start`) recompile le code à chaque démarrage et a besoin des `devDependencies` en permanence. `npm run start:prod` (`node dist/main`) utilise le code déjà compilé à la construction de l'image (`RUN npm run build`) : démarrage plus rapide, et compatible avec un futur passage en multi-stage.
 
 **Service `backend` dans `docker-compose.yml`**
-- `build: ./backend` (et non `image:`) : l'image est construite localement, pas téléchargée.
+- `build:` avec `context: .` et `dockerfile: backend/Dockerfile` (et non `image:`) : l'image est construite localement, pas téléchargée, depuis la racine du repo (voir « Contexte de build » plus haut).
 - `depends_on: db: condition: service_healthy` : attend que Postgres soit prêt (pas juste démarré) avant de lancer le backend, pour éviter que les migrations échouent au premier essai.
 - `healthcheck` : interroge `127.0.0.1:$PORT/api/health` avec `wget --spider` (déjà présent dans l'image, pas besoin d'installer `curl`). Sans ce `healthcheck`, Docker considère le service prêt dès que le conteneur démarre, pas quand les migrations et Nest ont vraiment fini — `--wait` dans `make up`/`make all` ne peut attendre que ce qu'il sait vérifier.
 - Piège rencontré en écrivant ce `healthcheck` : utiliser `localhost` au lieu de `127.0.0.1` échoue avec `Connection refused`. Dans le conteneur, `localhost` résout en `::1` (IPv6, voir `/etc/hosts`), mais le serveur n'écoute qu'en IPv4 (`app.listen(port, '0.0.0.0')`). Rien n'écoute sur `::1`, donc la connexion est refusée. D'où `127.0.0.1` explicitement dans le test.
