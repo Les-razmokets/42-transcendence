@@ -4,10 +4,10 @@ import * as argon2 from 'argon2';
 @Injectable()
 export class Argon2Hasher implements OnModuleInit {
   private readonly options: argon2.HashOptions = {
-    type: argon2.argon2id,  // Hybrid version resistant to side-channel and GPU attacks
-    memoryCost: 2 ** 16,    // Memory usage in kibibytes (64 MB)
-    timeCost: 3,            // Number of iterations (passes over memory)
-    parallelism: 1,         // Degree of parallelism (number of threads)
+    type: argon2.argon2id, // Hybrid version resistant to side-channel and GPU attacks
+    memoryCost: 2 ** 16, // Memory usage in kibibytes (64 MB)
+    timeCost: 3, // Number of iterations (passes over memory)
+    parallelism: 1, // Degree of parallelism (number of threads)
   };
 
   // Validates password length and normalizes it.
