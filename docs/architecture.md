@@ -25,6 +25,7 @@ transcendence/
 │   │   ├── tables/          # PokerTable + Seat
 │   │   └── reservations/    # transaction + gateway WebSocket
 │   └── test/
+├── shared/                  # @transcendence/shared : enums + schémas zod communs back/front (voir docs/shared.md)
 ├── frontend/                # React + Vite + CSS Modules
 │   ├── Dockerfile
 │   ├── .nvmrc               # Node 24
