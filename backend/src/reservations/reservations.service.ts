@@ -2,6 +2,7 @@ import {
   Injectable,
   ConflictException,
   BadRequestException,
+  Logger,
 } from '@nestjs/common';
 import { CreateReservationDto } from './dto/create-reservation.dto';
 import { PrismaService } from '../prisma/prisma.service';
@@ -15,6 +16,8 @@ import { isCasinoClosed, casinoDay } from './casino-day';
 
 @Injectable()
 export class ReservationsService {
+  private readonly logger = new Logger(ReservationsService.name);
+
   constructor(private readonly prismaService: PrismaService) {}
   async create(userId: string, dto: CreateReservationDto) {
     if (isCasinoClosed(dto.arrivalAt)) {
@@ -25,7 +28,8 @@ export class ReservationsService {
     // Pendant la fermeture (5h-8h), les statuts table/place datent encore de la nuit :
     // ils ne disent rien de la journée qui commence
     const now = new Date();
-    const isToday = !isCasinoClosed(now) && casinoDay(dto.arrivalAt) === casinoDay(now);
+    const isToday =
+      !isCasinoClosed(now) && casinoDay(dto.arrivalAt) === casinoDay(now);
     await this.assertSeatAvailable(dto.seatId, isToday);
     try {
       return await this.prismaService.reservation.create({
@@ -53,7 +57,12 @@ export class ReservationsService {
           );
         }
         if (error.code === 'P2003') {
-          throw new BadRequestException('userId or seatId no longer exists');
+          this.logger.warn(
+            `Reservation foreign key violation (userId=${userId}, seatId=${dto.seatId})`,
+          );
+          throw new BadRequestException(
+            'The selected seat or your account is no longer available',
+          );
         }
       }
       throw error;

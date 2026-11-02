@@ -246,7 +246,9 @@ describe('ReservationsService', () => {
       prismaMock.reservation.create.mockRejectedValue(makePrismaError('P2003'));
 
       await expect(service.create(USER_ID, makeDto())).rejects.toThrow(
-        new BadRequestException('userId or seatId no longer exists'),
+        new BadRequestException(
+          'The selected seat or your account is no longer available',
+        ),
       );
     });
 
