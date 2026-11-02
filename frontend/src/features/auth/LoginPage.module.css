@@ -1,0 +1,27 @@
+.page {
+    min-height: 100vh;
+    display: grid;
+    place-items: center;
+    padding: var(--espace-24);
+    background: var(--fond-page);
+}
+
+.logo {
+    display: none;
+}
+
+.formulaire {
+    width: 100%;
+    max-width: 400px;
+    display: flex;
+    flex-direction: column;
+    gap: var(--espace-16);
+    padding: var(--espace-32);
+    background: var(--fond-surface);
+    border-radius: var(--rayon-l);
+}
+
+.sousTitre,
+.bas {
+    color: var(--texte-secondaire);
+}

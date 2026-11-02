@@ -1,3 +1,3 @@
-export function RegisterPage(){
-	return <h1>Register page</h1>
-}
+export function RegisterPage() {
+    return ( <h1>test</h1>);
+};

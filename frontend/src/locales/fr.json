@@ -1,0 +1,20 @@
+{
+  "connexion": {
+    "titre": "Connexion",
+    "sousTitre": "Réserve ta place aux tables de poker des casinos suisses.",
+    "email": "E-mail",
+    "emailIndication": "vous@exemple.ch",
+    "motDePasse": "Mot de passe",
+    "oublie": "Mot de passe oublié ?",
+    "seConnecter": "Se connecter",
+    "enCours": "Connexion…",
+    "ou": "ou",
+    "avec42": "Continuer avec 42",
+    "pasDeCompte": "Pas encore de compte ?",
+    "creerCompte": "Créer un compte",
+    "erreurEmail": "Adresse e-mail invalide",
+    "erreurIdentifiants": "E-mail ou mot de passe incorrect",
+    "erreurTropDeTentatives": "Trop de tentatives, réessaie dans une minute.",
+    "erreurGenerique": "Une erreur est survenue, réessaie plus tard."
+  }
+}

@@ -32,3 +32,17 @@ export type PokerTable = {
   createdAt: string;
   updatedAt: string;
 };
+
+export type User = {
+  id: string;
+  email: string;
+  pseudo: string;
+  firstName: string;
+  lastName: string;
+  phone: string | null;
+  birthDate: string;
+  role: string;
+  createdAt: string;
+  updatedAt: string;
+};
+
