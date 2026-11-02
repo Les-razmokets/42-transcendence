@@ -12,8 +12,10 @@ cd frontend
 nvm install     # seulement la première fois, si tu n'as pas encore Node 24
 nvm use
 
-# 3. Installe les dépendances EXACTES du projet (⚠️ PAS NPM INSTALL !)
+# 3. Installe les dépendances EXACTES du projet, depuis la RACINE du repo (⚠️ PAS NPM INSTALL !)
+cd ..
 npm ci
+cd frontend
 
 # 4. Installe le navigateur pour les tests Storybook (une seule fois par machine)
 npx playwright install chromium
@@ -25,6 +27,9 @@ npm run dev
 > [!CAUTION]
 > **PAS `NPM INSTALL` !** Utilise toujours `npm ci` pour installer le projet. `npm install` peut modifier le `package-lock.json` et installer des versions différentes de celles de l'équipe.
 
+> [!IMPORTANT]
+> **`npm ci` se lance à la racine du repo, pas dans `frontend/`.** Le repo est un monorepo npm workspaces (`backend`, `frontend`, `shared`) avec **un seul** `package-lock.json`, à la racine. Une seule installation suffit pour tout le monde. Le front utilise aussi le package `@transcendence/shared` (types et enums communs avec le back) : voir [`docs/shared.md`](../docs/shared.md).
+
 Ouvre ensuite **http://localhost:5173**. Si la page s'affiche, tout est bon ✅
 
 ---
@@ -34,7 +39,7 @@ Ouvre ensuite **http://localhost:5173**. Si la page s'affiche, tout est bon ✅
 ```bash
 git pull
 nvm use
-npm ci          # seulement si package-lock.json a changé
+(cd .. && npm ci)    # seulement si package-lock.json (à la racine) a changé
 npm run dev
 ```
 
@@ -53,13 +58,15 @@ Pour arrêter un serveur : `Ctrl + C`.
 ## 📦 Ajouter une dépendance
 
 1. Préviens l'autre avant d'en ajouter une.
-2. `npm i <paquet>` (ou `npm i -D <paquet>` pour un outil de dev).
-3. Commit **ensemble** `package.json` **et** `package-lock.json`.
+2. Depuis la **racine** du repo : `npm i <paquet> -w frontend` (ou `npm i -D <paquet> -w frontend` pour un outil de dev).
+3. Commit **ensemble** `frontend/package.json` **et** le `package-lock.json` de la racine.
 4. Une PR = un ajout de dépendance.
 
 ⚠️ Ne jamais commit `node_modules/` (déjà dans le `.gitignore`).
 
-**Conflit sur `package-lock.json` ?** Ne le corrige pas à la main : garde le `package.json` fusionné, lance `npm install` pour régénérer le lock, puis commit.
+⚠️ Si un `frontend/package-lock.json` apparaît, c'est qu'une commande npm a été lancée sans `-w` depuis `frontend/` : supprime-le, il n'a rien à faire là.
+
+**Conflit sur `package-lock.json` ?** Ne le corrige pas à la main : garde les `package.json` fusionnés, lance `npm install` **à la racine** pour régénérer le lock, puis commit.
 
 ## 🗂️ Où ranger quoi
 
@@ -109,4 +116,5 @@ Exemple avec `design-system/primitives/Bouton/` :
 - **`nvm: command not found`** → nvm n'est pas chargé dans ton terminal. Vérifie qu'il est bien dans ton `~/.zshrc`, puis ouvre un nouveau terminal.
 - **Port 5173 déjà utilisé** → un autre `npm run dev` tourne déjà quelque part. Ferme-le.
 - **Les tests Storybook plantent sur « browser not found »** → refais `npx playwright install chromium`.
-- **Warning `install-scripts` sur `fsevents`** → sans gravité (paquet macOS pour surveiller les fichiers). Il est déjà autorisé dans `allowScripts`. S'il revient après une mise à jour, refais `npm install-scripts approve fsevents` et commit le `package.json`.
+- **Warning `install-scripts` sur `fsevents`** → sans gravité (paquet macOS pour surveiller les fichiers). Il est déjà autorisé dans `allowScripts`. S'il revient après une mise à jour, refais `npm install-scripts approve fsevents` **à la racine** et commit le `package.json` de la racine (c'est lui qui contient `allowScripts`).
+- **`Cannot find module '@transcendence/shared'`** → l'installation n'a pas été faite depuis la racine. Lance `npm ci` à la racine du repo.
