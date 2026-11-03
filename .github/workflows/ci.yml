@@ -45,7 +45,7 @@ jobs:
     - name: Build (frontend)
       run: npm run build -w frontend
 
-  build:
+  integration:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4
