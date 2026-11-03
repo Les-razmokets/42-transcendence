@@ -11,7 +11,7 @@ import {
   publicUserSchema,
   PublicUser,
   myProfileUserSchema,
-} from './users-response.schemas';
+} from './utils/users-response.schemas';
 import { Public } from '../auth/utils/public.decorator';
 import { CurrentUser } from '../auth/utils/current-user.decorator';
 import type { AuthenticatedUser } from '../auth/utils/auth-request';

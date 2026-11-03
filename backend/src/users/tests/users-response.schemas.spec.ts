@@ -3,7 +3,7 @@ import {
   myProfileUserSchema,
   publicUserSchema,
   staffUserSchema,
-} from '../users-response.schemas';
+} from '../utils/users-response.schemas';
 
 // Un user tel que le renvoie la base : AVEC un passwordHash.
 const fullUser = {

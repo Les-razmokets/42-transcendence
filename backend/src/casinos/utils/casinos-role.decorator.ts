@@ -5,10 +5,12 @@ import { CASINO_ROLE_KEY } from './casinos-role.constants';
 
 export function RequireCasinoRole(role: CasinoRole) {
   if (!Object.values(CasinoRole).includes(role)) {
-    throw new Error(`@RequireCasinoRole: invalid casino role "${String(role)}"`);
+    throw new Error(
+      `@RequireCasinoRole: invalid casino role "${String(role)}"`,
+    );
   }
   return applyDecorators(
-	  SetMetadata(CASINO_ROLE_KEY, role),
+    SetMetadata(CASINO_ROLE_KEY, role),
     UseGuards(CasinoRoleGuard),
-  )
-};
+  );
+}
