@@ -58,6 +58,12 @@ jobs:
 
     - name: Start services and wait for healthy
       run: docker compose up -d --wait
+
+    - name: Run backend unit tests
+      run: docker compose run --rm backend npm test
+
+    - name: Run backend e2e tests
+      run: docker compose run --rm backend npm run test:e2e
       
     - name: Dump logs on failure
       if: failure()
