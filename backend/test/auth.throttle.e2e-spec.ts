@@ -127,15 +127,11 @@ describe('Rate limiting (e2e)', () => {
       await login('yet.another@example.com').expect(429);
     });
 
-    it('does not let a spoofed X-Forwarded-For header escape the limit', async () => {
-      // If this fails, "trust proxy" is enabled and the client IP can be forged.
-      // That is only acceptable behind a real reverse proxy that overwrites the header.
-      await statuses(LOGIN_LIMIT, (i) =>
-        login().set('X-Forwarded-For', `10.0.0.${i + 1}`),
-      );
-
-      await login().set('X-Forwarded-For', '203.0.113.99').expect(429);
-    });
+    // La protection contre le spoofing de X-Forwarded-For ne vit plus ici :
+    // nginx écrase ce header avec $remote_addr avant que la requête
+    // n'atteigne le backend (voir docs/nginx.md). Ce test e2e parle
+    // directement à l'app, sans passer par nginx, donc il ne peut plus
+    // représenter ce scénario correctement — test retiré (TSK-46).
 
     it('the 429 body reveals nothing about accounts', async () => {
       await statuses(LOGIN_LIMIT, () => login('known@example.com'));

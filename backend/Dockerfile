@@ -20,6 +20,8 @@ COPY backend/prisma7.config.ts ./
 RUN npx prisma generate
 
 COPY backend/src ./src
+COPY backend/jest.config.cjs ./
+COPY backend/test ./test
 RUN npm run build
 
 CMD ["sh", "-c", "npm run db:migrate && npm run start:prod"]

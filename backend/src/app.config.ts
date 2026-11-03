@@ -1,13 +1,14 @@
 import {
-  INestApplication,
   ValidationPipe,
   StandardSchemaSerializerInterceptor,
 } from '@nestjs/common';
+import { NestExpressApplication } from '@nestjs/platform-express';
 import { Reflector } from '@nestjs/core';
 import { missingResponseSchema } from './common/missing-response.schema';
 import cookieParser from 'cookie-parser';
 
-export function configureApp(app: INestApplication) {
+export function configureApp(app: NestExpressApplication) {
+  app.set('trust proxy', 1);
   app.setGlobalPrefix('api');
   app.useGlobalPipes(
     new ValidationPipe({
