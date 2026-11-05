@@ -1,7 +1,7 @@
-import { useState } from "react";
+import { useState, type SubmitEvent } from "react";
 import { Link, useNavigate} from "react-router";
 import { useTranslation } from "react-i18next";
-import { Bandes, Bouton, ChampSaisie, Logo, Notification } from "../../design-system";
+import { Bandes, Bouton, ChampSaisie, Logo } from "../../design-system";
 import { ApiError} from "../../lib/api";
 import { login } from "./api";
 import styles from "./LoginPage.module.css";
@@ -15,7 +15,8 @@ export function LoginPage() {
 	const [error, setError] = useState<string | null>(null);
 	const [enCours, setEnCours] = useState(false);
 
-	async function envoyer() {
+	async function envoyer(e: SubmitEvent<HTMLFormElement>) {
+		e.preventDefault();
 		setError(null);
 		setEnCours(true);
 		try {
@@ -34,46 +35,56 @@ export function LoginPage() {
 	}
 
 	return (
-		<div className={styles.page}>
-			<form
-				className={styles.formulaire}
-				onSubmit={(e) => {
-					e.preventDefault();
-					void envoyer();
-				}}
+		<main className={styles.page}>
+			<form className={styles.formulaire} onSubmit={envoyer} noValidate>
+				<span className={styles.logo}><Logo variante="xl"/></span>
+				<Bandes variante="epaisse"/>
+
+				<div className={styles.entete}>
+					<h1 className="typo-titre-2">{t('connexion.titre')}</h1>
+					<p className={`${styles.secondaire} typo-texte-petit`}>{t('connexion.sousTitre')}</p>
+				</div>
+
+				<ChampSaisie
+					libelle={t('connexion.email')}
+					type="email"
+					autoComplete="email"
+					placeholder={t('connexion.emailIndication')}
+					value={email}
+					onChange={(e) => setEmail(e.target.value)}
+					erreur={error ?? undefined}
+				/>
+				<ChampSaisie
+					libelle={t('connexion.motDePasse')}
+					type="password"
+					autoComplete="current-password"
+					value={password}
+					onChange={(e) => setPassword(e.target.value)}
+				/>
+
+				<Link to="/forgot-password" className={`${styles.lien} typo-texte-petit`}>
+					{t('connexion.oublie')}
+				</Link>
+
+				<Bouton type="submit" disabled={enCours} className={styles.large}>
+					{ enCours ? t('connexion.enCours') : t('connexion.seConnecter')}
+				</Bouton>
+
+				<span className={`${styles.secondaire} typo-legende`}>{t('connexion.ou')}</span>
+
+				<Bouton 
+					variante="secondaire"
+					className={styles.large}
+					onClick={() => (window.location.href = '/api/auth/42')}
 				>
-					<span className={styles.logo}><Logo variante="xl"/></span>
-					<Bandes variante="epaisse"/>
-					<h1 className="typo-titre-1">{t('connexion.titre')}</h1>
-					<p className={styles.sousTitre}>{t('connexion.sousTitre')}</p>
-					{error && <Notification variante="erreur">{error}</Notification>}
+					{t('connexion.avec42')}
+				</Bouton>
 
-					<ChampSaisie
-						libelle={t('connexion.email')}
-						type="email"
-						autoComplete="email"
-						placeholder={t('connexion.emailIndication')}
-						required
-						value={email}
-						onChange={(e) => setEmail(e.target.value)}
-					/>
-					<ChampSaisie
-						libelle={t('connexion.motDePasse')}
-						type="password"
-						autoComplete="current-password"
-						required
-						value={password}
-						onChange={(e) => setPassword(e.target.value)}
-					/>
-
-					<Bouton type="submit" disabled={enCours}>
-						{enCours ? t('connexion.enCours') : t('connexion.seConnecter')}
-					</Bouton>
-
-					<p className={styles.bas}>
-						{t('connexion.pasDeCompte')} <Link to="/register">{t('connexion.creerCompte')}</Link>
-					</p>
-				</form>
-		</div>
+				<p className={`${styles.secondaire} typo-texte-petit`}>
+					{t('connexion.pasDeCompte')}{' '}
+					<Link to='/register' className={styles.lien}>{t('connexion.creerCompte')}</Link>
+				</p>
+			</form>
+		</main>
 	);
 };

@@ -7,6 +7,7 @@ import { LoginPage } from './features/auth/LoginPage';
 import { RegisterPage } from './features/auth/RegisterPage';
 import { AccountPage } from './features/account/AccountPage';
 import { NotFoundPage } from './features/NotFoundPage';
+import { ForgotPasswordPage } from './features/auth/ForgotPasswordPage';
 
 export const router = createBrowserRouter([
   {
@@ -20,6 +21,7 @@ export const router = createBrowserRouter([
       { path: 'register', element: <RegisterPage /> },
       { path: 'account', element: <AccountPage /> },
       { path: '*', element: <NotFoundPage /> },
+      { path: 'forgot-password', element: <ForgotPasswordPage/> },
     ],
   },
 ]);
