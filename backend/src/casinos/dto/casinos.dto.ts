@@ -2,7 +2,6 @@ import { Transform } from 'class-transformer';
 import { trim } from '../../users/dto/users.dto';
 import {
   IsNotEmpty,
-  IsOptional,
   IsString,
   MaxLength,
   ValidateIf,
@@ -29,27 +28,24 @@ export class CasinosCreationDto {
 }
 
 export class CasinosUpdateDto {
-  @ValidateIf((o) => !o.city && !o.adress)
-  @IsOptional()
+  @ValidateIf((_, value) => value !== undefined)
   @Transform(trim)
   @IsString()
   @IsNotEmpty()
   @MaxLength(50)
-  name: string;
+  name?: string;
 
-  @ValidateIf((o) => !o.city && !o.adress)
-  @IsOptional()
+  @ValidateIf((_, value) => value !== undefined)
   @Transform(trim)
   @IsString()
   @IsNotEmpty()
   @MaxLength(50)
-  city: string;
+  city?: string;
 
-  @ValidateIf((o) => !o.city && !o.adress)
-  @IsOptional()
+  @ValidateIf((_, value) => value !== undefined)
   @Transform(trim)
   @IsString()
   @IsNotEmpty()
   @MaxLength(50)
-  address: string;
+  address?: string;
 }

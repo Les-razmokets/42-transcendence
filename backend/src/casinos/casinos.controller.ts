@@ -27,30 +27,30 @@ export class CasinosController {
   @SerializeOptions({ schema: adminCasinoSchema })
   @Post()
   async create(@Body() dto: CasinosCreationDto): Promise<Casino> {
-    return await this.casinos.create(dto);
+    return await this.casinos.createCasino(dto);
   }
 
   @SerializeOptions({ schema: publicCasinoSchema })
   @Get()
   async getActiveCasinos(): Promise<CasinoInfo[]> {
-    return await this.casinos.listActive();
+    return await this.casinos.listActiveCasinos();
   }
 
   @SerializeOptions({ schema: publicCasinoSchema })
   @Get(':casinoId')
   async findOneActiveCasino(
-    @Param('casinoId', new ParseUUIDPipe()) id: string,
+    @Param('casinoId') casinoId: string,
   ): Promise<CasinoInfo> {
-    return await this.casinos.findActiveById(id);
+    return await this.casinos.findActiveCasino(casinoId);
   }
 
   @SerializeOptions({ schema: publicCasinoSchema })
   @RequireCasinoRole(CasinoRole.OWNER)
   @Patch(':casinoId')
   async updateCasino(
-    @Param('casinoId', new ParseUUIDPipe()) id: string,
+    @Param('casinoId') casinoId: string,
     @Body() dto: CasinosUpdateDto,
   ) {
-    return await this.casinos.updateCasino(id, dto);
+    return await this.casinos.updateCasino(casinoId, dto);
   }
 }

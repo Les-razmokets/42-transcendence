@@ -1,7 +1,11 @@
 {
   "name": "transcendence",
   "private": true,
-  "workspaces": ["shared", "backend", "frontend"],
+  "workspaces": [
+    "shared",
+    "backend",
+    "frontend"
+  ],
   "scripts": {
     "build:shared": "npm run build -w @transcendence/shared"
   },
@@ -14,5 +18,9 @@
     "@prisma/engines@7.10.1": true,
     "fsevents@2.3.3": true,
     "esbuild@0.28.2": true
+  },
+  "dependencies": {
+    "class-transformer": "^0.5.1",
+    "class-validator": "^0.15.1"
   }
 }

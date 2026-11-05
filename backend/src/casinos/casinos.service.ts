@@ -1,15 +1,15 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
-import { CasinoInfo, CasinoCreateInfo } from './utils/casinos.struct';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import { CasinoInfo } from './utils/casinos.struct';
 import { Casino, Prisma } from '../generated/prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { ConflictException } from '@nestjs/common';
-import { CasinosUpdateDto } from './dto/casinos.dto';
+import { CasinosCreationDto, CasinosUpdateDto } from './dto/casinos.dto';
 
 @Injectable()
 export class CasinosService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async listActive(): Promise<CasinoInfo[]> {
+  async listActiveCasinos(): Promise<CasinoInfo[]> {
     const casinos = await this.prisma.casino.findMany({
       where: { deletedAt: null },
       orderBy: [{ name: 'asc' }, { id: 'asc' }],
@@ -24,9 +24,15 @@ export class CasinosService {
     return casinos;
   }
 
-  async findActiveById(id: string): Promise<CasinoInfo> {
-    const casino = await this.prisma.casino.findUnique({
-      where: { id },
+  async findActiveCasino(id: string): Promise<CasinoInfo> {
+    const casino = await this.prisma.casino.findFirst({
+      where: { id, deletedAt: null },
+      select: {
+        id: true,
+        name: true,
+        city: true,
+        address: true,
+      },
     });
     if (!casino) throw new NotFoundException();
     return casino;
@@ -36,6 +42,12 @@ export class CasinosService {
     casinoId: string,
     dto: CasinosUpdateDto,
   ): Promise<CasinoInfo> {
+    if (
+      dto.address === undefined &&
+      dto.city === undefined &&
+      dto.name === undefined
+    )
+      throw new BadRequestException();
     try {
       return await this.prisma.casino.update({
         where: { id: casinoId, deletedAt: null },
@@ -53,9 +65,11 @@ export class CasinosService {
     }
   }
 
-  async create(casinoData: CasinoCreateInfo): Promise<Casino> {
+  async createCasino(dto: CasinosCreationDto): Promise<Casino> {
     try {
-      return await this.prisma.casino.create({ data: casinoData });
+      return await this.prisma.casino.create({ 
+        data: { name: dto.name, city: dto.city, address: dto.address }
+      });
     } catch (error) {
       if (
         error instanceof Prisma.PrismaClientKnownRequestError &&
