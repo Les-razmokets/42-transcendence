@@ -1,4 +1,4 @@
-import { useState, type SubmitEvent } from "react";
+import { useEffect, useState, type SubmitEvent } from "react";
 import { Link, useNavigate, useLocation} from "react-router";
 import { useTranslation } from "react-i18next";
 import { Bandes, Bouton, ChampSaisie, Logo, Notification } from "../../design-system";
@@ -11,7 +11,12 @@ export function LoginPage() {
 	const { t } = useTranslation();
 	const navigate = useNavigate();
 	const location = useLocation();
-	const vientDeSInscrire = location.state?.inscrit === true;
+	const [afficherSucces] = useState(location.state?.inscrit === true)
+
+	useEffect(() => {
+		if (location.state?.inscrit)
+			navigate(location.pathname, { replace: true, state: null});
+	}, [location, navigate]);
 
 	const [email, setEmail] = useState('');
 	const [password, setPassword] = useState('');
@@ -21,6 +26,12 @@ export function LoginPage() {
 	async function envoyer(e: SubmitEvent<HTMLFormElement>) {
 		e.preventDefault();
 		setError(null);
+
+		if (!email.includes('@') || !password) {
+			setError(t('connexion.erreurIdentifiants'));
+			return;
+		}
+
 		setEnCours(true);
 		try {
 			await login(email, password);
@@ -38,9 +49,9 @@ export function LoginPage() {
 	}
 
 	return (
-		<main className={styles.page}>
+		<div className={styles.page}>
 			<form className={styles.formulaire} onSubmit={envoyer} noValidate>
-				<span className={styles.logo}><Logo variante="xl"/></span>
+				<Logo variante="xl"/>
 				<Bandes variante="epaisse"/>
 
 				<div className={styles.entete}>
@@ -48,7 +59,7 @@ export function LoginPage() {
 					<p className={`${styles.secondaire} typo-texte-petit`}>{t('connexion.sousTitre')}</p>
 				</div>
 
-				{vientDeSInscrire && <Notification>{t('connexion.compteCree')}</Notification>}
+				{afficherSucces && !error && <Notification>{t('connexion.compteCree')}</Notification>}
 
 				<ChampSaisie
 					libelle={t('connexion.email')}
@@ -91,6 +102,6 @@ export function LoginPage() {
 					<Link to='/register' className={styles.lien}>{t('connexion.creerCompte')}</Link>
 				</p>
 			</form>
-		</main>
+		</div>
 	);
 };

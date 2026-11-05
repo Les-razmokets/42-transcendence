@@ -9,7 +9,8 @@ import styles from "./LoginPage.module.css";
 type Erreurs = Partial<Record<keyof DonneeInscription, string>>;
 
 const REGEX_PSEUDO = /^[a-z0-9_-]{1,20}$/i;
-const REGEX_MOT_DE_PASSE = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^a-zA-Z0-9]).{8,128}$/;
+const REGEX_MOT_DE_PASSE = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[-#!$@£%^&*()_+|~=`{}[\]:";'<>?,./\\ ]).{8,128}$/;
+
 
 
 function estMajeur(date: string) {
@@ -66,8 +67,12 @@ export function RegisterPage() {
             await inscription(champs);
             navigate('/login', { state: { inscrit: true } });
         } catch (err) {
-            if (err instanceof ApiError && err.status === 409)
-                setErreurs({ email: t('inscription.erreurEmailUtilise') });
+            if (err instanceof ApiError && err.status === 409) {
+                if (err.message.startsWith('Pseudo'))
+                    setErreurs({ pseudo: t('inscription.erreurPseudoUtilise')});
+                else
+                    setErreurs({ email: t('inscription.erreurEmailUtilise') });
+            }
             else if (err instanceof ApiError && err.status === 429)
                 setErreurServeur(t('inscription.erreurTropDeTentatives'));
             else if (err instanceof ApiError && err.status === 400)

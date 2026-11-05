@@ -41,6 +41,13 @@
     "erreurAge": "Tu dois avoir au moins 18 ans.",
     "erreurEmailUtilise": "Cette adresse e-mail est déjà utilisée",
     "erreurTropDeTentatives": "Trop de tentatives, réessaie dans une minute.",
-    "erreurServeur": "Une erreur est survenue, réessaie plus tard."
-  }
+    "erreurServeur": "Une erreur est survenue, réessaie plus tard.",
+    "erreurPseudoUtilise": "Ce pseudo est déjà utilisé"
+  },
+  "motDePasseOublie": {
+    "titre": "Mot de passe oublié",
+    "bientot": "Cette fonctionnalité arrive bientôt. En attendant, contacte le support.",
+    "retour": "Retour à la connexion"
+}
+
 }
