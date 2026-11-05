@@ -7,11 +7,8 @@ import { ApiError } from '@/lib/api';
 import { LoginPage } from './LoginPage';
 import { login } from './api';
 
-// on remplace l'appel au backend par une fausse fonction
 vi.mock('./api', () => ({ login: vi.fn() }));
 
-// <Link> et useNavigate ont besoin d'un routeur : on rend la page sur "/login"
-// et une page factice sur "/" pour vérifier la redirection
 function renderLogin(state?: unknown) {
   return render(
     <MemoryRouter initialEntries={[{ pathname: '/login', state }]}>
