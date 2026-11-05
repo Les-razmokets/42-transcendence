@@ -15,6 +15,32 @@
     "erreurEmail": "Adresse e-mail invalide",
     "erreurIdentifiants": "E-mail ou mot de passe incorrect",
     "erreurTropDeTentatives": "Trop de tentatives, réessaie dans une minute.",
-    "erreurGenerique": "Une erreur est survenue, réessaie plus tard."
+    "erreurGenerique": "Une erreur est survenue, réessaie plus tard.",
+    "compteCree": "Compte créé, tu peux te connecter."
+  },
+  "inscription": {
+    "titre": "Créer un compte",
+    "sousTitre": "Rejoins les tables de poker des casinos suisses.",
+    "prenom": "Prénom",
+    "nom": "Nom",
+    "pseudo": "Pseudo",
+    "pseudoAide": "Lettres, chiffres, « _ » et « - », 20 caractères max.",
+    "email": "E-mail",
+    "motDePasse": "Mot de passe",
+    "motDePasseAide": "8 caractères min. avec une majuscule, une minuscule, un chiffre et un symbole.",
+    "dateNaissance": "Date de naissance",
+    "creer": "Créer mon compte",
+    "enCours": "Création…",
+    "conditions": "En créant un compte, tu confirmes avoir au moins 18 ans.",
+    "dejaCompte": "Déjà un compte ?",
+    "seConnecter": "Se connecter",
+    "erreurObligatoire": "Ce champ est obligatoire",
+    "erreurPseudo": "Pseudo invalide",
+    "erreurEmail": "Adresse e-mail invalide",
+    "erreurMotDePasse": "Mot de passe trop faible",
+    "erreurAge": "Tu dois avoir au moins 18 ans.",
+    "erreurEmailUtilise": "Cette adresse e-mail est déjà utilisée",
+    "erreurTropDeTentatives": "Trop de tentatives, réessaie dans une minute.",
+    "erreurServeur": "Une erreur est survenue, réessaie plus tard."
   }
 }

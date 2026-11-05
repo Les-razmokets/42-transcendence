@@ -19,9 +19,9 @@ export const router = createBrowserRouter([
       { path: 'reservations', element: <ReservationPage /> },
       { path: 'login', element: <LoginPage /> },
       { path: 'register', element: <RegisterPage /> },
+      { path: 'forgot-password', element: <ForgotPasswordPage/> },
       { path: 'account', element: <AccountPage /> },
       { path: '*', element: <NotFoundPage /> },
-      { path: 'forgot-password', element: <ForgotPasswordPage/> },
     ],
   },
 ]);

@@ -1,14 +1,17 @@
 import { useState, type SubmitEvent } from "react";
-import { Link, useNavigate} from "react-router";
+import { Link, useNavigate, useLocation} from "react-router";
 import { useTranslation } from "react-i18next";
-import { Bandes, Bouton, ChampSaisie, Logo } from "../../design-system";
-import { ApiError} from "../../lib/api";
+import { Bandes, Bouton, ChampSaisie, Logo, Notification } from "../../design-system";
+import { ApiError } from "../../lib/api";
 import { login } from "./api";
 import styles from "./LoginPage.module.css";
+
 
 export function LoginPage() {
 	const { t } = useTranslation();
 	const navigate = useNavigate();
+	const location = useLocation();
+	const vientDeSInscrire = location.state?.inscrit === true;
 
 	const [email, setEmail] = useState('');
 	const [password, setPassword] = useState('');
@@ -45,6 +48,8 @@ export function LoginPage() {
 					<p className={`${styles.secondaire} typo-texte-petit`}>{t('connexion.sousTitre')}</p>
 				</div>
 
+				{vientDeSInscrire && <Notification>{t('connexion.compteCree')}</Notification>}
+
 				<ChampSaisie
 					libelle={t('connexion.email')}
 					type="email"
@@ -72,7 +77,8 @@ export function LoginPage() {
 
 				<span className={`${styles.secondaire} typo-legende`}>{t('connexion.ou')}</span>
 
-				<Bouton 
+				<Bouton
+					type="button"
 					variante="secondaire"
 					className={styles.large}
 					onClick={() => (window.location.href = '/api/auth/42')}
