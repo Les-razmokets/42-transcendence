@@ -14,7 +14,9 @@ services:
       - 127.0.0.1:5432:5432
     restart: unless-stopped
   backend:
-    build: ./backend
+    build:
+      context: .
+      dockerfile: backend/Dockerfile 
     depends_on:
       db:
         condition: service_healthy
@@ -29,15 +31,19 @@ services:
       - DATABASE_URL=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
     restart: unless-stopped
   frontend:
-    build: ./frontend
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile 
     healthcheck:
       test: ["CMD-SHELL", "wget --spider -q http://127.0.0.1:5173/"]
       interval: 5s
       timeout: 3s
       retries: 10
     volumes:
-      - ./frontend:/app
+      - ./frontend:/app/frontend
+      - ./shared:/app/shared
       - /app/node_modules
+      - /app/frontend/node_modules
     restart: unless-stopped
   genere-certif:
     image: alpine:3.24

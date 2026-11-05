@@ -1,6 +1,5 @@
-export type SeatStatus = 'FREE' | 'OCCUPIED';
-export type PokerVariant = 'OMAHA' | 'TEXAS_HOLDEM';
-export type TableStatus = 'OPEN' | 'PAUSED';
+import type { SeatStatus, PokerVariant, TableStatus } from '@transcendence/shared';
+export type { SeatStatus, PokerVariant, TableStatus };
 
 export type Seat = {
   id: string;

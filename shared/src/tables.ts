@@ -1,9 +1,5 @@
 import { z } from 'zod';
-import {
-  PokerVariant,
-  SeatStatus,
-  TableStatus,
-} from '../generated/prisma/enums';
+import { PokerVariant, SeatStatus, TableStatus } from './enums.js';
 
 // response schema for a seat inside a table
 export const seatSchema = z.object({

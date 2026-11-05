@@ -22,7 +22,7 @@ export class AuthGuard implements CanActivate {
     private readonly reflector: Reflector,
   ) {}
   async canActivate(context: ExecutionContext): Promise<boolean> {
-	  // Check if the route or controller is marked as public using the Reflector and custom public key
+    // Check if the route or controller is marked as public using the Reflector and custom public key
     const isPublic = this.reflector.getAllAndOverride<boolean>(IS_PUBLIC_KEY, [
       context.getHandler(),
       context.getClass(),
@@ -35,7 +35,7 @@ export class AuthGuard implements CanActivate {
       throw new UnauthorizedException(); // Reject if the token is missing or not a valid string
     let payload: JwtPayload;
     try {
-	    // Verify the JWT signature, expiration, and algorithm (restricted to HS256)
+      // Verify the JWT signature, expiration, and algorithm (restricted to HS256)
       payload = await this.jwt.verifyAsync(token, {
         algorithms: ['HS256'],
       });

@@ -26,16 +26,44 @@ Le `CMD` lance `npm run dev` (hot-reload), pas `npm run build` + un serveur de f
 - `--host` fait écouter Vite sur toutes les interfaces (`0.0.0.0`), pas seulement sur `localhost` du conteneur. Sans lui, le serveur tourne mais reste injoignable depuis l'extérieur du conteneur, même avec un `ports:` dans le compose.
 - Le `--` avant `--host` est nécessaire : un script `npm run` ne transmet pas ses arguments à la commande sous-jacente par défaut. Tout ce qui suit `--` est passé à Vite, pas interprété par `npm`.
 
-**Un seul `COPY` pour les fichiers de config**
-```
-COPY package.json package-lock.json tsconfig.json ./
-RUN npm ci
-COPY . .
-```
-Plus simple que le backend : pas de génération de client (pas de Prisma côté frontend), donc pas besoin d'étapes intermédiaires entre `npm ci` et la copie du reste du code.
+**Contexte de build : la racine du repo**
+Comme pour le backend (voir « Contexte de build » dans `docs/backend-docker.md`) : depuis TSK-45, le repo est un monorepo npm workspaces avec un seul `package-lock.json` à la racine, et le frontend importe `@transcendence/shared` (voir `docs/shared.md`). Le compose construit donc l'image depuis la racine (`context: .`, `dockerfile: frontend/Dockerfile`), et les chemins des `COPY` partent de la racine.
 
-**`.dockerignore` : `node_modules`, `.env`**
-Même raison que le backend : ne jamais laisser une copie du disque de l'hôte écraser ce que `npm ci` vient d'installer dans l'image, et ne jamais embarquer de secret.
+**Ordre des `COPY`/`RUN`**
+```
+WORKDIR /app
+COPY package.json package-lock.json ./
+COPY backend/package.json backend/
+COPY frontend/package.json frontend/
+COPY shared/package.json shared/
+RUN npm ci -w frontend -w @transcendence/shared
+
+COPY shared/ shared/
+
+WORKDIR /app/frontend
+COPY frontend/ ./
+```
+- Les trois `package.json` sont copiés, même celui du backend : `npm ci` exige que le lockfile corresponde à tous les workspaces déclarés à la racine.
+- `npm ci -w frontend -w @transcendence/shared` n'installe que ce dont le front a besoin : rien de NestJS ni de Prisma dans l'image.
+- Plus simple que le backend : pas de génération de client (pas de Prisma côté frontend), et **pas de `build:shared`**. Vite lit directement les sources de `shared/src` grâce à un alias dans `frontend/vite.config.ts` :
+  ```ts
+  '@transcendence/shared': path.resolve(dirname, '../shared/src/index.ts'),
+  ```
+  C'est pour ça que `shared/` (sources comprises) est copié tel quel dans l'image, à côté de `frontend/`.
+
+**Volumes : hot-reload sur le front et sur `shared/`**
+```yaml
+volumes:
+  - ./frontend:/app/frontend
+  - ./shared:/app/shared
+  - /app/node_modules
+  - /app/frontend/node_modules
+```
+- `./frontend` et `./shared` sont montés depuis l'hôte : modifier un fichier dans `frontend/src` **ou** dans `shared/src` met à jour la page sans reconstruire l'image (grâce à l'alias Vite ci-dessus).
+- Les volumes anonymes protègent les dépendances installées dans l'image. Le plus important est `/app/frontend/node_modules` : sans lui, le montage de `./frontend` ferait apparaître le `node_modules` de l'hôte (ou rien du tout) à la place de celui que `npm ci` a installé. `/app/node_modules` contient les dépendances que npm a remontées à la racine du monorepo ; il est déclaré aussi pour qu'elles restent celles de l'image.
+
+**`.dockerignore` : un seul, à la racine**
+Partagé avec le backend (voir `docs/backend-docker.md`). Même raison : ne jamais laisser une copie du disque de l'hôte (`node_modules`, `dist`…) écraser ce que `npm ci` vient d'installer dans l'image, et ne jamais embarquer de secret (`.env`).
 
 **Pas de `depends_on` sur `db` ni `backend`**
 Le conteneur `frontend` sert des fichiers avec Vite ; il n'a besoin ni de la base ni de l'API pour démarrer lui-même. C'est le **navigateur** de l'utilisateur qui appellera l'API plus tard, pas le conteneur. D'où l'absence de `depends_on` ici, à la différence de `backend` qui attend `db`.

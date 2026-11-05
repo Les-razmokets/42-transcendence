@@ -38,7 +38,7 @@ import { AuthGuard } from './auth.guard';
     AuthService,
     Argon2Hasher,
     AuthGuard,
-  { provide: APP_GUARD, useClass: AuthGuard },
+    { provide: APP_GUARD, useClass: AuthGuard },
   ],
   exports: [JwtModule, UsersModule, AuthGuard],
 })

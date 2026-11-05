@@ -41,5 +41,11 @@ export default defineConfig({
         setupFiles: ['./vitest.setup.ts']
       }
     }]
-  }
+  },
+  resolve: {
+    alias: {
+      '@transcendence/shared': path.resolve(dirname, '../shared/src/index.ts'),
+      '@': path.resolve(dirname, 'src'),
+    },
+  },
 });
