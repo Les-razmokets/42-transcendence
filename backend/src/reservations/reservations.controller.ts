@@ -1,10 +1,7 @@
 import { Body, Controller, Post, SerializeOptions } from '@nestjs/common';
 import { ReservationsService } from './reservations.service';
 import { CreateReservationDto } from './dto/create-reservation.dto';
-import {
-  reservationSchema,
-  Reservation,
-} from './reservations-response.schemas';
+import { reservationSchema, type ReservationInput } from '@transcendence/shared';
 import { CurrentUser } from '../auth/utils/current-user.decorator';
 import type { AuthenticatedUser } from '../auth/utils/auth-request';
 
@@ -17,7 +14,7 @@ export class ReservationsController {
   createReservation(
     @CurrentUser() user: AuthenticatedUser,
     @Body() dto: CreateReservationDto,
-  ): Promise<Reservation> {
+  ): Promise<ReservationInput> {
     return this.reservationsService.create(user.id, dto);
   }
 }
