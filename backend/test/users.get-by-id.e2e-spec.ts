@@ -7,17 +7,17 @@ import {
   afterAll,
 } from '@jest/globals';
 import { randomUUID } from 'node:crypto';
-import { INestApplication } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import request from 'supertest';
 import { AppModule } from '../src/app.module';
 import { configureApp } from '../src/app.config';
 import { PrismaService } from '../src/prisma/prisma.service';
+import { NestExpressApplication } from '@nestjs/platform-express';
 
 const USERS_ID_IS_PUBLIC = true;
 
 describe('GET /api/users/:id (e2e)', () => {
-  let app: INestApplication;
+  let app: NestExpressApplication;
   let prisma: PrismaService;
 
   const PASSWORD = 'Correct-Horse-9-Battery!';

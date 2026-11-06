@@ -6,7 +6,7 @@ import {
   beforeEach,
   afterAll,
 } from '@jest/globals';
-import { INestApplication } from '@nestjs/common';
+
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import { Test } from '@nestjs/testing';
@@ -15,6 +15,7 @@ import { AppModule } from '../src/app.module';
 import { configureApp } from '../src/app.config';
 import { PrismaService } from '../src/prisma/prisma.service';
 import { COOKIE_NAME } from '../src/auth/utils/cookie';
+import { NestExpressApplication } from '@nestjs/platform-express';
 
 /*
  * ASSUMPTIONS TO CHECK:
@@ -27,7 +28,7 @@ import { COOKIE_NAME } from '../src/auth/utils/cookie';
  */
 
 describe('Auth cookie: register / login / logout (e2e)', () => {
-  let app: INestApplication;
+  let app: NestExpressApplication;
   let prisma: PrismaService;
   let jwt: JwtService;
   let lifetime: number; // seconds
