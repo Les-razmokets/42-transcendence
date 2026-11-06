@@ -52,6 +52,9 @@ Même raisonnement que pour `backend`/`frontend` (TSK-22) : sans `healthcheck:`,
 **Plus aucun `ports:` sur `backend` et `frontend`**
 Ils communiquent avec `nginx` uniquement via le réseau interne de Compose (résolution par nom de service : `backend:3000`, `frontend:5173`) — plus besoin d'être joignables depuis l'hôte. `nginx` est le seul service qui publie un port (`127.0.0.1:443:443`), confirmant l'objectif du ticket : un seul point d'entrée.
 
+**`proxy_set_header X-Forwarded-For $remote_addr;` sur `/api`**
+Trouvé par Fred en code review (TSK-40) : le backend identifie chaque client par `req.ip` pour le rate-limiting (login, limite globale). Comme tout passe par `nginx` sans ce header, `req.ip` valait toujours l'IP de `nginx`, jamais celle du vrai client — tout le monde partageait le même compteur. `$remote_addr` (l'IP que `nginx` observe réellement sur la connexion TCP, impossible à falsifier par le client) **remplace** systématiquement le header, plutôt que `$proxy_add_x_forwarded_for` qui l'aurait seulement complété : avec `$proxy_add_x_forwarded_for`, un attaquant aurait pu injecter sa propre valeur en tête de la chaîne, et le `trust proxy` de Nest (configuré côté backend dans `app.config.ts`) aurait fait confiance à cette valeur falsifiée. Vérifié en live : un header `X-Forwarded-For` falsifié envoyé via `nginx` n'échappe plus au rate-limit ; deux sources réseau réelles différentes (hôte et un autre conteneur) ont bien des compteurs séparés. Script de vérification : `scripts/verify-client-ip.sh`.
+
 ## Limites connues / à faire plus tard
 
 - ~~Seul le port `443` est publié~~ : fait, le port `80` est publié et redirige en `301` vers `https://$host$request_uri` (second bloc `server { }` dans `default.conf`, dédié, sans `location`).
@@ -59,3 +62,4 @@ Ils communiquent avec `nginx` uniquement via le réseau interne de Compose (rés
 - Les headers `Upgrade`/`Connection` sont gérés sur `/` (nécessaires au hot-reload Vite, trouvé via la review de Fred). Pas encore sur `/api` (prévu dans `docs/diagram-archi.md` pour le temps réel des réservations) : à ajouter quand le backend aura sa passerelle WebSocket.
 - Le frontend continue d'être servi par le serveur de dev Vite (pas un build de production) à travers `nginx` — limite déjà documentée dans `docs/frontend-docker.md`, toujours vraie.
 - Certificat valide 1 an, pas de renouvellement automatique — un `make re` complet le régénère de toute façon à chaque fois que le volume est recréé.
+- `trust proxy` côté backend (`app.config.ts`) est réglé sur `1` saut exactement : si un jour un autre proxy s'ajoute devant `nginx` (CDN, load balancer...), cette valeur devra être revue.
