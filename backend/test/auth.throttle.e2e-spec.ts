@@ -7,12 +7,13 @@ import {
   afterAll,
   jest,
 } from '@jest/globals';
-import { INestApplication } from '@nestjs/common';
+
 import { Test } from '@nestjs/testing';
 import request from 'supertest';
 import { AppModule } from '../src/app.module'; // adjust
 import { configureApp } from '../src/app.config'; // or inline the same setup as in your other e2e specs
 import { PrismaService } from '../src/prisma/prisma.service'; // adjust
+import { NestExpressApplication } from '@nestjs/platform-express';
 
 /*
  * Rate limiting e2e spec.
@@ -40,7 +41,7 @@ const PASSWORD = 'Correct-Horse-9-Battery!';
 const ORIGINAL_FLAG = process.env.THROTTLE_DISABLED;
 
 describe('Rate limiting (e2e)', () => {
-  let app: INestApplication;
+  let app: NestExpressApplication;
   let prisma: PrismaService;
 
   const server = () => app.getHttpServer();

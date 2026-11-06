@@ -6,7 +6,6 @@ import {
   beforeEach,
   afterAll,
 } from '@jest/globals';
-import { INestApplication } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { Test } from '@nestjs/testing';
 import request from 'supertest';
@@ -15,9 +14,10 @@ import { configureApp } from '../src/app.config';
 import { PrismaService } from '../src/prisma/prisma.service';
 import { COOKIE_NAME } from '../src/auth/utils/cookie';
 import { Role } from '../src/generated/prisma/client'; // value import: Role.USER / Role.ADMIN
+import { NestExpressApplication } from '@nestjs/platform-express';
 
 describe('GET /api/users/me (e2e): the whole auth chain', () => {
-  let app: INestApplication;
+  let app: NestExpressApplication;
   let prisma: PrismaService;
   let jwt: JwtService;
 

@@ -6,13 +6,14 @@ import {
   beforeEach,
   afterAll,
 } from '@jest/globals';
-import { INestApplication } from '@nestjs/common';
+
 import { Test } from '@nestjs/testing';
 import * as argon2 from 'argon2';
 import request from 'supertest';
 import { AppModule } from '../src/app.module';
 import { configureApp } from '../src/app.config';
 import { PrismaService } from '../src/prisma/prisma.service';
+import { NestExpressApplication } from '@nestjs/platform-express';
 
 /*
  * ASSUMPTIONS TO CHECK:
@@ -23,7 +24,7 @@ import { PrismaService } from '../src/prisma/prisma.service';
  */
 
 describe('POST /api/auth/login (e2e)', () => {
-  let app: INestApplication;
+  let app: NestExpressApplication;
   let prisma: PrismaService;
 
   const LOGIN_STATUS = 200;
