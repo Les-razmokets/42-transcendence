@@ -1,9 +1,10 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
+  HttpCode,
   Param,
-  ParseUUIDPipe,
   Patch,
   Post,
   SerializeOptions,
@@ -18,6 +19,11 @@ import {
 } from './utils/casinos-response.schemas';
 import { CasinoInfo } from './utils/casinos.struct';
 import { RequireCasinoRole } from './utils/casinos-role.decorator';
+import { CasinosMembersService } from './members/casinos-members.service';
+import { publicMemberSchema } from './members/utils/members-response.schema';
+import { MembersAddDto, MembersUpdateDto } from './members/dto/members.dto';
+import { CurrentUser } from '../auth/utils/current-user.decorator';
+import type { AuthenticatedUser } from '../auth/utils/auth-request';
 
 @Controller('casinos')
 export class CasinosController {

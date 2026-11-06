@@ -1,0 +1,106 @@
+import { ForbiddenException, ConflictException, Injectable, NotFoundException, BadRequestException } from "@nestjs/common";
+import { PrismaService } from "../../prisma/prisma.service";
+import { MemberInfo } from "./utils/members.struct";
+import { CasinosService } from "../casinos.service";
+import { MembersAddDto, MembersUpdateDto } from "./dto/members.dto";
+import type { AuthenticatedUser } from "../../auth/utils/auth-request";
+import { Prisma } from "../../generated/prisma/client";
+
+@Injectable()
+export class CasinosMembersService {
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly casinos: CasinosService,
+  ) {}
+
+  async listMembers(casinoId: string): Promise<MemberInfo[]> {
+    const memberships = await this.prisma.membership.findMany({
+      where: { casinoId, user: { deletedAt: null } },
+      orderBy: [{user: { pseudo: 'asc' } }, { id: 'asc' }],
+      take: 50,
+      select: { role: true, user: { select: { pseudo: true } } },
+    });
+    return memberships.map((m) => ({ pseudo: m.user.pseudo, role: m.role }));
+  }
+
+  async addMember(dto: MembersAddDto, casinoId: string, caller: AuthenticatedUser): Promise<MemberInfo> {
+    if (dto.role === 'OWNER' && caller.role !== 'ADMIN')
+      throw new ForbiddenException();
+    const pseudo = dto.pseudo.trim().toLowerCase();
+    const user = await this.prisma.user.findFirst({
+      where: { pseudo, deletedAt: null },
+      select: { id: true, pseudo: true },
+    })
+    if (!user)
+      throw new NotFoundException();
+    try {
+      const membership = await this.prisma.membership.create({
+        data: { userId: user.id, casinoId, role: dto.role },
+        select: { role: true, user: { select: { pseudo: true } } },
+      })
+      return { role: membership.role, pseudo: membership.user.pseudo };
+    }
+    catch (error) {
+      if (
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        error.code === 'P2002'
+      ) {
+        throw new ConflictException(`Pseudo already used in a membership.`);
+      }
+      throw error;
+    }
+  }
+
+  async updateMemberRole(dto: MembersUpdateDto, casinoId: string, caller: AuthenticatedUser, pseudo: string): Promise<MemberInfo> {
+    if (caller.role !== 'ADMIN')
+      throw new ForbiddenException();
+    const normalizedPseudo = pseudo.trim().toLowerCase();
+    const user = await this.prisma.user.findFirst({
+      where: { normalizedPseudo, deletedAt: null },
+      select: { id: true, pseudo: true },
+    })
+    if (!user || caller.id === user.id)
+      throw new ForbiddenException();
+    try {
+      const membership = await this.prisma.membership.update({
+        where: { id: user.id, casinoId },
+        data: { role: dto.role },
+        select: { role: true, user: { select: { pseudo: true } } },
+      })
+      return { role: membership.role, pseudo: membership.user.pseudo };
+    } catch (error) {
+      if (
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        error.code === 'P2025'
+      ) {
+        throw new NotFoundException();
+      }
+      throw error;
+    }
+  }
+
+  async removeMember(casinoId: string, caller: AuthenticatedUser, pseudo: string) {
+    const normalizedPseudo = pseudo.trim().toLowerCase();
+    const user = await this.prisma.user.findFirst({
+      where: { normalizedPseudo, deletedAt: null },
+      select: { id: true },
+    })
+    if (!user)
+      throw new NotFoundException();
+    const membership = await this.prisma.membership.findFirst({
+      where: { casinoId, id: user.id },
+      select: { role: true },
+    })
+    if (!membership)
+      throw new NotFoundException();
+    if (membership.role === 'OWNER' && caller.role !== 'ADMIN')
+      throw new ForbiddenException();
+    try {
+      return await this.prisma.membership.delete({
+        where: { id : user.id }
+      })
+    } catch (error) {
+      throw error;
+    }
+  }
+}

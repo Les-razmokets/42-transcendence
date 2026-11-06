@@ -10,7 +10,6 @@ import { randomUUID } from 'node:crypto';
 import {
   Controller,
   Get,
-  INestApplication,
   NotFoundException,
   SerializeOptions,
 } from '@nestjs/common';
@@ -26,6 +25,7 @@ import { RequireCasinoRole } from '../src/casinos/utils/casinos-role.decorator';
 import { Public } from '../src/auth/utils/public.decorator';
 import { COOKIE_NAME } from '../src/auth/utils/cookie';
 import { CasinoRole, Role } from '../src/generated/prisma/client'; // value imports
+import { NestExpressApplication } from '@nestjs/platform-express';
 
 /*
  * @RequireCasinoRole() end to end, behind the REAL global guards (throttler, auth, roles),
@@ -84,7 +84,7 @@ type CasinoKey = 'A' | 'B' | 'DELETED' | 'UNKNOWN';
 type RouteName = 'floor' | 'owner';
 
 describe('@RequireCasinoRole (e2e): the casino access matrix', () => {
-  let app: INestApplication;
+  let app: NestExpressApplication;
   let prisma: PrismaService;
   let jwt: JwtService;
 
@@ -415,7 +415,7 @@ describe('@RequireCasinoRole (e2e): the casino access matrix', () => {
       const moduleRef = await Test.createTestingModule({
         imports: [AppModule],
       }).compile();
-      const plain = moduleRef.createNestApplication();
+      let plain: NestExpressApplication = moduleRef.createNestApplication();
       configureApp(plain);
       await plain.init();
 

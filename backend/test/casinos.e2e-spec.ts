@@ -1,12 +1,13 @@
 import { describe, it, expect, beforeAll, beforeEach, afterAll } from '@jest/globals';
 import { randomUUID } from 'node:crypto';
-import { INestApplication, NotFoundException } from '@nestjs/common';
+import { NotFoundException } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import request from 'supertest';
 import { AppModule } from '../src/app.module';
 import { configureApp } from '../src/app.config';
 import { PrismaService } from '../src/prisma/prisma.service';
 import { CasinoRole, Role } from '../src/generated/prisma/client';
+import { NestExpressApplication } from '@nestjs/platform-express';
 
 /*
  * Casino routes end to end, behind the REAL global guards (throttler, auth, roles):
@@ -43,7 +44,7 @@ type Method = 'get' | 'post' | 'patch';
 type Caller = Record<Method, (path: string) => request.Test>;
 
 describe('Casino routes (e2e)', () => {
-    let app: INestApplication;
+    let app: NestExpressApplication;
     let prisma: PrismaService;
 
     const PASSWORD = 'Correct-Horse-9-Battery!';
