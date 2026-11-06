@@ -1,13 +1,11 @@
-import type { SeatStatus, PokerVariant, TableStatus } from '@transcendence/shared';
-export type { SeatStatus, PokerVariant, TableStatus };
+import type { Table } from '@transcendence/shared';
 
-export type Seat = {
-  id: string;
-  tableId: string;
-  seatNumber: number;
-  status: SeatStatus;
-};
+// Une place, telle qu'elle est rangée dans une table renvoyée par l'API.
+// shared n'exporte pas encore de type Seat : on le déduit du type Table.
+export type Seat = Table['seats'][number];
 
+// Pas encore de route API ni de schéma shared pour les casinos :
+// forme reprise du schéma Prisma, en attendant.
 export type Casino = {
   id: string;
   name: string;
@@ -16,32 +14,3 @@ export type Casino = {
   createdAt: string;
   updatedAt: string;
 };
-
-export type PokerTable = {
-  id: string;
-  casinoId: string;
-  name: string;
-  variant: PokerVariant;
-  smallBlind: number;
-  bigBlind: number;
-  maxSeats: number;
-  status: TableStatus;
-  moneyOnTable: number;
-  moneyUpdatedAt: string | null;
-  createdAt: string;
-  updatedAt: string;
-};
-
-export type User = {
-  id: string;
-  email: string;
-  pseudo: string;
-  firstName: string;
-  lastName: string;
-  phone: string | null;
-  birthDate: string;
-  role: string;
-  createdAt: string;
-  updatedAt: string;
-};
-
