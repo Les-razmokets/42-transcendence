@@ -21,7 +21,8 @@
     "test:cov": "node --experimental-vm-modules --no-warnings=ExperimentalWarning ./node_modules/jest/bin/jest.js --coverage",
     "test:debug": "node --inspect-brk --experimental-vm-modules --no-warnings=ExperimentalWarning -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
     "test:e2e": "node --experimental-vm-modules --no-warnings=ExperimentalWarning ../node_modules/jest/bin/jest.js --config ./test/jest-e2e.json --runInBand",
-    "db:migrate": "prisma migrate deploy"
+    "db:migrate": "prisma migrate deploy",
+	"generate": "prisma generate && cp src/generated/prisma/enums.ts ../shared/src/enums.ts"
   },
   "devDependencies": {
     "@jest/globals": "^30.5.2",
@@ -68,6 +69,7 @@
     "passport-jwt": "^4.0.1",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.1",
-    "zod": "^4.6.7"
+    "zod": "^4.6.7",
+    "@transcendence/shared": "*"
   }
 }
