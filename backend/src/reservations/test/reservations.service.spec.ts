@@ -1,14 +1,14 @@
 import { BadRequestException, ConflictException } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
-import { Prisma } from '../generated/prisma/client';
+import { Prisma } from '../../generated/prisma/client';
 import {
   ReservationStatus,
   SeatStatus,
   TableStatus,
-} from '../generated/prisma/enums';
-import { PrismaService } from '../prisma/prisma.service';
-import { CreateReservationDto } from './dto/create-reservation.dto';
-import { ReservationsService } from './reservations.service';
+} from '../../generated/prisma/enums';
+import { PrismaService } from '../../prisma/prisma.service';
+import { CreateReservationDto } from '../dto/create-reservation.dto';
+import { ReservationsService } from '../reservations.service';
 
 // Test unitaire : PrismaService est remplacé par un mock, aucune base n'est touchée.
 // Il vérifie la traduction des erreurs Prisma, pas les index partiels eux-mêmes :

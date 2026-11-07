@@ -1,7 +1,10 @@
 import { Body, Controller, Post, SerializeOptions } from '@nestjs/common';
 import { ReservationsService } from './reservations.service';
 import { CreateReservationDto } from './dto/create-reservation.dto';
-import { reservationSchema, type ReservationInput } from '@transcendence/shared';
+import {
+  reservationSchema,
+  type ReservationInput,
+} from '@transcendence/shared';
 import { CurrentUser } from '../auth/utils/current-user.decorator';
 import type { AuthenticatedUser } from '../auth/utils/auth-request';
 

@@ -1,13 +1,13 @@
 import { BadRequestException, ConflictException } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
-import { AppModule } from '../app.module';
+import { AppModule } from '../../app.module';
 import {
   PokerVariant,
   ReservationStatus,
   SeatStatus,
-} from '../generated/prisma/enums';
-import { PrismaService } from '../prisma/prisma.service';
-import { ReservationsService } from './reservations.service';
+} from '../../generated/prisma/enums';
+import { PrismaService } from '../../prisma/prisma.service';
+import { ReservationsService } from '../reservations.service';
 
 // Test d'intégration : utilise la vraie base de dev (DATABASE_URL), jamais la prod.
 // C'est ici qu'on prouve que les index partiels de la migration empêchent
