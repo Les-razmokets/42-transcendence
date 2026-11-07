@@ -14,3 +14,18 @@ export type Casino = {
   createdAt: string;
   updatedAt: string;
 };
+
+// Profil renvoyé par /auth/login, /auth/register et /users/me (myProfileUserSchema côté back).
+// Pas encore dans shared : les dates arrivent en string dans le JSON.
+export type User = {
+  id: string;
+  email: string;
+  pseudo: string;
+  firstName: string;
+  lastName: string;
+  phone: string | null;
+  birthDate: string;
+  role: string;
+  createdAt: string;
+  updatedAt: string;
+};

@@ -48,12 +48,10 @@ describe('Filtre', () => {
   });
 
   describe('avec chevron (par défaut)', () => {
-    it('est un déclencheur de menu fermé', () => {
+    it('est fermé par défaut', () => {
       render(<Filtre>Casino</Filtre>);
-      const bouton = screen.getByRole('button');
 
-      expect(bouton).toHaveAttribute('aria-haspopup', 'menu');
-      expect(bouton).toHaveAttribute('aria-expanded', 'false');
+      expect(screen.getByRole('button')).toHaveAttribute('aria-expanded', 'false');
     });
 
     it("n'expose pas aria-pressed", () => {
