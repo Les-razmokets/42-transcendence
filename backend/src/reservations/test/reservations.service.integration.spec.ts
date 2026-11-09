@@ -258,4 +258,49 @@ describe('ReservationsService (intégration)', () => {
       }),
     ).rejects.toBeInstanceOf(BadRequestException);
   });
+
+  describe('findAllForUser', () => {
+    it('ne renvoie que les réservations du joueur, annulées comprises, la plus lointaine en premier', async () => {
+      const owner = await createUser('list-owner');
+      const other = await createUser('list-other');
+      // Insertion directe : on teste la lecture, pas les règles de création.
+      // Place 9 réservée par personne d'autre, sur trois journées casino distinctes.
+      const soon = await prisma.reservation.create({
+        data: {
+          userId: owner.id,
+          seatId: seatIds[9],
+          arrivalAt,
+          status: ReservationStatus.CANCELLED,
+          cancelledAt: new Date(),
+        },
+      });
+      const later = await prisma.reservation.create({
+        data: {
+          userId: owner.id,
+          seatId: seatIds[9],
+          arrivalAt: addHours(arrivalAt, 48),
+          status: ReservationStatus.PENDING_PAYMENT,
+        },
+      });
+      await prisma.reservation.create({
+        data: {
+          userId: other.id,
+          seatId: seatIds[9],
+          arrivalAt: addHours(arrivalAt, 24),
+          status: ReservationStatus.PENDING_PAYMENT,
+        },
+      });
+
+      const reservations = await service.findAllForUser(owner.id);
+
+      expect(reservations.map((r) => r.id)).toEqual([later.id, soon.id]);
+      expect(reservations.every((r) => r.userId === owner.id)).toBe(true);
+    });
+
+    it('renvoie un tableau vide pour un joueur sans réservation', async () => {
+      const user = await createUser('list-empty');
+
+      await expect(service.findAllForUser(user.id)).resolves.toEqual([]);
+    });
+  });
 });

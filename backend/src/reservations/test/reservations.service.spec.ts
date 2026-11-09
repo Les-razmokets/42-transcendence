@@ -17,7 +17,7 @@ describe('ReservationsService', () => {
   let service: ReservationsService;
   const prismaMock = {
     seat: { findFirst: jest.fn() },
-    reservation: { create: jest.fn() },
+    reservation: { create: jest.fn(), findMany: jest.fn() },
   };
 
   const USER_ID = 'b0000000-0000-4000-8000-000000000001';
@@ -264,6 +264,34 @@ describe('ReservationsService', () => {
       prismaMock.reservation.create.mockRejectedValue(error);
 
       await expect(service.create(USER_ID, makeDto())).rejects.toBe(error);
+    });
+  });
+
+  describe('findAllForUser', () => {
+    it('ne demande à la base que les réservations du joueur, les plus lointaines en premier', async () => {
+      prismaMock.reservation.findMany.mockResolvedValue([]);
+
+      await service.findAllForUser(USER_ID);
+
+      expect(prismaMock.reservation.findMany).toHaveBeenCalledWith({
+        where: { userId: USER_ID },
+        orderBy: { arrivalAt: 'desc' },
+      });
+    });
+
+    it('renvoie les réservations telles que la base les donne', async () => {
+      const fakeReservations = [{ id: 'reservation-2' }, { id: 'reservation-1' }];
+      prismaMock.reservation.findMany.mockResolvedValue(fakeReservations);
+
+      await expect(service.findAllForUser(USER_ID)).resolves.toBe(
+        fakeReservations,
+      );
+    });
+
+    it('renvoie un tableau vide si le joueur n’a aucune réservation', async () => {
+      prismaMock.reservation.findMany.mockResolvedValue([]);
+
+      await expect(service.findAllForUser(USER_ID)).resolves.toEqual([]);
     });
   });
 });
