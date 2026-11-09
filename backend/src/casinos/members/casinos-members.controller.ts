@@ -21,12 +21,14 @@ import { Role } from '@transcendence/shared';
 
 @Controller('casinos/:casinoId/members')
 export class CasinosMembersController {
-  constructor (private readonly members: CasinosMembersService) {}
+  constructor(private readonly members: CasinosMembersService) {}
 
   @SerializeOptions({ schema: publicMemberSchema })
   @RequireCasinoRole('FLOOR')
   @Get()
-  async listMembers(@Param('casinoId') casinoId: string): Promise<MemberInfo[]> {
+  async listMembers(
+    @Param('casinoId') casinoId: string,
+  ): Promise<MemberInfo[]> {
     return await this.members.listMembers(casinoId);
   }
 

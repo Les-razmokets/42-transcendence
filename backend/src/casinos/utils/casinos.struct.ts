@@ -1,4 +1,4 @@
-import { CasinoRole } from "@transcendence/shared";
+import { CasinoRole } from '@transcendence/shared';
 
 export interface CasinoInfo {
   id: string;

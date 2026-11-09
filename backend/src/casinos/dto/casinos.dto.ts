@@ -1,11 +1,6 @@
 import { Transform } from 'class-transformer';
 import { trim } from '../../users/dto/users.dto';
-import {
-  IsNotEmpty,
-  IsString,
-  MaxLength,
-  ValidateIf,
-} from 'class-validator';
+import { IsNotEmpty, IsString, MaxLength, ValidateIf } from 'class-validator';
 
 export class CasinosCreationDto {
   @Transform(trim)

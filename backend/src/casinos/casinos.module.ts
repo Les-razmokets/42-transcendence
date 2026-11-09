@@ -10,7 +10,7 @@ import { CasinosMembersService } from './members/casinos-members.service';
 import { CasinosMembersController } from './members/casinos-members.controller';
 
 @Module({
-  imports: [ AuthModule ],
+  imports: [AuthModule],
   providers: [
     CasinosAccessService,
     CasinosService,

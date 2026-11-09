@@ -41,10 +41,12 @@ export const myProfileWithMembershipsSchema = myProfileUserSchema.extend({
       casinoId: z.string(),
       casinoName: z.string(),
       role: z.enum(CasinoRole), // Keeps your existing role validation
-    })
+    }),
   ),
 });
-export type MyProfileWithMemberships = z.infer<typeof myProfileWithMembershipsSchema>;
+export type MyProfileWithMemberships = z.infer<
+  typeof myProfileWithMembershipsSchema
+>;
 
 // response schema when an admin wants to GET a user.
 export const adminUserSchema = z.object({

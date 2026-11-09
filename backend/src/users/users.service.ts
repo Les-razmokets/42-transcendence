@@ -62,27 +62,39 @@ export class UsersService {
 
   async me(id: string): Promise<MyProfileWithMemberships> {
     const user = await this.prisma.user.findUnique({
-    where: { id },
-    select: {
-      id: true, email: true, pseudo: true, firstName: true, lastName: true,
-      phone: true, birthDate: true, role: true, createdAt: true, updatedAt: true,
-      memberships: {
-        where: { casino: { deletedAt: null } },
-        orderBy: [{ casino: { name: 'asc' } }, { id: 'asc' }],
-        select: { casinoId: true, role: true, casino: { select: { name: true } } },
+      where: { id },
+      select: {
+        id: true,
+        email: true,
+        pseudo: true,
+        firstName: true,
+        lastName: true,
+        phone: true,
+        birthDate: true,
+        role: true,
+        createdAt: true,
+        updatedAt: true,
+        memberships: {
+          where: { casino: { deletedAt: null } },
+          orderBy: [{ casino: { name: 'asc' } }, { id: 'asc' }],
+          select: {
+            casinoId: true,
+            role: true,
+            casino: { select: { name: true } },
+          },
+        },
       },
-    },
-  });
-  if (!user) throw new NotFoundException();
-  const { memberships, ...profile } = user;
-  return {
-    ...profile,
-    memberships: memberships.map((m) => ({
-      casinoId: m.casinoId,
-      casinoName: m.casino.name,
-      role: m.role,
-    })),
-  };
+    });
+    if (!user) throw new NotFoundException();
+    const { memberships, ...profile } = user;
+    return {
+      ...profile,
+      memberships: memberships.map((m) => ({
+        casinoId: m.casinoId,
+        casinoName: m.casino.name,
+        role: m.role,
+      })),
+    };
   }
 
   async updatePasswordHash(id: string, newHash: string): Promise<void> {

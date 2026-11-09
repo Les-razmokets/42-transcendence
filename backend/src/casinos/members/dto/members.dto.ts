@@ -1,5 +1,5 @@
-import { Transform } from "class-transformer";
-import { trimToLower } from "../../../users/dto/users.dto";
+import { Transform } from 'class-transformer';
+import { trimToLower } from '../../../users/dto/users.dto';
 import {
   IsString,
   MinLength,
@@ -8,7 +8,7 @@ import {
   IsNotEmpty,
   IsEnum,
 } from 'class-validator';
-import { CasinoRole } from "@transcendence/shared";
+import { CasinoRole } from '@transcendence/shared';
 
 export class AddMemberDto {
   @Transform(trimToLower)

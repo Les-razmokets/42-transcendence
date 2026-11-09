@@ -1,4 +1,8 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { CasinoInfo } from './utils/casinos.struct';
 import { Casino, Prisma } from '../generated/prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
@@ -67,8 +71,8 @@ export class CasinosService {
 
   async createCasino(dto: CasinosCreationDto): Promise<Casino> {
     try {
-      return await this.prisma.casino.create({ 
-        data: { name: dto.name, city: dto.city, address: dto.address }
+      return await this.prisma.casino.create({
+        data: { name: dto.name, city: dto.city, address: dto.address },
       });
     } catch (error) {
       if (
