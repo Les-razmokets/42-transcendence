@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, jest } from '@jest/globals';
-import { NotFoundException, BadRequestException } from '@nestjs/common';
+import { NotFoundException } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import { CasinosService } from '../casinos.service'; // adjust paths / names to your project
 import { PrismaService } from '../../prisma/prisma.service';

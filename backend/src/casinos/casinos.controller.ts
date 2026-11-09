@@ -1,9 +1,7 @@
 import {
   Body,
   Controller,
-  Delete,
   Get,
-  HttpCode,
   Param,
   Patch,
   Post,
@@ -19,8 +17,6 @@ import {
 } from './utils/casinos-response.schemas';
 import { CasinoInfo } from './utils/casinos.struct';
 import { RequireCasinoRole } from './utils/casinos-role.decorator';
-import { CasinosMembersService } from './members/casinos-members.service';
-import { publicMemberSchema } from './members/utils/members-response.schema';
 
 @Controller('casinos')
 export class CasinosController {
