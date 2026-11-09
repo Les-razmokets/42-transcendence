@@ -2,7 +2,7 @@ import { ForbiddenException, ConflictException, Injectable, NotFoundException, B
 import { PrismaService } from "../../prisma/prisma.service";
 import { MemberInfo } from "./utils/members.struct";
 import { CasinosService } from "../casinos.service";
-import { MembersAddDto, MembersUpdateDto } from "./dto/members.dto";
+import { AddMemberDto, ChangeMemberRoleDto } from "./dto/members.dto";
 import type { AuthenticatedUser } from "../../auth/utils/auth-request";
 import { Prisma } from "../../generated/prisma/client";
 
@@ -23,7 +23,7 @@ export class CasinosMembersService {
     return memberships.map((m) => ({ pseudo: m.user.pseudo, role: m.role }));
   }
 
-  async addMember(dto: MembersAddDto, casinoId: string, caller: AuthenticatedUser): Promise<MemberInfo> {
+  async addMember(caller: AuthenticatedUser, casinoId: string, dto: AddMemberDto): Promise<MemberInfo> {
     if (dto.role === 'OWNER' && caller.role !== 'ADMIN')
       throw new ForbiddenException();
     const pseudo = dto.pseudo.trim().toLowerCase();
@@ -51,7 +51,7 @@ export class CasinosMembersService {
     }
   }
 
-  async updateMemberRole(dto: MembersUpdateDto, casinoId: string, caller: AuthenticatedUser, pseudo: string): Promise<MemberInfo> {
+  async changeRole(caller: AuthenticatedUser, casinoId: string, pseudo: string, dto: ChangeMemberRoleDto): Promise<MemberInfo> {
     if (caller.role !== 'ADMIN')
       throw new ForbiddenException();
     const normalizedPseudo = pseudo.trim().toLowerCase();
@@ -79,7 +79,7 @@ export class CasinosMembersService {
     }
   }
 
-  async removeMember(casinoId: string, caller: AuthenticatedUser, pseudo: string) {
+  async removeMember(caller: AuthenticatedUser, casinoId: string, pseudo: string): Promise<void> {
     const normalizedPseudo = pseudo.trim().toLowerCase();
     const user = await this.prisma.user.findFirst({
       where: { normalizedPseudo, deletedAt: null },
@@ -96,7 +96,7 @@ export class CasinosMembersService {
     if (membership.role === 'OWNER' && caller.role !== 'ADMIN')
       throw new ForbiddenException();
     try {
-      return await this.prisma.membership.delete({
+      await this.prisma.membership.delete({
         where: { id : user.id }
       })
     } catch (error) {

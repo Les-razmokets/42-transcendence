@@ -5,10 +5,12 @@ import {
   MinLength,
   MaxLength,
   Matches,
+  IsNotEmpty,
+  IsEnum,
 } from 'class-validator';
 import { CasinoRole } from "@transcendence/shared";
 
-export class MembersAddDto {
+export class AddMemberDto {
   @Transform(trimToLower)
   @IsString()
   @MinLength(1)
@@ -18,9 +20,13 @@ export class MembersAddDto {
   })
   pseudo: string;
 
+  @IsNotEmpty()
+  @IsEnum(CasinoRole)
   role: CasinoRole;
 }
 
-export class MembersUpdateDto {
+export class ChangeMemberRoleDto {
+  @IsNotEmpty()
+  @IsEnum(CasinoRole)
   role: CasinoRole;
 }

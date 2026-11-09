@@ -14,20 +14,20 @@ import { MemberInfo } from './utils/members.struct';
 import { RequireCasinoRole } from '../utils/casinos-role.decorator';
 import { CasinosMembersService } from './casinos-members.service';
 import { publicMemberSchema } from './utils/members-response.schema';
-import { MembersAddDto, MembersUpdateDto } from './dto/members.dto';
+import { AddMemberDto, ChangeMemberRoleDto } from './dto/members.dto';
 import { CurrentUser } from '../../auth/utils/current-user.decorator';
 import type { AuthenticatedUser } from '../../auth/utils/auth-request';
 import { Role } from '@transcendence/shared';
 
 @Controller('casinos/:casinoId/members')
 export class CasinosMembersController {
-  constructor (private readonly casinosMembers: CasinosMembersService) {}
+  constructor (private readonly members: CasinosMembersService) {}
 
   @SerializeOptions({ schema: publicMemberSchema })
   @RequireCasinoRole('FLOOR')
   @Get()
   async listMembers(@Param('casinoId') casinoId: string): Promise<MemberInfo[]> {
-    return await this.casinosMembers.listMembers(casinoId);
+    return await this.members.listMembers(casinoId);
   }
 
   @SerializeOptions({ schema: publicMemberSchema })
@@ -36,10 +36,10 @@ export class CasinosMembersController {
   @Post()
   async addMember(
     @Param('casinoId') casinoId: string,
-    @Body() dto: MembersAddDto,
+    @Body() dto: AddMemberDto,
     @CurrentUser() user: AuthenticatedUser,
   ): Promise<MemberInfo> {
-    return await this.casinosMembers.addMember(dto, casinoId, user);
+    return await this.members.addMember(user, casinoId, dto);
   }
 
   @SerializeOptions({ schema: publicMemberSchema })
@@ -48,10 +48,10 @@ export class CasinosMembersController {
   async updateMember(
     @Param('casinoId') casinoId: string,
     @Param('pseudo') pseudo: string,
-    @Body() dto: MembersUpdateDto,
+    @Body() dto: ChangeMemberRoleDto,
     @CurrentUser() user: AuthenticatedUser,
   ): Promise<MemberInfo> {
-    return await this.casinosMembers.updateMemberRole(dto, casinoId, user, pseudo);
+    return await this.members.changeRole(user, casinoId, pseudo, dto);
   }
 
   @RequireCasinoRole('OWNER')
@@ -62,6 +62,6 @@ export class CasinosMembersController {
     @Param('pseudo') pseudo: string,
     @CurrentUser() user: AuthenticatedUser,
   ) {
-    return await this.casinosMembers.removeMember(casinoId, user, pseudo);
+    return await this.members.removeMember(user, casinoId, pseudo);
   }
 }
