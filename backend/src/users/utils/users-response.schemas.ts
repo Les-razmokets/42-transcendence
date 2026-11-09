@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { CasinoRole } from '../../generated/prisma/enums';
 
 // response schema when someone wants to GET a user.
 export const publicUserSchema = z.object({
@@ -33,6 +34,17 @@ export const myProfileUserSchema = z.object({
   updatedAt: z.date(),
 });
 export type MyProfileUser = z.infer<typeof myProfileUserSchema>;
+
+export const myProfileWithMembershipsSchema = myProfileUserSchema.extend({
+  memberships: z.array(
+    z.object({
+      casinoId: z.string(),
+      casinoName: z.string(),
+      role: z.enum(CasinoRole), // Keeps your existing role validation
+    })
+  ),
+});
+export type MyProfileWithMemberships = z.infer<typeof myProfileWithMembershipsSchema>;
 
 // response schema when an admin wants to GET a user.
 export const adminUserSchema = z.object({

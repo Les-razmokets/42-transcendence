@@ -10,7 +10,7 @@ import { UsersService } from './users.service';
 import {
   publicUserSchema,
   PublicUser,
-  myProfileUserSchema,
+  myProfileWithMembershipsSchema,
 } from './utils/users-response.schemas';
 import { Public } from '../auth/utils/public.decorator';
 import { CurrentUser } from '../auth/utils/current-user.decorator';
@@ -20,10 +20,10 @@ import type { AuthenticatedUser } from '../auth/utils/auth-request';
 export class UsersController {
   constructor(private readonly usersService: UsersService) {}
 
-  @SerializeOptions({ schema: myProfileUserSchema })
+  @SerializeOptions({ schema: myProfileWithMembershipsSchema })
   @Get('me')
   async me(@CurrentUser() user: AuthenticatedUser) {
-    const currentUser = this.usersService.findById(user.id);
+    const currentUser = this.usersService.me(user.id);
     return currentUser;
   }
 
