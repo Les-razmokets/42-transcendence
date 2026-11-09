@@ -10,6 +10,7 @@ import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { ConfigModule } from '@nestjs/config';
 import { HealthModule } from './health/health.module';
+import { MetricsModule } from './metrics/metrics.module';
 import { AuthModule } from './auth/auth.module';
 import { UsersModule } from './users/users.module';
 import { CasinosModule } from './casinos/casinos.module';
@@ -31,6 +32,7 @@ import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
       skipIf: () => process.env.THROTTLE_DISABLED === 'true',
     }),
     HealthModule,
+    MetricsModule,
     AuthModule,
     UsersModule,
     CasinosModule,
