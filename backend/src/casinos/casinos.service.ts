@@ -9,6 +9,17 @@ import { PrismaService } from '../prisma/prisma.service';
 import { ConflictException } from '@nestjs/common';
 import { CasinosCreationDto, CasinosUpdateDto } from './dto/casinos.dto';
 
+/**
+ * Service handling business logic for casino management in NestJS.
+ * Communicates with the database via Prisma to perform CRUD operations with 
+ * soft-delete checks, error handling for uniqueness conflicts, and validation.
+ * 
+ * Methods:
+ * - listActiveCasinos: Retrieves up to 50 active (non-deleted) casinos ordered by name.
+ * - findActiveCasino: Finds a single active casino by ID or throws a `NotFoundException`.
+ * - updateCasino: Updates casino details with validation for empty payloads and Prisma P2025 error handling.
+ * - createCasino: Creates a new casino and handles Prisma P2002 uniqueness violation errors.
+ */
 @Injectable()
 export class CasinosService {
   constructor(private readonly prisma: PrismaService) {}

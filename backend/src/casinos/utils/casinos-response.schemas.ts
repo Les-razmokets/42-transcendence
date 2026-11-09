@@ -1,5 +1,6 @@
 import { z } from 'zod';
 
+// Public view of the casino informations
 export const publicCasinoSchema = z.object({
   id: z.string(),
   name: z.string(),
@@ -8,6 +9,7 @@ export const publicCasinoSchema = z.object({
 });
 export type PublicCasino = z.infer<typeof publicCasinoSchema>;
 
+// Admin view of the casino informations
 export const adminCasinoSchema = z.object({
   id: z.string(),
   name: z.string(),

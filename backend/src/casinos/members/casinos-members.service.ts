@@ -11,6 +11,17 @@ import { AddMemberDto, ChangeMemberRoleDto } from './dto/members.dto';
 import type { AuthenticatedUser } from '../../auth/utils/auth-request';
 import { Prisma } from '../../generated/prisma/client';
 
+/**
+ * Service managing member associations and roles for specific casinos.
+ * Communicates with the database via Prisma to handle listing, adding, modifying, 
+ * and removing casino memberships with permission checks.
+ * 
+ * Methods:
+ * - listMembers: Retrieves up to 50 active memberships for a casino, ordered by user pseudo.
+ * - addMember: Adds a user to a casino with a specified role, ensuring proper authorization for OWNER roles and handling unique conflicts.
+ * - changeRole: Updates a member's role for a casino, restricted to system admins and excluding self-modifications.
+ * - removeMember: Deletes a user's membership from a casino, with security checks preventing non-admins from removing owners.
+ */
 @Injectable()
 export class CasinosMembersService {
   constructor(

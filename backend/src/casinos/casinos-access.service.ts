@@ -8,6 +8,16 @@ import { PrismaService } from '../prisma/prisma.service';
 import { hasAtLeastRole } from './utils/casinos-role';
 import { AuthenticatedUser } from '../auth/utils/auth-request';
 
+/**
+ * Service responsible for validating user access permissions to specific casinos.
+ * It checks active casino records, membership roles, and global privileges (e.g., system admin status).
+ * 
+ * @param user - The currently authenticated user making the request.
+ * @param casinoId - The unique identifier of the target casino.
+ * @param minRole - The minimum casino role required to pass authorization.
+ * @throws {NotFoundException} If the casino does not exist, is soft-deleted, or the user lacks a membership (masked as not found for security).
+ * @throws {ForbiddenException} If the user's casino role is lower than the required `minRole`.
+ */
 @Injectable()
 export class CasinosAccessService {
   constructor(private readonly prisma: PrismaService) {}
