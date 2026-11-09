@@ -9,7 +9,6 @@ import {
 import {
   Controller,
   Get,
-  INestApplication,
   SerializeOptions,
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
@@ -23,6 +22,7 @@ import { Roles } from '../src/auth/utils/roles.decorator';
 import { Public } from '../src/auth/utils/public.decorator';
 import { COOKIE_NAME } from '../src/auth/utils/cookie';
 import { Role } from '../src/generated/prisma/client';
+import { NestExpressApplication } from '@nestjs/platform-express';
 
 /*
  * RolesGuard end to end, with a THROWAWAY controller that only exists in this spec:
@@ -63,7 +63,7 @@ class TestRolesController {
 }
 
 describe('Roles (e2e): RolesGuard behind the real guards', () => {
-  let app: INestApplication;
+  let app: NestExpressApplication;
   let prisma: PrismaService;
   let jwt: JwtService;
 
@@ -246,7 +246,7 @@ describe('Roles (e2e): RolesGuard behind the real guards', () => {
       const moduleRef = await Test.createTestingModule({
         imports: [AppModule],
       }).compile();
-      const plain = moduleRef.createNestApplication();
+      const plain = moduleRef.createNestApplication<NestExpressApplication>();
       configureApp(plain);
       await plain.init();
 
