@@ -7,6 +7,8 @@ BACKDIR = backend
 # Commands
 COMPOSE = docker compose
 PRISMA = cd $(BACKDIR) && npx prisma
+TESTBACK = docker compose run --rm backend npm test && docker compose run --rm backend npm run test:e2e
+TESTFRONT = docker compose run --rm frontend npm test -- --run
 
 # Colors
 GREEN = \033[0;32m
@@ -69,6 +71,14 @@ logs:
 # Applique les migrations existantes (non interactif)
 deploy:
 	$(call spin,🗄️  Applying migrations...,$(PRISMA) migrate deploy)
+	
+testback:
+	@$(TESTBACK) 
+
+testfront:
+	@$(TESTFRONT)
+
+test: testback testfront
 
 # Cree une nouvelle migration : make migrate name=add_casino
 migrate:
@@ -76,7 +86,7 @@ migrate:
 
 studio:
 	@$(PRISMA) studio
-
+	
 clean: down
 
 # ⚠️ Supprime aussi le volume : toutes les donnees de la base sont perdues
@@ -98,10 +108,13 @@ help:
 	@echo "  $(YELLOW)deploy$(RESET)    - Apply existing migrations"
 	@echo "  $(YELLOW)migrate$(RESET)   - Create a migration (name=<migration_name>)"
 	@echo "  $(YELLOW)studio$(RESET)    - Open Prisma Studio"
+	@echo "  $(YELLOW)testback$(RESET)  - Run test backend"
+	@echo "  $(YELLOW)testfront$(RESET) - Run test frontend"
+	@echo "  $(YELLOW)test$(RESET)      - Run test front & back"
 	@echo "  $(YELLOW)clean$(RESET)     - Same as down"
 	@echo "  $(YELLOW)fclean$(RESET)    - Stop containers and DELETE database volume"
 	@echo "  $(YELLOW)re$(RESET)        - fclean + all"
 	@echo "  $(YELLOW)help$(RESET)      - Show this help message"
 	@echo "$(CYAN)═══════════════════════════════════════════════════════$(RESET)"
 
-.PHONY: all up down ps logs deploy migrate studio clean fclean re help
+.PHONY: all up down ps logs deploy migrate studio clean fclean re help testback testfront test
