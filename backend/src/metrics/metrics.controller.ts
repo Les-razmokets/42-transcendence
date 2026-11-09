@@ -1,4 +1,4 @@
-// Creat metrics controller class for 
+// Read metrics and send it in text to prometheus 
 
 import { Controller, Get, Res } from '@nestjs/common';
 import type { Response } from 'express';

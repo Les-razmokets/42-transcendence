@@ -1,4 +1,4 @@
-//Creat the Metrucs class and export it to metrics.controller
+//declar metrics controller as part of this module
 import { Module } from '@nestjs/common';
 import { MetricsController } from './metrics.controller';
 

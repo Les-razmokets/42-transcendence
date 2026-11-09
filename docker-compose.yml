@@ -72,5 +72,17 @@ services:
       - 127.0.0.1:443:443
       - 127.0.0.1:80:80
     restart: unless-stopped
+  prometheus:
+    image: prom/prometheus:v3.16.0
+    depends_on:
+      backend:
+        condition: service_healthy
+    ports:
+      - 127.0.0.1:9090:9090
+    restart: unless-stopped
+    volumes:
+      - ./infra/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus-data:/prometheus
 volumes:
   db_data:
+  prometheus-data:
