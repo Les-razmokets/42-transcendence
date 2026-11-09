@@ -69,6 +69,13 @@ export class ReservationsService {
     }
   }
 
+  findAllForUser(userId: string) {
+    return this.prismaService.reservation.findMany({
+      where: { userId },
+      orderBy: { arrivalAt: 'desc' },
+    });
+  }
+
   private async assertSeatAvailable(seatId: string, isToday: boolean) {
     const seat = await this.prismaService.seat.findFirst({
       where: {

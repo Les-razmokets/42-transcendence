@@ -280,7 +280,10 @@ describe('ReservationsService', () => {
     });
 
     it('renvoie les réservations telles que la base les donne', async () => {
-      const fakeReservations = [{ id: 'reservation-2' }, { id: 'reservation-1' }];
+      const fakeReservations = [
+        { id: 'reservation-2' },
+        { id: 'reservation-1' },
+      ];
       prismaMock.reservation.findMany.mockResolvedValue(fakeReservations);
 
       await expect(service.findAllForUser(USER_ID)).resolves.toBe(

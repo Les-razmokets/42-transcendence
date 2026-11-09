@@ -1,4 +1,4 @@
-import { Body, Controller, Post, SerializeOptions } from '@nestjs/common';
+import { Body, Controller, Post, Get, SerializeOptions } from '@nestjs/common';
 import { ReservationsService } from './reservations.service';
 import { CreateReservationDto } from './dto/create-reservation.dto';
 import {
@@ -19,5 +19,12 @@ export class ReservationsController {
     @Body() dto: CreateReservationDto,
   ): Promise<ReservationInput> {
     return this.reservationsService.create(user.id, dto);
+  }
+
+  @Get()
+  getMyReservations	(
+    @CurrentUser() user: AuthenticatedUser,
+  ): Promise<ReservationInput[]> {
+    return this.reservationsService.findAllForUser(user.id);
   }
 }
