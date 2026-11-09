@@ -30,16 +30,7 @@ import { NestExpressApplication } from '@nestjs/platform-express';
 /*
  * @RequireCasinoRole() end to end, behind the REAL global guards (throttler, auth, roles),
  * with THROWAWAY controllers that only exist in this spec.
- *
- * ASSUMPTIONS TO CHECK:
- *  - CasinosModule provides and exports CasinosAccessService (the throwaway controllers use the guard,
- *    so the testing module must be able to build it).
- *  - Your closed-by-default interceptor needs a response schema on every route (SerializeOptions below).
- *  - THROTTLE_DISABLED=true comes from test/setup-env.ts.
- *  - Casino has name, city, address (required) and deletedAt; Membership has userId, casinoId, role.
- *  - Run against a TEST database: beforeEach wipes Membership, User and Casino.
- *    (If other specs leave PokerTable rows, delete them first or the Casino wipe is refused: onDelete Restrict.)
- */
+*/
 
 const okSchema = z.object({ ok: z.boolean() });
 

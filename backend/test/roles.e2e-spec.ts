@@ -22,7 +22,7 @@ import { PrismaService } from '../src/prisma/prisma.service';
 import { Roles } from '../src/auth/utils/roles.decorator';
 import { Public } from '../src/auth/utils/public.decorator';
 import { COOKIE_NAME } from '../src/auth/utils/cookie';
-import { Role } from '../src/generated/prisma/client'; // value import: Role.USER / Role.ADMIN
+import { Role } from '../src/generated/prisma/client';
 
 /*
  * RolesGuard end to end, with a THROWAWAY controller that only exists in this spec:

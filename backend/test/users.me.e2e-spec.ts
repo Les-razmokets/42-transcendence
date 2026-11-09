@@ -129,7 +129,9 @@ describe('GET /api/users/me (e2e): the whole auth chain', () => {
       const agent = await loggedInAgent(ME.email);
       const res = await agent.get('/api/users/me').expect(200);
 
-      expect(Object.keys(res.body).sort()).toEqual([...MY_PROFILE_KEYS, 'memberships'].sort());
+      expect(Object.keys(res.body).sort()).toEqual(
+        [...MY_PROFILE_KEYS, 'memberships'].sort(),
+      );
       expect(res.body).not.toHaveProperty('passwordHash');
       expect(res.body).not.toHaveProperty('deletedAt');
       expect(JSON.stringify(res.body)).not.toContain('$argon2');
