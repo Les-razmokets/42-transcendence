@@ -1,14 +1,9 @@
 import { describe, it, expect } from '@jest/globals';
 import { publicMemberSchema } from '../members/utils/members-response.schema';
-import { CasinoRole } from '../../generated/prisma/client'; // value import
+import { CasinoRole } from '../../generated/prisma/client';
 
 /*
  * The member view is a WHITELIST: a member is shown as { pseudo, role } and nothing else.
- *
- * ASSUMPTIONS TO CHECK:
- *  - memberViewSchema is a plain z.object (unknown keys are stripped, not rejected).
- *    If you used z.strictObject, the "drops unknown keys" tests must expect a throw instead.
- *  - role is validated against the CasinoRole values (remove the "unknown role" test if it is z.string()).
  */
 
 const member = { pseudo: 'bob', role: CasinoRole.FLOOR };

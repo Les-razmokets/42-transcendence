@@ -2,17 +2,12 @@ import { describe, it, expect } from '@jest/globals';
 import {
   myProfileUserSchema,
   myProfileWithMembershipsSchema,
-} from '../utils/users-response.schemas'; // adjust paths / names to your project
-import { CasinoRole } from '../../generated/prisma/client'; // value import
+} from '../utils/users-response.schemas';
+import { CasinoRole } from '../../generated/prisma/client';
 
 /*
  * The schema used ONLY by GET /users/me: the usual "my profile" fields + an always-present
  * list of memberships. Register and login keep myProfileUserSchema (no memberships).
- *
- * ASSUMPTIONS TO CHECK:
- *  - myProfileWithMembershipsSchema extends myProfileUserSchema (same fields + memberships).
- *  - Each membership is exactly { casinoId, casinoName, role }.
- *  - Plain z.object: unknown keys are stripped. If you used z.strictObject, expect a throw instead.
  */
 
 const profile = {

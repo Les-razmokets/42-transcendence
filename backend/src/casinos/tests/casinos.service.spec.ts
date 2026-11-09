@@ -9,14 +9,6 @@ import { Prisma } from '../../generated/prisma/client';
  * Unit spec for the casino CRUD service, with a stubbed Prisma (no database).
  * The e2e spec proves the real queries (deleted casinos hidden, real ordering); here we check the
  * logic around them and the SHAPE of each query we send.
- *
- * ASSUMPTIONS TO CHECK (rename to your real method names):
- *  - createCasino(dto)            -> prisma.casino.create
- *  - listActiveCasinos(limit?)    -> prisma.casino.findMany   (limit is optional; remove those tests if you have none)
- *  - findActiveCasino(id)         -> prisma.casino.findFirst
- *  - updateCasino(id, dto)        -> prisma.casino.update, P2025 mapped to a 404
- *  - Public queries select exactly id, name, city, address.
- *  - MAX_PAGE_SIZE is the hard cap of your list.
  */
 
 const MAX_PAGE_SIZE = 50;

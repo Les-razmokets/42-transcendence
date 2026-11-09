@@ -2,16 +2,10 @@ import { describe, it, expect } from '@jest/globals';
 import {
   publicCasinoSchema,
   adminCasinoSchema,
-} from '../utils/casinos-response.schemas'; // adjust paths / names to your project
+} from '../utils/casinos-response.schemas';
 
 /*
  * The schemas are WHITELISTS: whatever the database row contains, only these fields leave the API.
- *
- * ASSUMPTIONS TO CHECK:
- *  - publicCasinoSchema: id, name, city, address (nothing else).
- *  - adminCasinoSchema: the public fields + createdAt, updatedAt, deletedAt (nullable).
- *  - Both are plain z.object (unknown keys are stripped). If you used z.strictObject, the
- *    "drops unknown keys" tests must expect a throw instead.
  */
 
 const row = {

@@ -3,15 +3,10 @@ import { plainToInstance } from 'class-transformer';
 import { validate } from 'class-validator';
 import { AddMemberDto } from '../members/dto/members.dto';
 import { ChangeMemberRoleDto } from '../members/dto/members.dto';
-import { CasinoRole } from '../../generated/prisma/client'; // value import
+import { CasinoRole } from '../../generated/prisma/client';
 
 /*
  * Validated the way your global ValidationPipe does it: transform + whitelist + forbidNonWhitelisted.
- *
- * ASSUMPTIONS TO CHECK:
- *  - AddMemberDto: pseudo (trimmed, lowercased, same format as register) and role (a CasinoRole). Nothing else.
- *  - ChangeMemberRoleDto: role only. The pseudo comes from the URL, so a pseudo in the body is rejected.
- *  - PSEUDO_MAX / the pseudo regex follow your register DTO (letters, digits, "_" and "-").
  */
 
 const PSEUDO_MAX = 20;

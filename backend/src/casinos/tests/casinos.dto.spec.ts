@@ -1,17 +1,12 @@
 import { describe, it, expect } from '@jest/globals';
 import { plainToInstance } from 'class-transformer';
 import { validate } from 'class-validator';
-import { CasinosCreationDto } from '../dto/casinos.dto'; // adjust paths / names to your project
+import { CasinosCreationDto } from '../dto/casinos.dto';
 import { CasinosUpdateDto } from '../dto/casinos.dto';
 
 /*
  * The DTOs are validated the way your global ValidationPipe does it:
  * transform + whitelist + forbidNonWhitelisted.
- *
- * ASSUMPTIONS TO CHECK (change the constants to your real limits):
- *  - name, city and address are trimmed, non-empty strings with a maximum length.
- *  - The update DTO has the same three fields, all optional, AT LEAST ONE required.
- *  - Nothing else is accepted (id, deletedAt, timestamps...).
  */
 
 const NAME_MAX = 50;

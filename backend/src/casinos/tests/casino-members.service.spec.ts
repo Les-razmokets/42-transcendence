@@ -19,18 +19,6 @@ import { CasinosService } from '../casinos.service';
  *   change  : ADMIN-only; nobody changes their own role.
  *   remove  : removing an OWNER is ADMIN-only.
  *   always  : an unknown pseudo, a deleted user and a non-member give the same bare 404.
- *
- * ASSUMPTIONS TO CHECK (rename to your real names):
- *  - listMembers(casinoId)
- *    addMember(caller, casinoId, dto)
- *    changeRole(caller, casinoId, pseudo, dto)
- *    removeMember(caller, casinoId, pseudo)
- *  - caller is { id, role } (the shape of req.user); role is the GLOBAL role.
- *  - The target user is found with prisma.user.findFirst({ where: { pseudo, deletedAt: null } }).
- *  - The membership is identified by the unique pair: { userId_casinoId: { userId, casinoId } }.
- *  - Results are the flat view { pseudo, role }.
- *  - The service normalizes the pseudo (trim + lowercase) itself. Delete that test if only the DTO does.
- *  - Changing your own role is refused with a 403.
  */
 
 const MAX_MEMBERS = 50;
