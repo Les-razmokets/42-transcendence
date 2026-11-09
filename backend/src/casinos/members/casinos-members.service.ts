@@ -56,14 +56,16 @@ export class CasinosMembersService {
       throw new ForbiddenException();
     const normalizedPseudo = pseudo.trim().toLowerCase();
     const user = await this.prisma.user.findFirst({
-      where: { normalizedPseudo, deletedAt: null },
+      where: { pseudo: normalizedPseudo, deletedAt: null },
       select: { id: true, pseudo: true },
     })
-    if (!user || caller.id === user.id)
+    if (!user)
+      throw new NotFoundException();
+    if (caller.id === user.id)
       throw new ForbiddenException();
     try {
       const membership = await this.prisma.membership.update({
-        where: { id: user.id, casinoId },
+        where: { userId_casinoId: { casinoId, userId: user.id }, casino: { deletedAt: null } },
         data: { role: dto.role },
         select: { role: true, user: { select: { pseudo: true } } },
       })
@@ -82,13 +84,13 @@ export class CasinosMembersService {
   async removeMember(caller: AuthenticatedUser, casinoId: string, pseudo: string): Promise<void> {
     const normalizedPseudo = pseudo.trim().toLowerCase();
     const user = await this.prisma.user.findFirst({
-      where: { normalizedPseudo, deletedAt: null },
+      where: { pseudo: normalizedPseudo, deletedAt: null },
       select: { id: true },
     })
     if (!user)
       throw new NotFoundException();
     const membership = await this.prisma.membership.findFirst({
-      where: { casinoId, id: user.id },
+      where: { casinoId, userId: user.id },
       select: { role: true },
     })
     if (!membership)
@@ -97,7 +99,7 @@ export class CasinosMembersService {
       throw new ForbiddenException();
     try {
       await this.prisma.membership.delete({
-        where: { id : user.id }
+        where: { userId_casinoId: { casinoId, userId: user.id } }
       })
     } catch (error) {
       throw error;

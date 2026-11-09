@@ -4,6 +4,7 @@ import { Test } from '@nestjs/testing';
 import { CasinosMembersService } from '../members/casinos-members.service';
 import { PrismaService } from '../../prisma/prisma.service';
 import { CasinoRole, Prisma, Role } from '../../generated/prisma/client'; 
+import { CasinosService } from '../casinos.service';
 
 /*
  * Unit spec for the members rules, with a stubbed Prisma (no database).
@@ -79,6 +80,7 @@ describe('CasinoMembersService', () => {
 
         const moduleRef = await Test.createTestingModule({
             providers: [
+                CasinosService,
                 CasinosMembersService,
                 {
                     provide: PrismaService,
@@ -270,7 +272,12 @@ describe('CasinoMembersService', () => {
         it('an ADMIN changes the role of the member found by pseudo, via the unique pair', async () => {
             await service.changeRole(caller(Role.ADMIN), CASINO, target.pseudo, roleDto(CasinoRole.OWNER));
 
-            expect(update).toHaveBeenCalledWith(expect.objectContaining({ where: uniquePair }));
+            expect(update).toHaveBeenCalledWith(expect.objectContaining({
+              where: {
+                userId_casinoId: uniquePair.userId_casinoId,
+                casino: { deletedAt: null }
+            }
+          }));
             const arg = update.mock.calls[0][0] as { data: Record<string, unknown> };
             expect(arg.data).toEqual({ role: CasinoRole.OWNER });
         });
