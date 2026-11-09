@@ -1,4 +1,13 @@
-import { Body, Controller, Post, Get, SerializeOptions } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Post,
+  Get,
+  Delete,
+  SerializeOptions,
+  Param,
+  ParseUUIDPipe,
+} from '@nestjs/common';
 import { ReservationsService } from './reservations.service';
 import { CreateReservationDto } from './dto/create-reservation.dto';
 import {
@@ -22,9 +31,17 @@ export class ReservationsController {
   }
 
   @Get()
-  getMyReservations	(
+  getMyReservations(
     @CurrentUser() user: AuthenticatedUser,
   ): Promise<ReservationInput[]> {
     return this.reservationsService.findAllForUser(user.id);
+  }
+
+  @Delete(':id')
+  cancelMyreservation(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id', ParseUUIDPipe) id: string,
+  ): Promise<ReservationInput> {
+    return this.reservationsService.cancel(user.id, id);
   }
 }

@@ -1,4 +1,8 @@
-import { BadRequestException, ConflictException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ConflictException,
+  NotFoundException,
+} from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { AppModule } from '../../app.module';
 import {
@@ -301,6 +305,164 @@ describe('ReservationsService (intégration)', () => {
       const user = await createUser('list-empty');
 
       await expect(service.findAllForUser(user.id)).resolves.toEqual([]);
+    });
+  });
+
+  describe('cancel', () => {
+    // Insertion directe en CONFIRMED : le paiement n'existe pas encore,
+    // service.create ne produit que des PENDING_PAYMENT.
+    const createConfirmed = (userId: string, seatId: string, at: Date) =>
+      prisma.reservation.create({
+        data: {
+          userId,
+          seatId,
+          arrivalAt: at,
+          status: ReservationStatus.CONFIRMED,
+        },
+      });
+
+    it('annule une réservation CONFIRMED, libère la place, et refuse une 2ᵉ annulation', async () => {
+      const owner = await createUser('cancel-owner');
+      const next = await createUser('cancel-next');
+      // place 4 : libre ce jour-là (le test « 409 joueur » n'a rien pu y créer)
+      const reservation = await createConfirmed(
+        owner.id,
+        seatIds[4],
+        arrivalAt,
+      );
+
+      const cancelled = await service.cancel(owner.id, reservation.id);
+
+      expect(cancelled.status).toBe(ReservationStatus.CANCELLED);
+      expect(cancelled.cancelledAt).toBeInstanceOf(Date);
+      // la place est de nouveau réservable par un autre joueur, le même jour
+      await expect(
+        service.create(next.id, { seatId: seatIds[4], arrivalAt }),
+      ).resolves.toBeDefined();
+      // une réservation déjà annulée ne peut pas l'être une 2ᵉ fois
+      await expect(
+        service.cancel(owner.id, reservation.id),
+      ).rejects.toBeInstanceOf(ConflictException);
+    });
+
+    it("un joueur ne peut pas annuler la réservation d'un autre (404, rien ne change)", async () => {
+      const owner = await createUser('cancel-victim');
+      const intruder = await createUser('cancel-intruder');
+      // place 9, J+5 : journée que les tests de liste n'utilisent pas
+      const reservation = await createConfirmed(
+        owner.id,
+        seatIds[9],
+        addHours(arrivalAt, 96),
+      );
+
+      await expect(
+        service.cancel(intruder.id, reservation.id),
+      ).rejects.toBeInstanceOf(NotFoundException);
+      await expect(
+        prisma.reservation.findUniqueOrThrow({ where: { id: reservation.id } }),
+      ).resolves.toMatchObject({
+        status: ReservationStatus.CONFIRMED,
+        cancelledAt: null,
+      });
+    });
+
+    it('lève NotFoundException pour un id inconnu', async () => {
+      const user = await createUser('cancel-unknown');
+
+      await expect(
+        service.cancel(user.id, '00000000-0000-4000-8000-000000000000'),
+      ).rejects.toBeInstanceOf(NotFoundException);
+    });
+  });
+
+  describe('expirePendingPayments', () => {
+    const minutesAgo = (minutes: number) =>
+      new Date(Date.now() - minutes * 60 * 1000);
+
+    // place 1, journées J+2 à J+4 : jamais utilisées par les autres tests
+    const insert = (
+      userId: string,
+      status: ReservationStatus,
+      createdAt: Date,
+      dayOffset: number,
+    ) =>
+      prisma.reservation.create({
+        data: {
+          userId,
+          seatId: seatIds[1],
+          arrivalAt: addHours(arrivalAt, 24 * dayOffset),
+          status,
+          createdAt,
+        },
+      });
+
+    const statusOf = async (id: string) =>
+      (await prisma.reservation.findUniqueOrThrow({ where: { id } })).status;
+
+    it('expire les PENDING_PAYMENT de plus de 15 min, et seulement elles', async () => {
+      const stalePlayer = await createUser('expire-stale');
+      const freshPlayer = await createUser('expire-fresh');
+      const confirmedPlayer = await createUser('expire-confirmed');
+      const stale = await insert(
+        stalePlayer.id,
+        ReservationStatus.PENDING_PAYMENT,
+        minutesAgo(20),
+        1,
+      );
+      const fresh = await insert(
+        freshPlayer.id,
+        ReservationStatus.PENDING_PAYMENT,
+        minutesAgo(5),
+        2,
+      );
+      const confirmed = await insert(
+        confirmedPlayer.id,
+        ReservationStatus.CONFIRMED,
+        minutesAgo(20),
+        3,
+      );
+
+      // la base de dev peut contenir d'autres réservations périmées : au moins 1
+      await expect(service.expirePendingPayments()).resolves.toBeGreaterThan(0);
+
+      await expect(statusOf(stale.id)).resolves.toBe(ReservationStatus.EXPIRED);
+      await expect(statusOf(fresh.id)).resolves.toBe(
+        ReservationStatus.PENDING_PAYMENT,
+      );
+      await expect(statusOf(confirmed.id)).resolves.toBe(
+        ReservationStatus.CONFIRMED,
+      );
+    });
+
+    it('libère la place et le joueur après l’expiration', async () => {
+      const late = await createUser('expire-late');
+      const next = await createUser('expire-next');
+      // place 1, J+5 : libre (le test précédent s'arrête à J+4)
+      const day = addHours(arrivalAt, 24 * 4);
+      await prisma.reservation.create({
+        data: {
+          userId: late.id,
+          seatId: seatIds[1],
+          arrivalAt: day,
+          status: ReservationStatus.PENDING_PAYMENT,
+          createdAt: minutesAgo(16),
+        },
+      });
+      // avant l'expiration, la réservation périmée bloque encore la place
+      await expect(
+        service.create(next.id, { seatId: seatIds[1], arrivalAt: day }),
+      ).rejects.toBeInstanceOf(ConflictException);
+
+      await service.expirePendingPayments();
+
+      // la place est réservable par un autre joueur, le même jour
+      await expect(
+        service.create(next.id, { seatId: seatIds[1], arrivalAt: day }),
+      ).resolves.toBeDefined();
+      // et le joueur peut réserver une autre place le même jour
+      await expect(
+        service.create(late.id, { seatId: seatIds[7], arrivalAt: day }),
+      ).resolves.toBeDefined();
     });
   });
 });

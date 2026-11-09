@@ -7,9 +7,9 @@ import { configureApp } from '../src/app.config';
 import { PrismaService } from '../src/prisma/prisma.service';
 import { PokerVariant, ReservationStatus } from '../src/generated/prisma/enums';
 
-// POST and GET /api/reservations through HTTP: auth guard, DTO validation and
+// /api/reservations through HTTP: auth guard, DTO and param validation, and
 // response serialization (reservationSchema), which the service tests do not cover.
-describe('POST + GET /api/reservations (e2e)', () => {
+describe('/api/reservations (e2e)', () => {
   let app: NestExpressApplication;
   let prisma: PrismaService;
   let casinoId: string;
@@ -222,6 +222,111 @@ describe('POST + GET /api/reservations (e2e)', () => {
       const res = await empty.get('/api/reservations').expect(200);
 
       expect(res.body).toEqual([]);
+    });
+  });
+
+  describe('DELETE /api/reservations/:id', () => {
+    let cancellerId: string;
+    let confirmedId: string;
+    let pendingId: string;
+
+    // a CONFIRMED reservation can only be inserted directly:
+    // POST creates PENDING_PAYMENT and there is no payment route yet
+    const insert = (status: ReservationStatus, hoursLater: number) =>
+      prisma.reservation.create({
+        data: {
+          userId: cancellerId,
+          seatId: seatIds[3],
+          arrivalAt: new Date(arrivalAt.getTime() + hoursLater * 3_600_000),
+          status,
+        },
+      });
+
+    const statusOf = async (id: string) =>
+      (await prisma.reservation.findUniqueOrThrow({ where: { id } })).status;
+
+    beforeAll(async () => {
+      cancellerId = await register('canceller');
+      await register('intruder');
+      // seat 3, two different casino days: one active reservation per day
+      confirmedId = (await insert(ReservationStatus.CONFIRMED, 0)).id;
+      pendingId = (await insert(ReservationStatus.PENDING_PAYMENT, 24)).id;
+    });
+
+    it('401 without cookie, and the reservation is unchanged', async () => {
+      await request(server())
+        .delete(`/api/reservations/${confirmedId}`)
+        .expect(401);
+
+      await expect(statusOf(confirmedId)).resolves.toBe(
+        ReservationStatus.CONFIRMED,
+      );
+    });
+
+    it('400 when the id is not a UUID (ParseUUIDPipe)', async () => {
+      const canceller = await loggedInAgent('canceller');
+
+      await canceller.delete('/api/reservations/not-a-uuid').expect(400);
+    });
+
+    it('404 for an unknown id', async () => {
+      const canceller = await loggedInAgent('canceller');
+
+      await canceller
+        .delete('/api/reservations/00000000-0000-4000-8000-000000000000')
+        .expect(404);
+    });
+
+    it("404 for another player's reservation (its existence is not revealed), and it is unchanged", async () => {
+      const intruder = await loggedInAgent('intruder');
+
+      await intruder.delete(`/api/reservations/${confirmedId}`).expect(404);
+
+      await expect(statusOf(confirmedId)).resolves.toBe(
+        ReservationStatus.CONFIRMED,
+      );
+    });
+
+    it('409 for a PENDING_PAYMENT reservation, and it is unchanged', async () => {
+      const canceller = await loggedInAgent('canceller');
+
+      await canceller.delete(`/api/reservations/${pendingId}`).expect(409);
+
+      await expect(statusOf(pendingId)).resolves.toBe(
+        ReservationStatus.PENDING_PAYMENT,
+      );
+    });
+
+    it('200 with the serialized CANCELLED reservation, then 409 on a second DELETE', async () => {
+      const canceller = await loggedInAgent('canceller');
+
+      const res = await canceller
+        .delete(`/api/reservations/${confirmedId}`)
+        .expect(200);
+
+      expect(Object.keys(res.body).sort()).toEqual(
+        [...RESERVATION_KEYS].sort(),
+      );
+      expect(res.body).toMatchObject({
+        id: confirmedId,
+        userId: cancellerId,
+        status: ReservationStatus.CANCELLED,
+      });
+      expect(new Date(res.body.cancelledAt).toISOString()).toBe(
+        res.body.cancelledAt,
+      );
+
+      await canceller.delete(`/api/reservations/${confirmedId}`).expect(409);
+    });
+
+    it('the cancelled reservation stays in GET /api/reservations (history)', async () => {
+      const canceller = await loggedInAgent('canceller');
+
+      const res = await canceller.get('/api/reservations').expect(200);
+
+      expect(
+        res.body.find((r: { id: string }) => r.id === confirmedId),
+      ).toMatchObject({ status: ReservationStatus.CANCELLED });
     });
   });
 });
