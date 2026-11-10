@@ -11,7 +11,7 @@ import { Prisma } from '../../generated/prisma/client';
  * logic around them and the SHAPE of each query we send.
  */
 
-const MAX_PAGE_SIZE = 50;
+const MAX_PAGE_SIZE = 20;
 const PUBLIC_SELECT = { id: true, name: true, city: true, address: true };
 
 type Stub = jest.Mock<(...args: unknown[]) => Promise<unknown>>;

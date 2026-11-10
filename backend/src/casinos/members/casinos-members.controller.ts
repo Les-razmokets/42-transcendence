@@ -13,7 +13,7 @@ import { Roles } from '../../auth/utils/roles.decorator';
 import { MemberInfo } from './utils/members.struct';
 import { RequireCasinoRole } from '../utils/casinos-role.decorator';
 import { CasinosMembersService } from './casinos-members.service';
-import { publicMemberSchema } from './utils/members-response.schema';
+import { publicMemberSchema } from '@transcendence/shared';
 import { AddMemberDto, ChangeMemberRoleDto } from './dto/members.dto';
 import { CurrentUser } from '../../auth/utils/current-user.decorator';
 import type { AuthenticatedUser } from '../../auth/utils/auth-request';

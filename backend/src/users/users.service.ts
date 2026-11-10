@@ -6,7 +6,7 @@ import {
 import { PrismaService } from '../prisma/prisma.service';
 import { User, Prisma } from '../generated/prisma/client';
 import { UserInfo } from './users.struct';
-import { MyProfileWithMemberships } from './utils/users-response.schemas';
+import { MyProfileWithMemberships } from '@transcendence/shared';
 
 @Injectable()
 export class UsersService {

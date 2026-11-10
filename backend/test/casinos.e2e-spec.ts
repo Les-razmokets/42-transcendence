@@ -25,7 +25,7 @@ import { NestExpressApplication } from '@nestjs/platform-express';
  */
 
 const MALFORMED_ID_STATUS = 404;
-const MAX_PAGE_SIZE = 50;
+const MAX_PAGE_SIZE = 20;
 
 const PUBLIC_KEYS = ['address', 'city', 'id', 'name'];
 const ADMIN_KEYS = [

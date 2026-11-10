@@ -24,11 +24,15 @@ import { CasinosCreationDto, CasinosUpdateDto } from './dto/casinos.dto';
 export class CasinosService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async listActiveCasinos(): Promise<CasinoInfo[]> {
+  async listActiveCasinos(page: number = 1, limit: number = 20): Promise<CasinoInfo[]> {
+    const validLimit = Math.min(Math.max(limit, 1), 100);
+    const validPage = Math.max(page, 1);
+    const skip = (validPage - 1) * validLimit;
     const casinos = await this.prisma.casino.findMany({
       where: { deletedAt: null },
       orderBy: [{ name: 'asc' }, { id: 'asc' }],
-      take: 50,
+      skip: skip,
+      take: validLimit,
       select: {
         id: true,
         name: true,
@@ -98,9 +102,9 @@ export class CasinosService {
             }
           | undefined;
         const target = info?.driverAdapterError?.cause?.constraint?.index;
-        let field = 'Name or adress';
+        let field = 'Name or address';
         if (target?.includes('name')) field = 'name';
-        else if (target?.includes('adress')) field = 'adress';
+        else if (target?.includes('address')) field = 'address';
         throw new ConflictException(`${field} already in use.`);
       }
       throw error;

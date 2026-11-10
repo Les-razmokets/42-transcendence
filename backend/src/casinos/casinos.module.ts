@@ -15,7 +15,6 @@ import { CasinosMembersController } from './members/casinos-members.controller';
     CasinosAccessService,
     CasinosService,
     CasinosMembersService,
-    PrismaService,
     { provide: APP_GUARD, useClass: AuthGuard },
   ],
   controllers: [CasinosController, CasinosMembersController],

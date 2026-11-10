@@ -1,5 +1,5 @@
 import { describe, it, expect } from '@jest/globals';
-import { publicMemberSchema } from '../members/utils/members-response.schema';
+import { publicMemberSchema } from '@transcendence/shared';
 import { CasinoRole } from '../../generated/prisma/client';
 
 /*

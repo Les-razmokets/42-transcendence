@@ -7,7 +7,7 @@ import {
   HttpStatus,
 } from '@nestjs/common';
 import { AuthService } from './auth.service';
-import { myProfileUserSchema } from '../users/utils/users-response.schemas';
+import { myProfileUserSchema } from '@transcendence/shared';
 import { UsersCreationDto } from '../users/dto/users.dto';
 import { Public } from './utils/public.decorator';
 import { LoginDto } from './dto/login.dto';

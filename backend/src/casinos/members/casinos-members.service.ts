@@ -127,6 +127,12 @@ export class CasinosMembersService {
         where: { userId_casinoId: { casinoId, userId: user.id } },
       });
     } catch (error) {
+      if (
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        error.code === 'P2025'
+      ) {
+        throw new NotFoundException();
+      }
       throw error;
     }
   }

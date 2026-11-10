@@ -7,14 +7,10 @@ import {
   SerializeOptions,
 } from '@nestjs/common';
 import { UsersService } from './users.service';
-import {
-  publicUserSchema,
-  PublicUser,
-  myProfileWithMembershipsSchema,
-} from './utils/users-response.schemas';
 import { Public } from '../auth/utils/public.decorator';
 import { CurrentUser } from '../auth/utils/current-user.decorator';
 import type { AuthenticatedUser } from '../auth/utils/auth-request';
+import { publicUserSchema, myProfileWithMembershipsSchema, PublicUser } from '@transcendence/shared';
 
 @Controller('users')
 export class UsersController {
