@@ -211,9 +211,9 @@ Schéma de réponse `Table` (`shared/src/tables.ts`) : `id`, `casinoId`, `name`,
 | Méthode | Route | Accès | Corps | Réponse | État |
 |---|---|---|---|---|---|
 | POST | `/api/reservations` | Privé | `seatId`, `arrivalAt` | 201 + `Reservation` (statut `PENDING_PAYMENT`) | Existe |
-| GET | `/api/reservations` | Privé | – | `Reservation[]` du joueur connecté | Prévu (TSK-49) |
-| GET | `/api/reservations/:id` | Privé | – | `Reservation`, 404 si elle appartient à un autre joueur | Prévu (TSK-49) |
-| DELETE | `/api/reservations/:id` | Privé | – | Annulation : statut `CANCELLED` et `cancelledAt` | Prévu (TSK-49) |
+| GET | `/api/reservations` | Privé | – | `Reservation[]` du joueur connecté | Existe |
+| GET | `/api/reservations/:id` | Privé | – | `Reservation`, 404 si elle appartient à un autre joueur | Prévu |
+| DELETE | `/api/reservations/:id` | Privé | – | 200 + `Reservation` annulée (statut `CANCELLED`, `cancelledAt` rempli) | Existe |
 
 Règles de `POST /api/reservations` :
 - **Date d'arrivée** : `arrivalAt` doit être dans le futur et dans les 7 jours (sinon 400).
@@ -222,6 +222,35 @@ Règles de `POST /api/reservations` :
 - **Une seule réservation active** (`PENDING_PAYMENT`, `CONFIRMED` ou `SEATED`) par place et par journée casino, et une seule par joueur et par journée casino. Sinon 409.
 - **Arrivée le jour même** : la table doit être `OPEN` et la place `FREE`, sinon 409. Pour un autre jour, l'état actuel de la table ou de la place ne compte pas.
 - **Place introuvable** : une place inconnue ou supprimée renvoie 400.
+
+Règles de `GET /api/reservations` :
+- **Uniquement ses réservations** : le joueur est identifié par son cookie de session. Un `userId` passé dans l'URL est ignoré.
+- **Toutes les réservations**, y compris les annulées ou expirées (historique). Le front filtre selon `status` s'il ne veut que les actives.
+- **Ordre** : par `arrivalAt` décroissant, l'arrivée la plus lointaine en premier.
+- Un joueur sans réservation reçoit `[]`.
+
+Règles de `DELETE /api/reservations/:id` :
+- **Pas de suppression** : la réservation reste en base, avec le statut `CANCELLED` et la date d'annulation dans `cancelledAt`. Elle reste visible dans `GET /api/reservations`.
+- **Ses propres réservations seulement** : la réservation d'un autre joueur renvoie 404, comme un id inconnu, pour ne pas révéler qu'elle existe.
+- **Statut** : seule une réservation `CONFIRMED` peut être annulée. Pour tout autre statut, y compris `PENDING_PAYMENT` (qui expire seule si le paiement n'aboutit pas), la route renvoie 409.
+- **Délai** : l'annulation est refusée (409) dès que l'heure d'arrivée est atteinte.
+- **Place libérée** : une fois la réservation annulée, la place est de nouveau réservable pour cette journée casino, par n'importe quel joueur.
+- Si la réservation change de statut pendant la requête (par exemple le joueur est marqué arrivé), la route renvoie 409 au lieu d'annuler.
+
+| Code | Message (`message`) |
+|---|---|
+| 400 | `Validation failed (uuid is expected)` : l'id n'est pas un UUID |
+| 404 | `Reservation not found` |
+| 409 | `Only a confirmed reservation can be cancelled` |
+| 409 | `The arrival time has passed` |
+| 409 | `The reservation changed and can no longer be cancelled` |
+
+Expiration des réservations non payées (aucune route, tâche planifiée) :
+- **Délai** : une réservation `PENDING_PAYMENT` doit être payée dans les **15 minutes** qui suivent sa création (`createdAt`).
+- **Passage en `EXPIRED`** : une tâche planifiée tourne **toutes les minutes** et passe en `EXPIRED` les réservations dont le délai est dépassé. Une réservation peut donc rester en `PENDING_PAYMENT` jusqu'à une minute après la fin du délai.
+- **Place et joueur libérés** : une réservation `EXPIRED` n'est plus active. La place redevient réservable pour cette journée casino, et le joueur peut de nouveau réserver ce jour-là.
+- **Historique** : la réservation n'est pas supprimée, elle reste visible dans `GET /api/reservations` avec le statut `EXPIRED`.
+- Côté code : `ReservationsService.expirePendingPayments()` (délai `PAYMENT_DELAY_MS`), appelée par `ReservationsScheduler` (`backend/src/reservations/utils/reservations.scheduler.ts`).
 
 Schéma de réponse `Reservation` (`shared/src/reservations.ts`) : `id`, `userId`, `seatId`, `status`, `arrivalAt`, `createdAt`, `updatedAt`, `seatedAt`, `leftAt`, `cancelledAt` (les trois derniers peuvent valoir `null`).
 
