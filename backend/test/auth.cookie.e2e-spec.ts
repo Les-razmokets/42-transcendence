@@ -17,16 +17,6 @@ import { PrismaService } from '../src/prisma/prisma.service';
 import { COOKIE_NAME } from '../src/auth/utils/cookie';
 import { NestExpressApplication } from '@nestjs/platform-express';
 
-/*
- * ASSUMPTIONS TO CHECK:
- *  - configureApp registers cookie-parser too (not strictly needed here, but the guard will need it).
- *  - NODE_ENV is not "production" in tests, so the cookie is not Secure
- *    (otherwise supertest could not send it back over plain HTTP).
- *  - login returns 200, logout returns 204.
- *  - JwtService can be retrieved with { strict: false } (it is provided by JwtModule inside AuthModule).
- *  - Run against a TEST database: beforeEach wipes the User table.
- */
-
 describe('Auth cookie: register / login / logout (e2e)', () => {
   let app: NestExpressApplication;
   let prisma: PrismaService;
