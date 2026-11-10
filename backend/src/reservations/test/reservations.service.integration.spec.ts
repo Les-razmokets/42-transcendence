@@ -422,8 +422,10 @@ describe('ReservationsService (intégration)', () => {
         3,
       );
 
-      // la base de dev peut contenir d'autres réservations périmées : au moins 1
-      await expect(service.expirePendingPayments()).resolves.toBeGreaterThan(0);
+      // Pas d'assertion sur le nombre renvoyé : le cron du conteneur backend tourne
+      // sur la même base et peut avoir déjà expiré `stale` (et d'autres lignes).
+      // Le nombre est vérifié par le test unitaire ; ici on vérifie les statuts.
+      await service.expirePendingPayments();
 
       await expect(statusOf(stale.id)).resolves.toBe(ReservationStatus.EXPIRED);
       await expect(statusOf(fresh.id)).resolves.toBe(
@@ -439,21 +441,30 @@ describe('ReservationsService (intégration)', () => {
       const next = await createUser('expire-next');
       // place 1, J+5 : libre (le test précédent s'arrête à J+4)
       const day = addHours(arrivalAt, 24 * 4);
-      await prisma.reservation.create({
+      // Créée « fraîche » : aucun cron (celui du conteneur backend tourne sur la
+      // même base) ne peut l'expirer avant qu'on vérifie qu'elle bloque la place.
+      const pending = await prisma.reservation.create({
         data: {
           userId: late.id,
           seatId: seatIds[1],
           arrivalAt: day,
           status: ReservationStatus.PENDING_PAYMENT,
-          createdAt: minutesAgo(16),
         },
       });
-      // avant l'expiration, la réservation périmée bloque encore la place
+      // tant qu'elle n'a pas expiré, la réservation bloque la place
       await expect(
         service.create(next.id, { seatId: seatIds[1], arrivalAt: day }),
       ).rejects.toBeInstanceOf(ConflictException);
 
+      // on la vieillit au-delà du délai de paiement, puis on expire
+      await prisma.reservation.update({
+        where: { id: pending.id },
+        data: { createdAt: minutesAgo(16) },
+      });
       await service.expirePendingPayments();
+      await expect(statusOf(pending.id)).resolves.toBe(
+        ReservationStatus.EXPIRED,
+      );
 
       // la place est réservable par un autre joueur, le même jour
       await expect(
