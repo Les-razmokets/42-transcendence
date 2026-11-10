@@ -7,6 +7,7 @@ import {
   Param,
   Patch,
   Post,
+  Query,
   SerializeOptions,
 } from '@nestjs/common';
 import { Roles } from '../../auth/utils/roles.decorator';
@@ -18,6 +19,7 @@ import { AddMemberDto, ChangeMemberRoleDto } from './dto/members.dto';
 import { CurrentUser } from '../../auth/utils/current-user.decorator';
 import type { AuthenticatedUser } from '../../auth/utils/auth-request';
 import { Role } from '@transcendence/shared';
+import { PaginationDto } from '../dto/pagination.dto';
 
 @Controller('casinos/:casinoId/members')
 export class CasinosMembersController {
@@ -28,8 +30,9 @@ export class CasinosMembersController {
   @Get()
   async listMembers(
     @Param('casinoId') casinoId: string,
+    @Query() query: PaginationDto,
   ): Promise<MemberInfo[]> {
-    return await this.members.listMembers(casinoId);
+    return await this.members.listMembers(casinoId, query.page, query.limit);
   }
 
   @SerializeOptions({ schema: publicMemberSchema })

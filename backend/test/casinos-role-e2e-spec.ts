@@ -131,12 +131,12 @@ describe('@RequireCasinoRole (e2e): the casino access matrix', () => {
     return agent;
   };
 
-  const newCasino = (name: string, deleted = false) =>
+  const newCasino = (name: string, address: string, deleted = false) =>
     prisma.casino.create({
       data: {
         name,
         city: 'Lausanne',
-        address: 'Rue du Test 1',
+        address,
         deletedAt: deleted ? new Date() : null,
       },
     });
@@ -168,9 +168,9 @@ describe('@RequireCasinoRole (e2e): the casino access matrix', () => {
       data: { role: Role.ADMIN },
     });
 
-    casinoIds.A = (await newCasino('Casino A')).id;
-    casinoIds.B = (await newCasino('Casino B')).id;
-    casinoIds.DELETED = (await newCasino('Casino Deleted', true)).id;
+    casinoIds.A = (await newCasino('Casino A', 'rue du test 1')).id;
+    casinoIds.B = (await newCasino('Casino B', 'rue des tests 2')).id;
+    casinoIds.DELETED = (await newCasino('Casino Deleted','rue de mon test 4', true)).id;
     casinoIds.UNKNOWN = randomUUID();
 
     membershipIds.floorA = (

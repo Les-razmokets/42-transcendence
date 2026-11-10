@@ -78,12 +78,12 @@ describe('GET /api/users/me with memberships (e2e)', () => {
     return agent;
   };
 
-  const newCasino = (name: string, deleted = false) =>
+  const newCasino = (name: string, address: string, deleted = false) =>
     prisma.casino.create({
       data: {
         name,
         city: 'Lausanne',
-        address: 'Rue du Test 1',
+        address,
         deletedAt: deleted ? new Date() : null,
       },
     });
@@ -124,10 +124,10 @@ describe('GET /api/users/me with memberships (e2e)', () => {
     await prisma.membership.deleteMany();
     await prisma.casino.deleteMany();
 
-    casinoIds.A = (await newCasino('Alpha Casino')).id;
-    casinoIds.B = (await newCasino('Beta Casino')).id;
-    casinoIds.C = (await newCasino('Gamma Casino')).id;
-    casinoIds.DELETED = (await newCasino('Zeta Deleted', true)).id;
+    casinoIds.A = (await newCasino('Alpha Casino', 'aliuhfaoierhgpairuhg')).id;
+    casinoIds.B = (await newCasino('Beta Casino', 'adilurvhaserpuhaeripufh')).id;
+    casinoIds.C = (await newCasino('Gamma Casino', 'ajlrhfieeeee')).id;
+    casinoIds.DELETED = (await newCasino('Zeta Deleted', 'rrrrrrrrrrrrr', true)).id;
 
     await addMembership('floorA', 'A', CasinoRole.FLOOR);
     // inserted in REVERSE name order on purpose: the list must come back sorted by casino name

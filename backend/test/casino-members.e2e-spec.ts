@@ -97,12 +97,12 @@ describe('Casino members (e2e)', () => {
     return agent;
   };
 
-  const newCasino = (name: string, deleted = false) =>
+  const newCasino = (name: string, address: string, deleted = false) =>
     prisma.casino.create({
       data: {
         name,
         city: 'Lausanne',
-        address: 'Rue du Test 1',
+        address,
         deletedAt: deleted ? new Date() : null,
       },
     });
@@ -165,10 +165,10 @@ describe('Casino members (e2e)', () => {
     await prisma.membership.deleteMany();
     await prisma.casino.deleteMany();
 
-    casinoIds.A = (await newCasino('Casino A')).id;
-    casinoIds.B = (await newCasino('Casino B')).id;
-    casinoIds.EMPTY = (await newCasino('Casino Empty')).id; // no member at all
-    casinoIds.DELETED = (await newCasino('Casino Deleted', true)).id;
+    casinoIds.A = (await newCasino('Casino A', 'adrgsrynrgrtgvev')).id;
+    casinoIds.B = (await newCasino('Casino B', 'ldriruhfaifhu')).id;
+    casinoIds.EMPTY = (await newCasino('Casino Empty', 'alruhfapiuhpiahrrrrrr')).id; // no member at all
+    casinoIds.DELETED = (await newCasino('Casino Deleted', 'LIUDHFAOIRHF', true)).id;
     casinoIds.UNKNOWN = randomUUID();
     casinoIds.MALFORMED = 'not-a-uuid';
 

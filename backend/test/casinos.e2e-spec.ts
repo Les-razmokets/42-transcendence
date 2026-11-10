@@ -108,12 +108,12 @@ describe('Casino routes (e2e)', () => {
     return agent;
   };
 
-  const newCasino = (name: string, deleted = false) =>
+  const newCasino = (name: string, address: string, deleted = false) =>
     prisma.casino.create({
       data: {
         name,
         city: 'Lausanne',
-        address: 'Rue du Test 1',
+        address,
         deletedAt: deleted ? new Date() : null,
       },
     });
@@ -145,9 +145,9 @@ describe('Casino routes (e2e)', () => {
       data: { role: Role.ADMIN },
     });
 
-    casinoIds.A = (await newCasino('Casino A')).id;
-    casinoIds.B = (await newCasino('Casino B')).id;
-    casinoIds.DELETED = (await newCasino('Casino Deleted', true)).id;
+    casinoIds.A = (await newCasino('Casino A', 'adgadgad')).id;
+    casinoIds.B = (await newCasino('Casino B', 'aldjrfhaucb')).id;
+    casinoIds.DELETED = (await newCasino('Casino Deleted', 'alidufhalfb', true)).id;
     casinoIds.UNKNOWN = randomUUID();
     casinoIds.MALFORMED = 'not-a-uuid';
 
@@ -385,16 +385,16 @@ describe('Casino routes (e2e)', () => {
     it('is ordered by name, whatever the insertion order', async () => {
       await prisma.membership.deleteMany();
       await prisma.casino.deleteMany();
-      await newCasino('Zeta');
-      await newCasino('Alpha');
-      await newCasino('Alpha'); // same name twice: the id breaks the tie
-      await newCasino('Mu');
+      await newCasino('Zeta', 'kauydgfakjbf');
+      await newCasino('Alpha', 'sdthsrtgbav');
+      await newCasino('Beta', 'adresse-beta');
+      await newCasino('Mu', 'dfighsdoub');
 
       const res = await send('plain', 'get', pathFor(null)).expect(200);
 
       expect(res.body.map((c: { name: string }) => c.name)).toEqual([
         'Alpha',
-        'Alpha',
+        'Beta',
         'Mu',
         'Zeta',
       ]);
@@ -402,10 +402,10 @@ describe('Casino routes (e2e)', () => {
 
     it('is stable: two calls return the same order', async () => {
       await prisma.casino.createMany({
-        data: Array.from({ length: 6 }, () => ({
-          name: 'Same Name',
+        data: Array.from({ length: 6 }, (_, index) => ({
+          name: `Casino ${index + 1}`, // Noms uniques pour respecter le @unique
           city: 'Lausanne',
-          address: 'Rue 1',
+          address: `Rue ${index + 1}`,    // Adresses uniques aussi
         })),
       });
 
@@ -417,10 +417,10 @@ describe('Casino routes (e2e)', () => {
 
     it('never returns more than the maximum page size (delete this test if you did not paginate)', async () => {
       await prisma.casino.createMany({
-        data: Array.from({ length: MAX_PAGE_SIZE + 5 }, (_, i) => ({
-          name: `Bulk ${String(i).padStart(3, '0')}`,
+        data: Array.from({ length: 6 }, (_, index) => ({
+          name: `Casino ${index + 1}`, 
           city: 'Lausanne',
-          address: 'Rue 1',
+          address: `Rue de Lausanne ${index + 1}`, 
         })),
       });
 

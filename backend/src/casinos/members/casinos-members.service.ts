@@ -29,12 +29,16 @@ export class CasinosMembersService {
     private readonly casinos: CasinosService,
   ) {}
 
-  async listMembers(casinoId: string): Promise<MemberInfo[]> {
+  async listMembers(casinoId: string, page: number = 1, limit: number = 20): Promise<MemberInfo[]> {
+    const validLimit = Math.min(Math.max(limit, 1), 100);
+    const validPage = Math.max(page, 1);
+    const skip = (validPage - 1) * validLimit;
     const memberships = await this.prisma.membership.findMany({
       where: { casinoId, user: { deletedAt: null } },
-      orderBy: [{ user: { pseudo: 'asc' } }, { id: 'asc' }],
-      take: 50,
+      skip: skip,
+      take: validLimit,
       select: { role: true, user: { select: { pseudo: true } } },
+      orderBy: [{ user: { pseudo: 'asc' } }, { id: 'asc' }],
     });
     return memberships.map((m) => ({ pseudo: m.user.pseudo, role: m.role }));
   }
