@@ -9,5 +9,14 @@ export class FortyTwoClientService {
     private readonly config: ConfigType<typeof fortyTwoConfig>,
   ) {}
 
-  
+  buildAuthUrl(state: string): string {
+    const params = new URLSearchParams({
+      client_id: this.config.clientId,
+      redirect_uri: this.config.callbackUrl,
+      response_type: "code",
+      scope: "public",
+      state: state,
+    });
+    return `${this.config.baseUrl}?${params.toString()}`;
+  }
 }

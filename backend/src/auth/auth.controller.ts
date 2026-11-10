@@ -6,6 +6,7 @@ import {
   HttpCode,
   HttpStatus,
   Get,
+  Redirect,
 } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { myProfileUserSchema } from '../users/users-response.schemas';
@@ -18,12 +19,15 @@ import { Res } from '@nestjs/common';
 import type { Response } from 'express';
 import { ConfigService } from '@nestjs/config';
 import { Throttle } from '@nestjs/throttler';
+import { FortyTwoClientService } from './oauth/forty-two/forty-two.service';
+import * as crypto from 'crypto';
 
 @Controller('auth')
 export class AuthController {
   constructor(
     private readonly auth: AuthService,
     private readonly config: ConfigService,
+    private readonly fortyTwoClient: FortyTwoClientService,
   ) {}
 
   // Build the cookie options.
@@ -76,11 +80,12 @@ export class AuthController {
 
   @Public()
   @Throttle({ default: { limit: 5, ttl: 60000 } })
+  @Redirect()
   @Get('42')
-  redirectLogin(@Res({ passthrough: true }) res: Response) {
-    const crypto = require('crypto');
-    const state = crypto.randomBytes(32);
+  redirectTo42(@Res({ passthrough: true }) res: Response) {
+    const state = crypto.randomBytes(32).toString('hex');
     res.cookie(OAUTH_COOKIE, state, buildOauthCookieOptions(600, this.config.get('NODE_ENV') === 'production'));
+    const authUrl = this.fortyTwoClient.buildAuthUrl(state);
+    return { url: authUrl, statusCode: 302 }
   }
-
 }
