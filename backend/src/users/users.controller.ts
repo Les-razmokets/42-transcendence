@@ -7,23 +7,19 @@ import {
   SerializeOptions,
 } from '@nestjs/common';
 import { UsersService } from './users.service';
-import {
-  publicUserSchema,
-  PublicUser,
-  myProfileUserSchema,
-} from './users-response.schemas';
 import { Public } from '../auth/utils/public.decorator';
 import { CurrentUser } from '../auth/utils/current-user.decorator';
 import type { AuthenticatedUser } from '../auth/utils/auth-request';
+import { publicUserSchema, myProfileWithMembershipsSchema, PublicUser } from '@transcendence/shared';
 
 @Controller('users')
 export class UsersController {
   constructor(private readonly usersService: UsersService) {}
 
-  @SerializeOptions({ schema: myProfileUserSchema })
+  @SerializeOptions({ schema: myProfileWithMembershipsSchema })
   @Get('me')
   async me(@CurrentUser() user: AuthenticatedUser) {
-    const currentUser = this.usersService.findById(user.id);
+    const currentUser = this.usersService.me(user.id);
     return currentUser;
   }
 

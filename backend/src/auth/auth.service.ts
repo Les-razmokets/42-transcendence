@@ -14,6 +14,7 @@ export class AuthService {
     private readonly jwt: JwtService,
   ) {}
 
+  // registers a new user
   async register(dto: UsersCreationDto) {
     const passwordHash = await this.hasher.hash(dto.password);
     return this.users.create({
@@ -27,6 +28,7 @@ export class AuthService {
     });
   }
 
+  // logs in a new user
   async login(dto: LoginDto) {
     const user = await this.users.findByEmail(dto.email);
     const ok = await this.hasher.verify(dto.password, user?.passwordHash);

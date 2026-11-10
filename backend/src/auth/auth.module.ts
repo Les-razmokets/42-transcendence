@@ -10,6 +10,7 @@ import { APP_GUARD } from '@nestjs/core';
 import { AuthGuard } from './auth.guard';
 import { fortyTwoConfig } from './oauth/forty-two/forty-two.config';
 import { FortyTwoClientService } from './oauth/forty-two/forty-two.service';
+import { RolesGuard } from './roles.guard';
 
 @Module({
   imports: [
@@ -43,6 +44,7 @@ import { FortyTwoClientService } from './oauth/forty-two/forty-two.service';
     AuthGuard,
     FortyTwoClientService,
     { provide: APP_GUARD, useClass: AuthGuard },
+    { provide: APP_GUARD, useClass: RolesGuard },
   ],
   exports: [JwtModule, UsersModule, AuthGuard],
 })

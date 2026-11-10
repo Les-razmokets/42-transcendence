@@ -1,7 +1,11 @@
 {
   "name": "transcendence",
   "private": true,
-  "workspaces": ["shared", "backend", "frontend"],
+  "workspaces": [
+    "shared",
+    "backend",
+    "frontend"
+  ],
   "scripts": {
     "build:shared": "npm run build -w @transcendence/shared"
   },
