@@ -38,7 +38,7 @@ export class ReservationsController {
   }
 
   @Delete(':id')
-  cancelMyreservation(
+  cancelMyReservation(
     @CurrentUser() user: AuthenticatedUser,
     @Param('id', ParseUUIDPipe) id: string,
   ): Promise<ReservationInput> {

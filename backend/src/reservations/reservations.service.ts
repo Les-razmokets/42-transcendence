@@ -15,6 +15,8 @@ import {
 } from '../generated/prisma/enums';
 import { isCasinoClosed, casinoDay } from './casino-day';
 
+const PAYMENT_DELAY_MS = 15 * 60 * 1000;
+
 @Injectable()
 export class ReservationsService {
   private readonly logger = new Logger(ReservationsService.name);
@@ -104,6 +106,17 @@ export class ReservationsService {
         );
       throw error;
     }
+  }
+
+  async expirePendingPayments() {
+    const { count } = await this.prismaService.reservation.updateMany({
+      where: {
+        status: ReservationStatus.PENDING_PAYMENT,
+        createdAt: { lte: new Date(Date.now() - PAYMENT_DELAY_MS) },
+      },
+      data: { status: ReservationStatus.EXPIRED },
+    });
+    return count;
   }
 
   private async assertSeatAvailable(seatId: string, isToday: boolean) {
