@@ -5,13 +5,14 @@ import {
   SerializeOptions,
   HttpCode,
   HttpStatus,
+  Get,
 } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { myProfileUserSchema } from '../users/users-response.schemas';
 import { UsersCreationDto } from '../users/dto/users.dto';
 import { Public } from './utils/public.decorator';
 import { LoginDto } from './dto/login.dto';
-import { COOKIE_NAME, buildCookieOptions } from './utils/cookie';
+import { COOKIE_NAME, OAUTH_COOKIE, buildCookieOptions, buildOauthCookieOptions } from './utils/cookie';
 import { getJwtLifetimeSeconds } from './utils/jwt.lifetime';
 import { Res } from '@nestjs/common';
 import type { Response } from 'express';
@@ -72,4 +73,14 @@ export class AuthController {
     // Clear the authentication cookie from the client browser
     res.clearCookie(COOKIE_NAME, clearOptions);
   }
+
+  @Public()
+  @Throttle({ default: { limit: 5, ttl: 60000 } })
+  @Get('42')
+  redirectLogin(@Res({ passthrough: true }) res: Response) {
+    const crypto = require('crypto');
+    const state = crypto.randomBytes(32);
+    res.cookie(OAUTH_COOKIE, state, buildOauthCookieOptions(600, this.config.get('NODE_ENV') === 'production'));
+  }
+
 }
