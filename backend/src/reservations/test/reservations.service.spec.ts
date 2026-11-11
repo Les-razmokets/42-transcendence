@@ -1,14 +1,18 @@
-import { BadRequestException, ConflictException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ConflictException,
+  NotFoundException,
+} from '@nestjs/common';
 import { Test } from '@nestjs/testing';
-import { Prisma } from '../generated/prisma/client';
+import { Prisma } from '../../generated/prisma/client';
 import {
   ReservationStatus,
   SeatStatus,
   TableStatus,
-} from '../generated/prisma/enums';
-import { PrismaService } from '../prisma/prisma.service';
-import { CreateReservationDto } from './dto/create-reservation.dto';
-import { ReservationsService } from './reservations.service';
+} from '../../generated/prisma/enums';
+import { PrismaService } from '../../prisma/prisma.service';
+import { CreateReservationDto } from '../dto/create-reservation.dto';
+import { ReservationsService } from '../reservations.service';
 
 // Test unitaire : PrismaService est remplacé par un mock, aucune base n'est touchée.
 // Il vérifie la traduction des erreurs Prisma, pas les index partiels eux-mêmes :
@@ -17,7 +21,13 @@ describe('ReservationsService', () => {
   let service: ReservationsService;
   const prismaMock = {
     seat: { findFirst: jest.fn() },
-    reservation: { create: jest.fn() },
+    reservation: {
+      create: jest.fn(),
+      findMany: jest.fn(),
+      findFirst: jest.fn(),
+      update: jest.fn(),
+      updateMany: jest.fn(),
+    },
   };
 
   const USER_ID = 'b0000000-0000-4000-8000-000000000001';
@@ -264,6 +274,194 @@ describe('ReservationsService', () => {
       prismaMock.reservation.create.mockRejectedValue(error);
 
       await expect(service.create(USER_ID, makeDto())).rejects.toBe(error);
+    });
+  });
+
+  describe('findAllForUser', () => {
+    it('ne demande à la base que les réservations du joueur, les plus lointaines en premier', async () => {
+      prismaMock.reservation.findMany.mockResolvedValue([]);
+
+      await service.findAllForUser(USER_ID);
+
+      expect(prismaMock.reservation.findMany).toHaveBeenCalledWith({
+        where: { userId: USER_ID },
+        orderBy: { arrivalAt: 'desc' },
+      });
+    });
+
+    it('renvoie les réservations telles que la base les donne', async () => {
+      const fakeReservations = [
+        { id: 'reservation-2' },
+        { id: 'reservation-1' },
+      ];
+      prismaMock.reservation.findMany.mockResolvedValue(fakeReservations);
+
+      await expect(service.findAllForUser(USER_ID)).resolves.toBe(
+        fakeReservations,
+      );
+    });
+
+    it('renvoie un tableau vide si le joueur n’a aucune réservation', async () => {
+      prismaMock.reservation.findMany.mockResolvedValue([]);
+
+      await expect(service.findAllForUser(USER_ID)).resolves.toEqual([]);
+    });
+  });
+
+  // Règles : seule une réservation CONFIRMED est annulable, et seulement
+  // avant l'heure d'arrivée. Horloge figée à 2030-01-01T12:00:00Z (beforeEach).
+  describe('cancel', () => {
+    const RESERVATION_ID = 'c0000000-0000-4000-8000-000000000001';
+
+    const makeReservation = (
+      overrides: Partial<{
+        status: ReservationStatus;
+        arrivalAt: Date;
+      }> = {},
+    ) => ({
+      id: RESERVATION_ID,
+      userId: USER_ID,
+      status: ReservationStatus.CONFIRMED,
+      arrivalAt: new Date('2030-01-01T20:00:00Z'),
+      ...overrides,
+    });
+
+    it('cherche la réservation par id ET par joueur', async () => {
+      prismaMock.reservation.findFirst.mockResolvedValue(makeReservation());
+      prismaMock.reservation.update.mockResolvedValue({});
+
+      await service.cancel(USER_ID, RESERVATION_ID);
+
+      expect(prismaMock.reservation.findFirst).toHaveBeenCalledWith({
+        where: { id: RESERVATION_ID, userId: USER_ID },
+      });
+    });
+
+    it('passe la réservation en CANCELLED avec cancelledAt = maintenant, et la renvoie', async () => {
+      const cancelled = {
+        ...makeReservation(),
+        status: ReservationStatus.CANCELLED,
+      };
+      prismaMock.reservation.findFirst.mockResolvedValue(makeReservation());
+      prismaMock.reservation.update.mockResolvedValue(cancelled);
+
+      await expect(service.cancel(USER_ID, RESERVATION_ID)).resolves.toBe(
+        cancelled,
+      );
+      // statut et heure d'arrivée sont répétés dans le where : si la réservation
+      // a changé (ex. SEATED) ou si l'heure d'arrivée est passée entre la lecture
+      // et l'écriture, l'update ne trouve rien (P2025 -> 409)
+      expect(prismaMock.reservation.update).toHaveBeenCalledWith({
+        where: {
+          id: RESERVATION_ID,
+          status: ReservationStatus.CONFIRMED,
+          arrivalAt: { gt: new Date('2030-01-01T12:00:00Z') },
+        },
+        data: {
+          status: ReservationStatus.CANCELLED,
+          cancelledAt: new Date('2030-01-01T12:00:00Z'),
+        },
+      });
+    });
+
+    it('lève NotFoundException sans rien modifier si la réservation est introuvable ou appartient à un autre joueur', async () => {
+      prismaMock.reservation.findFirst.mockResolvedValue(null);
+
+      await expect(
+        service.cancel(USER_ID, RESERVATION_ID),
+      ).rejects.toBeInstanceOf(NotFoundException);
+      expect(prismaMock.reservation.update).not.toHaveBeenCalled();
+    });
+
+    it.each([
+      ReservationStatus.PENDING_PAYMENT,
+      ReservationStatus.SEATED,
+      ReservationStatus.COMPLETED,
+      ReservationStatus.CANCELLED,
+      ReservationStatus.NO_SHOW,
+      ReservationStatus.EXPIRED,
+    ])(
+      'lève ConflictException sans rien modifier pour une réservation %s',
+      async (status) => {
+        prismaMock.reservation.findFirst.mockResolvedValue(
+          makeReservation({ status }),
+        );
+
+        await expect(
+          service.cancel(USER_ID, RESERVATION_ID),
+        ).rejects.toBeInstanceOf(ConflictException);
+        expect(prismaMock.reservation.update).not.toHaveBeenCalled();
+      },
+    );
+
+    it.each([
+      ['pile à l’heure d’arrivée', '2030-01-01T12:00:00Z'],
+      ['après l’heure d’arrivée', '2030-01-01T11:00:00Z'],
+    ])(
+      'lève ConflictException sans rien modifier %s',
+      async (_label, arrivalAt) => {
+        prismaMock.reservation.findFirst.mockResolvedValue(
+          makeReservation({ arrivalAt: new Date(arrivalAt) }),
+        );
+
+        await expect(
+          service.cancel(USER_ID, RESERVATION_ID),
+        ).rejects.toBeInstanceOf(ConflictException);
+        expect(prismaMock.reservation.update).not.toHaveBeenCalled();
+      },
+    );
+
+    it('convertit P2025 (statut changé ou heure d’arrivée passée entre la lecture et l’écriture) en ConflictException', async () => {
+      prismaMock.reservation.findFirst.mockResolvedValue(makeReservation());
+      prismaMock.reservation.update.mockRejectedValue(makePrismaError('P2025'));
+
+      await expect(
+        service.cancel(USER_ID, RESERVATION_ID),
+      ).rejects.toBeInstanceOf(ConflictException);
+    });
+
+    it('laisse passer telles quelles les autres erreurs', async () => {
+      const error = new Error('connexion perdue');
+      prismaMock.reservation.findFirst.mockResolvedValue(makeReservation());
+      prismaMock.reservation.update.mockRejectedValue(error);
+
+      await expect(service.cancel(USER_ID, RESERVATION_ID)).rejects.toBe(error);
+    });
+  });
+
+  // Une réservation PENDING_PAYMENT non payée 15 min après sa création expire
+  // (docs/db-schema.md). Horloge figée à 2030-01-01T12:00:00Z (beforeEach).
+  describe('expirePendingPayments', () => {
+    it('expire en une requête les PENDING_PAYMENT créées il y a 15 min ou plus', async () => {
+      prismaMock.reservation.updateMany.mockResolvedValue({ count: 0 });
+
+      await service.expirePendingPayments();
+
+      // le statut dans le where protège un paiement confirmé au même moment
+      expect(prismaMock.reservation.updateMany).toHaveBeenCalledWith({
+        where: {
+          status: ReservationStatus.PENDING_PAYMENT,
+          createdAt: { lte: new Date('2030-01-01T11:45:00Z') },
+        },
+        data: { status: ReservationStatus.EXPIRED },
+      });
+    });
+
+    it('renvoie le nombre de réservations expirées', async () => {
+      prismaMock.reservation.updateMany.mockResolvedValue({ count: 3 });
+
+      await expect(service.expirePendingPayments()).resolves.toBe(3);
+    });
+
+    it('ne touche à aucune autre table que les réservations', async () => {
+      prismaMock.reservation.updateMany.mockResolvedValue({ count: 1 });
+
+      await service.expirePendingPayments();
+
+      // le statut de la place (FREE/OCCUPIED) décrit la salle, pas les
+      // réservations : expirer ne doit pas le modifier
+      expect(prismaMock.seat.findFirst).not.toHaveBeenCalled();
+      expect(prismaMock.reservation.update).not.toHaveBeenCalled();
     });
   });
 });

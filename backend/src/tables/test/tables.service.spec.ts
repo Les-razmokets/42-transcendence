@@ -1,10 +1,10 @@
 import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
-import { Prisma } from '../generated/prisma/client';
-import { PokerVariant } from '../generated/prisma/enums';
-import { PrismaService } from '../prisma/prisma.service';
-import { CreateTableDto } from './dto/create-table.dto';
-import { TablesService } from './tables.service';
+import { Prisma } from '../../generated/prisma/client';
+import { PokerVariant } from '../../generated/prisma/enums';
+import { PrismaService } from '../../prisma/prisma.service';
+import { CreateTableDto } from '../dto/create-table.dto';
+import { TablesService } from '../tables.service';
 
 // Test unitaire : PrismaService est remplacé par un mock, aucune base n'est touchée.
 describe('TablesService', () => {

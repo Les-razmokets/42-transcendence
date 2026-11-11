@@ -1,4 +1,4 @@
-import { casinoDay, isCasinoClosed } from './casino-day';
+import { casinoDay, isCasinoClosed } from '../casino-day';
 
 // Dates en UTC (suffixe Z) pour que le résultat ne dépende pas du fuseau de la machine.
 // L'heure de Paris est dans le titre : UTC+1 l'hiver, UTC+2 l'été.
