@@ -253,6 +253,7 @@ Expiration des réservations non payées (aucune route, tâche planifiée) :
 - **Place et joueur libérés** : une réservation `EXPIRED` n'est plus active. La place redevient réservable pour cette journée casino, et le joueur peut de nouveau réserver ce jour-là.
 - **Historique** : la réservation n'est pas supprimée, elle reste visible dans `GET /api/reservations` avec le statut `EXPIRED`.
 - Côté code : `ReservationsService.expirePendingPayments()` (délai `PAYMENT_DELAY_MS`), appelée par `ReservationsScheduler` (`backend/src/reservations/utils/reservations.scheduler.ts`).
+- **En test** : `SCHEDULER_DISABLED=true` (posé par `backend/test/setup-env.ts`) coupe les tâches planifiées dans les process Jest. Le cron du conteneur backend, lui, tourne toujours sur la même base, d'où les tests d'intégration qui ne comptent pas les lignes expirées.
 
 Schéma de réponse `Reservation` (`shared/src/reservations.ts`) : `id`, `userId`, `seatId`, `status`, `arrivalAt`, `createdAt`, `updatedAt`, `seatedAt`, `leftAt`, `cancelledAt` (les trois derniers peuvent valoir `null`).
 
@@ -261,7 +262,7 @@ Statuts possibles : `PENDING_PAYMENT`, `CONFIRMED`, `SEATED`, `COMPLETED`, `CANC
 ## 6. Ajouter une route
 
 1. Écrire la route dans le contrôleur du domaine (`backend/src/<domaine>/<domaine>.controller.ts`).
-2. **Déclarer un schéma de réponse** avec `@SerializeOptions({ schema })`. Sans ça, la route renvoie 500 (`missingResponseSchema` dans `backend/src/common/`). Si le front doit aussi connaître ce schéma, il va dans `shared/` (voir [`docs/shared.md`](shared.md)).
+2. **Déclarer un schéma de réponse** avec `@SerializeOptions({ schema })`. Sans ça, la route renvoie 500 (`missingResponseSchema` dans `backend/src/common/`). Si le front doit aussi connaître ce schéma, il va dans `shared/` (voir [`docs/shared.md`](shared.md)). Les dates s'y écrivent avec `isoDate` : elles sortent en chaîne ISO.
 3. **Valider le corps** avec un DTO `class-validator` dans `dto/`.
 4. Ajouter `@Public()` **seulement** si la route doit être accessible sans connexion.
 5. Ajouter `@Throttle(...)` si la route est sensible (login, envoi d'emails…).

@@ -57,7 +57,10 @@ shared/
 └── src/
     ├── index.ts        # le sommaire : réexporte tout le reste
     ├── enums.ts        # ⚠️ GÉNÉRÉ, ne pas modifier à la main
-    └── tables.ts       # tableSchema, seatSchema, type Table
+    ├── dates.ts        # isoDate : les dates des réponses (voir plus bas)
+    ├── tables.ts       # tableSchema, seatSchema, type Table
+    ├── reservations.ts # reservationSchema, types Reservation / ReservationInput
+    ├── users-schema.ts, casinos-schema.ts, casino-members-schema.ts, health-schemas.ts
 ```
 
 On l'importe partout de la même manière, comme une vraie librairie :
@@ -110,6 +113,29 @@ findOne(...): Promise<Table> { ... }         // 🏷️ le type vient du même s
 - **Pas de surprise** : le front connaît la forme exacte de la réponse, puisqu'il lit le même schéma.
 
 Le tamis est branché pour toute l'application dans `backend/src/app.config.ts` (`StandardSchemaSerializerInterceptor`). Et il est strict : **une route sans `@SerializeOptions` répond 500**. Pas de schéma, pas de réponse : c'est voulu, pour que personne n'oublie de déclarer son contrat.
+
+### Les dates : toujours `isoDate`, jamais `z.date()`
+
+Prisma donne des `Date` au backend, mais le JSON ne connaît pas les dates : sur le réseau, elles voyagent en **chaîne ISO** (`"2026-11-11T18:00:00.000Z"`). Le front reçoit donc une `string`, jamais une `Date`.
+
+Avec `z.date()`, le type `z.infer` dirait `Date` : il mentirait au front, et un `reservation.arrivalAt.getTime()` compilerait puis planterait. D'où le helper `isoDate` (`shared/src/dates.ts`), qui accepte une `Date` et ressort sa chaîne ISO :
+
+```ts
+import { isoDate } from './dates.js';
+
+export const reservationSchema = z.object({
+  arrivalAt: isoDate,
+  cancelledAt: isoDate.nullable(),
+});
+export type Reservation = z.infer<typeof reservationSchema>;       // arrivalAt: string  → pour le front
+export type ReservationInput = z.input<typeof reservationSchema>;  // arrivalAt: Date    → pour le back
+```
+
+Un schéma, deux types :
+- **`Xxx` (`z.infer`)** : ce qui sort sur le réseau, ce que le front manipule.
+- **`XxxInput` (`z.input`)** : ce que le backend donne au tamis, donc ce que renvoient le service et le controller (des `Date` venues de Prisma).
+
+La réponse JSON est la même qu'avec `z.date()` (`JSON.stringify` appelle déjà `toISOString()`) : seul le type change, pour dire la vérité.
 
 ## Comment chacun lit le livre
 
@@ -174,7 +200,9 @@ La CI joue le rôle de l'arbitre. À chaque PR, elle :
    ```ts
    export const reservationSchema = z.object({ ... });
    export type Reservation = z.infer<typeof reservationSchema>;
+   export type ReservationInput = z.input<typeof reservationSchema>; // si le schéma a des dates
    ```
+   Les dates s'écrivent avec `isoDate`, pas `z.date()` (voir « Les dates » plus haut).
 2. Ajoutez-le au sommaire, `shared/src/index.ts` :
    ```ts
    export * from './reservations.js';   // le .js est voulu (ESM)
@@ -191,4 +219,6 @@ La CI joue le rôle de l'arbitre. À chaque PR, elle :
 | La CI échoue sur `git diff --exit-code -- shared/` | `schema.prisma` modifié sans committer les enums | `npm run generate -w backend`, puis commiter `shared/src/enums.ts` |
 | Mes modifs dans `enums.ts` ont disparu | Le fichier est régénéré à chaque `generate` | Modifier `schema.prisma`, jamais `enums.ts` |
 | Un `package-lock.json` apparaît dans `backend/` ou `frontend/` | `npm install` lancé dans le sous-dossier | Le supprimer, et lancer `npm ci` à la racine |
+| Le type dit `Date` mais le front reçoit une `string` | `z.date()` dans le schéma | Utiliser `isoDate`, et `XxxInput` côté backend |
+| `Type 'Date' is not assignable to type 'string'` côté back | Le service retourne le type `Xxx` (sortie) au lieu de `XxxInput` | Typer le retour avec `XxxInput` |
 | Le backend plante au démarrage avec `exports is not defined` | Client Prisma généré sans `backend/tsconfig.json` | Voir `docs/backend-docker.md` |
