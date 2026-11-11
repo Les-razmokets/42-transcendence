@@ -215,6 +215,8 @@ Schéma de réponse `Table` (`shared/src/tables.ts`) : `id`, `casinoId`, `name`,
 | GET | `/api/reservations/:id` | Privé | – | `Reservation`, 404 si elle appartient à un autre joueur | Prévu |
 | DELETE | `/api/reservations/:id` | Privé | – | 200 + `Reservation` annulée (statut `CANCELLED`, `cancelledAt` rempli) | Existe |
 
+**Rôle** : toutes les routes de réservation sont limitées au rôle `USER` (`@Roles(Role.USER)` sur le contrôleur). Un compte `ADMIN` ne joue pas et reçoit 403.
+
 Règles de `POST /api/reservations` :
 - **Date d'arrivée** : `arrivalAt` doit être dans le futur et dans les 7 jours (sinon 400).
 - **Fermeture** : les casinos sont fermés de 5h à 8h, heure de Paris. Une arrivée dans ce créneau renvoie 400.

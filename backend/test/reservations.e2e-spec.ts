@@ -5,7 +5,11 @@ import request from 'supertest';
 import { AppModule } from '../src/app.module';
 import { configureApp } from '../src/app.config';
 import { PrismaService } from '../src/prisma/prisma.service';
-import { PokerVariant, ReservationStatus } from '../src/generated/prisma/enums';
+import {
+  PokerVariant,
+  ReservationStatus,
+  Role,
+} from '../src/generated/prisma/enums';
 
 // /api/reservations through HTTP: auth guard, DTO and param validation, and
 // response serialization (reservationSchema), which the service tests do not cover.
@@ -133,6 +137,42 @@ describe('/api/reservations (e2e)', () => {
       await expect(
         prisma.reservation.count({ where: { seatId: seatIds[1] } }),
       ).resolves.toBe(0);
+    });
+  });
+
+  // @Roles(Role.USER) on the controller: admins do not play, every route is 403
+  describe('admin account -> 403', () => {
+    let admin: Awaited<ReturnType<typeof loggedInAgent>>;
+
+    beforeAll(async () => {
+      const adminId = await register('admin');
+      // AuthGuard reloads the role from the DB on each request
+      await prisma.user.update({
+        where: { id: adminId },
+        data: { role: Role.ADMIN },
+      });
+      admin = await loggedInAgent('admin');
+    });
+
+    it('POST, and nothing is created', async () => {
+      await admin
+        .post('/api/reservations')
+        .send({ seatId: seatIds[3], arrivalAt: arrivalAt.toISOString() })
+        .expect(403);
+
+      await expect(
+        prisma.reservation.count({ where: { seatId: seatIds[3] } }),
+      ).resolves.toBe(0);
+    });
+
+    it('GET', async () => {
+      await admin.get('/api/reservations').expect(403);
+    });
+
+    it('DELETE, even on an unknown id', async () => {
+      await admin
+        .delete('/api/reservations/00000000-0000-4000-8000-000000000000')
+        .expect(403);
     });
   });
 

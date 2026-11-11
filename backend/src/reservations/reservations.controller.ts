@@ -16,8 +16,11 @@ import {
 } from '@transcendence/shared';
 import { CurrentUser } from '../auth/utils/current-user.decorator';
 import type { AuthenticatedUser } from '../auth/utils/auth-request';
+import { Roles } from '../auth/utils/roles.decorator';
+import { Role } from '../generated/prisma/client';
 
 @SerializeOptions({ schema: reservationSchema })
+@Roles(Role.USER)
 @Controller('reservations')
 export class ReservationsController {
   constructor(private readonly reservationsService: ReservationsService) {}
