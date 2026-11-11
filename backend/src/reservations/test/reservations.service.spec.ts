@@ -348,10 +348,15 @@ describe('ReservationsService', () => {
       await expect(service.cancel(USER_ID, RESERVATION_ID)).resolves.toBe(
         cancelled,
       );
-      // le statut est répété dans le where : si la réservation a changé
-      // entre la lecture et l'écriture (ex. SEATED), l'update ne trouve rien
+      // statut et heure d'arrivée sont répétés dans le where : si la réservation
+      // a changé (ex. SEATED) ou si l'heure d'arrivée est passée entre la lecture
+      // et l'écriture, l'update ne trouve rien (P2025 -> 409)
       expect(prismaMock.reservation.update).toHaveBeenCalledWith({
-        where: { id: RESERVATION_ID, status: ReservationStatus.CONFIRMED },
+        where: {
+          id: RESERVATION_ID,
+          status: ReservationStatus.CONFIRMED,
+          arrivalAt: { gt: new Date('2030-01-01T12:00:00Z') },
+        },
         data: {
           status: ReservationStatus.CANCELLED,
           cancelledAt: new Date('2030-01-01T12:00:00Z'),
@@ -406,7 +411,7 @@ describe('ReservationsService', () => {
       },
     );
 
-    it('convertit P2025 (statut changé entre la lecture et l’écriture) en ConflictException', async () => {
+    it('convertit P2025 (statut changé ou heure d’arrivée passée entre la lecture et l’écriture) en ConflictException', async () => {
       prismaMock.reservation.findFirst.mockResolvedValue(makeReservation());
       prismaMock.reservation.update.mockRejectedValue(makePrismaError('P2025'));
 

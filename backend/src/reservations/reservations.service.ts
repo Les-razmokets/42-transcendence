@@ -93,7 +93,13 @@ export class ReservationsService {
       throw new ConflictException('The arrival time has passed');
     try {
       return await this.prismaService.reservation.update({
-        where: { id: reservationId, status: ReservationStatus.CONFIRMED },
+        // status and arrival time re-checked atomically: the row may have
+        // changed, or arrival time passed, since the findFirst above
+        where: {
+          id: reservationId,
+          status: ReservationStatus.CONFIRMED,
+          arrivalAt: { gt: now },
+        },
         data: { status: ReservationStatus.CANCELLED, cancelledAt: now },
       });
     } catch (error) {
