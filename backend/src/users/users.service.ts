@@ -6,7 +6,7 @@ import {
 import { PrismaService } from '../prisma/prisma.service';
 import { User, Prisma } from '../generated/prisma/client';
 import { UserInfo } from './users.struct';
-import { MyProfileWithMemberships } from '@transcendence/shared';
+import { MyProfileWithMembershipsInput } from '@transcendence/shared';
 
 @Injectable()
 export class UsersService {
@@ -60,7 +60,7 @@ export class UsersService {
     }
   }
 
-  async me(id: string): Promise<MyProfileWithMemberships> {
+  async me(id: string): Promise<MyProfileWithMembershipsInput> {
     const user = await this.prisma.user.findUnique({
       where: { id },
       select: {

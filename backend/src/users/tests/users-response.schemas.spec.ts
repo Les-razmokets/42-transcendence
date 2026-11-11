@@ -6,6 +6,7 @@ import {
 } from '@transcendence/shared';
 
 // Un user tel que le renvoie la base : AVEC un passwordHash.
+// Les dates entrent en Date (Prisma) et sortent en chaîne ISO (isoDate), comme dans le JSON.
 const fullUser = {
   id: '6f1c2b1e-0000-4000-8000-000000000001',
   pseudo: 'alice',
@@ -50,7 +51,7 @@ describe('staffUserSchema', () => {
       lastName: fullUser.lastName,
       phone: null,
       role: 'USER',
-      birthDate: fullUser.birthDate,
+      birthDate: fullUser.birthDate.toISOString(),
     });
   });
 
@@ -96,9 +97,9 @@ describe('myProfileUserSchema', () => {
       lastName: fullUser.lastName,
       phone: null,
       role: 'USER',
-      birthDate: fullUser.birthDate,
-      createdAt: fullUser.createdAt,
-      updatedAt: fullUser.updatedAt,
+      birthDate: fullUser.birthDate.toISOString(),
+      createdAt: fullUser.createdAt.toISOString(),
+      updatedAt: fullUser.updatedAt.toISOString(),
     });
   });
 
@@ -131,7 +132,7 @@ describe('adminUserSchema', () => {
     const deletedAt = new Date('2026-01-01');
     const result = adminUserSchema.parse({ ...fullUser, deletedAt });
 
-    expect(result.deletedAt).toEqual(deletedAt);
+    expect(result.deletedAt).toBe(deletedAt.toISOString());
   });
 
   it('garde tous les champs sauf passwordHash', () => {
@@ -143,9 +144,9 @@ describe('adminUserSchema', () => {
       lastName: fullUser.lastName,
       phone: null,
       role: 'USER',
-      birthDate: fullUser.birthDate,
-      createdAt: fullUser.createdAt,
-      updatedAt: fullUser.updatedAt,
+      birthDate: fullUser.birthDate.toISOString(),
+      createdAt: fullUser.createdAt.toISOString(),
+      updatedAt: fullUser.updatedAt.toISOString(),
       deletedAt: null,
     });
   });

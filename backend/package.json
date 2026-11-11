@@ -58,9 +58,11 @@
     "@nestjs/jwt": "^12.0.3",
     "@nestjs/passport": "^12.0.0",
     "@nestjs/platform-express": "^12.0.1",
+    "@nestjs/schedule": "^12.0.3",
     "@nestjs/throttler": "^6.7.1",
     "@prisma/adapter-pg": "^7.10.0",
     "@prisma/client": "^7.10.0",
+    "@transcendence/shared": "*",
     "argon2": "^0.45.1",
     "class-transformer": "^0.5.1",
     "class-validator": "^0.15.1",
@@ -69,7 +71,6 @@
     "passport-jwt": "^4.0.1",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.1",
-    "zod": "^4.6.7",
-    "@transcendence/shared": "*"
+    "zod": "^4.6.7"
   }
 }
