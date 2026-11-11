@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { isoDate } from './dates.js';
 import { CasinoRole } from './enums.js';
 
 // response schema when someone wants to GET a user.
@@ -15,10 +16,11 @@ export const staffUserSchema = z.object({
   firstName: z.string(),
   lastName: z.string(),
   phone: z.string().nullable(),
-  birthDate: z.date(),
+  birthDate: isoDate,
   role: z.string(),
 });
 export type StaffUser = z.infer<typeof staffUserSchema>;
+export type StaffUserInput = z.input<typeof staffUserSchema>;
 
 // response schema when the user itself wants to GET his user.
 export const myProfileUserSchema = z.object({
@@ -28,12 +30,13 @@ export const myProfileUserSchema = z.object({
   firstName: z.string(),
   lastName: z.string(),
   phone: z.string().nullable(),
-  birthDate: z.date(),
+  birthDate: isoDate,
   role: z.string(),
-  createdAt: z.date(),
-  updatedAt: z.date(),
+  createdAt: isoDate,
+  updatedAt: isoDate,
 });
 export type MyProfileUser = z.infer<typeof myProfileUserSchema>;
+export type MyProfileUserInput = z.input<typeof myProfileUserSchema>;
 
 export const myProfileWithMembershipsSchema = myProfileUserSchema.extend({
   memberships: z.array(
@@ -45,6 +48,7 @@ export const myProfileWithMembershipsSchema = myProfileUserSchema.extend({
   ),
 });
 export type MyProfileWithMemberships = z.infer<typeof myProfileWithMembershipsSchema>;
+export type MyProfileWithMembershipsInput = z.input<typeof myProfileWithMembershipsSchema>;
 
 // response schema when an admin wants to GET a user.
 export const adminUserSchema = z.object({
@@ -54,10 +58,11 @@ export const adminUserSchema = z.object({
   firstName: z.string(),
   lastName: z.string(),
   phone: z.string().nullable(),
-  birthDate: z.date(),
+  birthDate: isoDate,
   role: z.string(),
-  createdAt: z.date(),
-  updatedAt: z.date(),
-  deletedAt: z.date().nullable(),
+  createdAt: isoDate,
+  updatedAt: isoDate,
+  deletedAt: isoDate.nullable(),
 });
 export type AdminUser = z.infer<typeof adminUserSchema>;
+export type AdminUserInput = z.input<typeof adminUserSchema>;

@@ -27,6 +27,8 @@ describe('ReservationsService (intégration)', () => {
 
   // Préfixe unique par exécution, pour ne nettoyer que nos propres données
   const prefix = `r-${Date.now().toString(36)}`;
+  // Demain 18h UTC, soit J+1. Dans ce fichier, « J+n » compte depuis aujourd'hui :
+  // addHours(arrivalAt, 24 * k) tombe donc sur J+(k+1).
   const arrivalAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
   arrivalAt.setUTCHours(18, 0, 0, 0);
   const addHours = (date: Date, hours: number) =>
@@ -348,7 +350,7 @@ describe('ReservationsService (intégration)', () => {
     it("un joueur ne peut pas annuler la réservation d'un autre (404, rien ne change)", async () => {
       const owner = await createUser('cancel-victim');
       const intruder = await createUser('cancel-intruder');
-      // place 9, J+5 : journée que les tests de liste n'utilisent pas
+      // place 9, J+5 (arrivalAt + 4 jours) : journée que les tests de liste n'utilisent pas
       const reservation = await createConfirmed(
         owner.id,
         seatIds[9],
@@ -379,7 +381,7 @@ describe('ReservationsService (intégration)', () => {
     const minutesAgo = (minutes: number) =>
       new Date(Date.now() - minutes * 60 * 1000);
 
-    // place 1, journées J+2 à J+4 : jamais utilisées par les autres tests
+    // place 1, journées J+2 à J+4 (dayOffset 1 à 3) : jamais utilisées par les autres tests
     const insert = (
       userId: string,
       status: ReservationStatus,
@@ -439,7 +441,7 @@ describe('ReservationsService (intégration)', () => {
     it('libère la place et le joueur après l’expiration', async () => {
       const late = await createUser('expire-late');
       const next = await createUser('expire-next');
-      // place 1, J+5 : libre (le test précédent s'arrête à J+4)
+      // place 1, J+5 (arrivalAt + 4 jours) : libre (le test précédent s'arrête à J+4)
       const day = addHours(arrivalAt, 24 * 4);
       // Créée « fraîche » : aucun cron (celui du conteneur backend tourne sur la
       // même base) ne peut l'expirer avant qu'on vérifie qu'elle bloque la place.

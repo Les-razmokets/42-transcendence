@@ -31,7 +31,10 @@ import { ScheduleModule } from '@nestjs/schedule';
       throttlers: [{ ttl: 600000, limit: 100 }],
       skipIf: () => process.env.THROTTLE_DISABLED === 'true',
     }),
-    ScheduleModule.forRoot(),
+    // Crons off when SCHEDULER_DISABLED=true (tests: avoids extra crons on the shared DB)
+    ...(process.env.SCHEDULER_DISABLED === 'true'
+      ? []
+      : [ScheduleModule.forRoot()]),
     HealthModule,
     AuthModule,
     UsersModule,

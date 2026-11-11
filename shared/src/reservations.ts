@@ -1,7 +1,6 @@
 import { z } from 'zod';
+import { isoDate } from './dates.js';
 import { ReservationStatus } from './enums.js';
-
-const isoDate = z.date().transform((date) => date.toISOString());
 
 // response schema for a reservation
 // not exposed:
