@@ -1,8 +1,5 @@
 import { describe, it, expect } from '@jest/globals';
-import {
-  publicCasinoSchema,
-  adminCasinoSchema,
-} from '@transcendence/shared';
+import { publicCasinoSchema, adminCasinoSchema } from '@transcendence/shared';
 
 /*
  * The schemas are WHITELISTS: whatever the database row contains, only these fields leave the API.

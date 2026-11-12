@@ -10,11 +10,7 @@ import { CasinosMembersController } from './members/casinos-members.controller';
 
 @Module({
   imports: [AuthModule],
-  providers: [
-    CasinosAccessService,
-    CasinosService,
-    CasinosMembersService,
-  ],
+  providers: [CasinosAccessService, CasinosService, CasinosMembersService],
   controllers: [CasinosController, CasinosMembersController],
   exports: [CasinosAccessService],
 })

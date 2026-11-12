@@ -147,7 +147,9 @@ describe('Casino routes (e2e)', () => {
 
     casinoIds.A = (await newCasino('Casino A', 'adgadgad')).id;
     casinoIds.B = (await newCasino('Casino B', 'aldjrfhaucb')).id;
-    casinoIds.DELETED = (await newCasino('Casino Deleted', 'alidufhalfb', true)).id;
+    casinoIds.DELETED = (
+      await newCasino('Casino Deleted', 'alidufhalfb', true)
+    ).id;
     casinoIds.UNKNOWN = randomUUID();
     casinoIds.MALFORMED = 'not-a-uuid';
 
@@ -405,7 +407,7 @@ describe('Casino routes (e2e)', () => {
         data: Array.from({ length: 6 }, (_, index) => ({
           name: `Casino ${index + 1}`, // Noms uniques pour respecter le @unique
           city: 'Lausanne',
-          address: `Rue ${index + 1}`,    // Adresses uniques aussi
+          address: `Rue ${index + 1}`, // Adresses uniques aussi
         })),
       });
 
@@ -418,9 +420,9 @@ describe('Casino routes (e2e)', () => {
     it('never returns more than the maximum page size (delete this test if you did not paginate)', async () => {
       await prisma.casino.createMany({
         data: Array.from({ length: 6 }, (_, index) => ({
-          name: `Casino ${index + 1}`, 
+          name: `Casino ${index + 1}`,
           city: 'Lausanne',
-          address: `Rue de Lausanne ${index + 1}`, 
+          address: `Rue de Lausanne ${index + 1}`,
         })),
       });
 

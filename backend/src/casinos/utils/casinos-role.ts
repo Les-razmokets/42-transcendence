@@ -11,7 +11,7 @@ export const CASINO_ROLE_RANKING: Record<CasinoRole, number> = {
 
 /**
  * Checks if a user's role meets or exceeds the minimum required role rank.
- * 
+ *
  * @param userRole - The role currently held by the user.
  * @param minRole - The minimum role required for access.
  * @returns `true` if the user's role rank is greater than or equal to the minimum required rank, otherwise `false`.

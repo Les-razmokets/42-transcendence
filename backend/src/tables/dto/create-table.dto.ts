@@ -1,18 +1,7 @@
-import {
-  IsEnum,
-  IsInt,
-  IsNotEmpty,
-  IsString,
-  IsUUID,
-  Max,
-  Min,
-} from 'class-validator';
+import { IsEnum, IsInt, IsNotEmpty, IsString, Max, Min } from 'class-validator';
 import { PokerVariant } from '../../generated/prisma/enums';
 
 export class CreateTableDto {
-  @IsUUID()
-  casinoId: string;
-
   @IsNotEmpty()
   @IsString()
   name: string;

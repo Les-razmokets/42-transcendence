@@ -1,0 +1,22 @@
+import { IsEnum, IsInt, IsNotEmpty, IsString, Max, Min } from 'class-validator';
+import { PokerVariant } from '../../generated/prisma/enums';
+
+export class PutTableDTO {
+  name: string;
+
+  @IsEnum(PokerVariant)
+  variant: PokerVariant;
+
+  @IsInt()
+  @Min(1)
+  smallBlind: number;
+
+  @IsInt()
+  @Min(1)
+  bigBlind: number;
+
+  @IsInt()
+  @Min(2)
+  @Max(10)
+  maxSeats: number;
+}

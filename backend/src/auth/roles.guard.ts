@@ -13,9 +13,9 @@ import { AuthenticatedRequest } from './utils/auth-request';
 
 /**
  * Guard that implements Role-Based Access Control (RBAC) in NestJS.
- * It checks handlers and controllers for metadata set by `@Public()` and `@Roles()` 
+ * It checks handlers and controllers for metadata set by `@Public()` and `@Roles()`
  * decorators to determine if the current request is authorized.
- * 
+ *
  * Flow:
  * 1. Checks if the route is marked as public (`IS_PUBLIC_KEY`). If so, allows access immediately.
  * 2. Retrieves required roles (`ROLES_KEY`). If no roles are specified, allows access.

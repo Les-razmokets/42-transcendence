@@ -11,9 +11,9 @@ import { CasinosCreationDto, CasinosUpdateDto } from './dto/casinos.dto';
 
 /**
  * Service handling business logic for casino management in NestJS.
- * Communicates with the database via Prisma to perform CRUD operations with 
+ * Communicates with the database via Prisma to perform CRUD operations with
  * soft-delete checks, error handling for uniqueness conflicts, and validation.
- * 
+ *
  * Methods:
  * - listActiveCasinos: Retrieves up to 50 active (non-deleted) casinos ordered by name.
  * - findActiveCasino: Finds a single active casino by ID or throws a `NotFoundException`.
@@ -24,7 +24,10 @@ import { CasinosCreationDto, CasinosUpdateDto } from './dto/casinos.dto';
 export class CasinosService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async listActiveCasinos(page: number = 1, limit: number = 20): Promise<CasinoInfo[]> {
+  async listActiveCasinos(
+    page: number = 1,
+    limit: number = 20,
+  ): Promise<CasinoInfo[]> {
     const validLimit = Math.min(Math.max(limit, 1), 100);
     const validPage = Math.max(page, 1);
     const skip = (validPage - 1) * validLimit;

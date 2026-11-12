@@ -1,10 +1,7 @@
 import { Controller, Get, Post, Body, SerializeOptions } from '@nestjs/common';
 import { HealthService } from './health.service';
 import { HealthDto } from './dto/health.dto';
-import {
-  healthResponseSchema,
-  HealthResponse,
-} from '@transcendence/shared';
+import { healthResponseSchema, HealthResponse } from '@transcendence/shared';
 import { Public } from '../auth/utils/public.decorator';
 import { SkipThrottle } from '@nestjs/throttler';
 

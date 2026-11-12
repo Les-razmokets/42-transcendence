@@ -30,7 +30,7 @@ import { NestExpressApplication } from '@nestjs/platform-express';
 /*
  * @RequireCasinoRole() end to end, behind the REAL global guards (throttler, auth, roles),
  * with THROWAWAY controllers that only exist in this spec.
-*/
+ */
 
 const okSchema = z.object({ ok: z.boolean() });
 
@@ -170,7 +170,9 @@ describe('@RequireCasinoRole (e2e): the casino access matrix', () => {
 
     casinoIds.A = (await newCasino('Casino A', 'rue du test 1')).id;
     casinoIds.B = (await newCasino('Casino B', 'rue des tests 2')).id;
-    casinoIds.DELETED = (await newCasino('Casino Deleted','rue de mon test 4', true)).id;
+    casinoIds.DELETED = (
+      await newCasino('Casino Deleted', 'rue de mon test 4', true)
+    ).id;
     casinoIds.UNKNOWN = randomUUID();
 
     membershipIds.floorA = (
