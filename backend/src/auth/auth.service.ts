@@ -1,10 +1,16 @@
-import { Injectable, UnauthorizedException } from '@nestjs/common';
+import { Inject, Injectable, UnauthorizedException } from '@nestjs/common';
 import { UsersService } from '../users/users.service';
 import { UsersCreationDto } from '../users/dto/users.dto';
 import { Argon2Hasher } from './argon2-hasher.service';
 import { LoginDto } from './dto/login.dto';
 import { JwtService } from '@nestjs/jwt';
 import { JwtPayload } from './utils/jwt.payload';
+import { FortyTwoClientService } from './oauth/forty-two/forty-two.service';
+import { PrismaService } from '../prisma/prisma.service';
+import { OAuthProvider } from '@transcendence/shared';
+import { FortyTwoAuthException } from './oauth/forty-two/utils/forty-two-auth.exception';
+import { fortyTwoConfig } from './oauth/forty-two/forty-two.config';
+import type { ConfigType } from '@nestjs/config';
 
 @Injectable()
 export class AuthService {
@@ -12,6 +18,10 @@ export class AuthService {
     private readonly users: UsersService,
     private readonly hasher: Argon2Hasher,
     private readonly jwt: JwtService,
+    private readonly fortyTwoClient: FortyTwoClientService,
+    private readonly prisma: PrismaService,
+    @Inject(fortyTwoConfig.KEY)
+    private readonly fortyTwo: ConfigType<typeof fortyTwoConfig>,
   ) {}
 
   // registers a new user
@@ -43,5 +53,36 @@ export class AuthService {
 
   async issueToken(payload: JwtPayload): Promise<string> {
     return this.jwt.signAsync({ sub: payload.sub, role: payload.role });
+  }
+
+  async handleFortyTwoCallback(code: string): Promise<{kind: 'login' | 'pending', token: string}> {
+    const fortyTwoToken = await this.fortyTwoClient.exchangeCodeForToken(code);
+    const profile = await this.fortyTwoClient.readProfile(fortyTwoToken);
+    const account = await this.prisma.oAuthAccount.findUnique({
+      where: { 
+        provider_providerAccountId: {
+          provider: OAuthProvider.FORTY_TWO,
+          providerAccountId: profile.providerAccountId,
+        },
+      },
+      include: { user: true },
+    });
+    if (!account) {
+      const existing = await this.users.findByEmail(profile.email);
+      if (existing) throw new FortyTwoAuthException();
+
+      const pendingToken = await this.jwt.signAsync(
+        { typ: 'oauth_pending', ...profile },
+        { secret: this.fortyTwo.pendingSecret, expiresIn: '10m' },
+      )
+      return { kind: 'pending', token: pendingToken } as const;
+    }
+    if (account.user.deletedAt)
+      throw new FortyTwoAuthException();
+    const token = await this.issueToken({
+      sub: account.user.id,
+      role: account.user.role,
+    });
+    return { kind: 'login', token } as const;
   }
 }

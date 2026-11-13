@@ -1,4 +1,4 @@
-import { Inject, Injectable, InternalServerErrorException } from "@nestjs/common";
+import { Inject, Injectable } from "@nestjs/common";
 import { fortyTwoConfig } from "./forty-two.config";
 import type { ConfigType } from "@nestjs/config";
 import { fortyTwoProfileSchema, tokenResponseSchema, type FortyTwoProfile } from "./utils/forty-two-response.schema";

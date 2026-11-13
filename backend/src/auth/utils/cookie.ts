@@ -1,7 +1,9 @@
+import { ConfigService } from '@nestjs/config';
 import type { CookieOptions } from 'express';
 
 export const COOKIE_NAME = 'access_token';
 export const OAUTH_COOKIE = 'oauth_token';
+export const OAUTH_PENDING_COOKIE = 'pending_token';
 
 // helper function to build cookies with the right options
 export function buildCookieOptions(

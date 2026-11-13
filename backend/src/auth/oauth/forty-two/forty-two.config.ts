@@ -9,6 +9,7 @@ export const fortyTwoConfig = registerAs('fortyTwo', () => {
   const tokenUrl = `${baseUrl}${process.env.FORTY_TWO_TOKEN}`;
   const profileUrl = `${baseUrl}${process.env.FORTY_TWO_PROFILE}`;
   const timeout: number = Number(process.env.FORTY_TWO_TIMEOUT);
+  const pendingSecret = process.env.OAUTH_PENDING_SECRET;
 
   if (
     !clientId
@@ -19,8 +20,9 @@ export const fortyTwoConfig = registerAs('fortyTwo', () => {
     || !process.env.FORTY_TWO_TOKEN
     || !process.env.FORTY_TWO_PROFILE
     || !timeout
+    || !pendingSecret
   )
     throw new Error('Missing FORTY_TWO_* variables.');
 
-  return { clientId, clientSecret, callbackUrl, baseUrl, authUrl, tokenUrl, profileUrl, timeout};
+  return { clientId, clientSecret, callbackUrl, baseUrl, authUrl, tokenUrl, profileUrl, timeout, pendingSecret };
 })
