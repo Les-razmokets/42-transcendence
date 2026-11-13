@@ -1,8 +1,8 @@
 import { request } from '../../lib/api';
-import type { User } from '../../lib/types/domain';
+import type { MyProfileUser } from '@transcendence/shared';
 
 export function login(email: string, password: string) {
-    return request<User>('POST', '/auth/login', {email, password});
+    return request<MyProfileUser>('POST', '/auth/login', {email, password});
 }
 
 export type DonneeInscription = {
@@ -15,7 +15,7 @@ export type DonneeInscription = {
 };
 
 export function inscription(donnees: DonneeInscription) {
-    return request<User>('POST', '/auth/register', {
+    return request<MyProfileUser>('POST', '/auth/register', {
         firstName: donnees.prenom,
         lastName: donnees.nom,
         pseudo: donnees.pseudo,
