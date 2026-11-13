@@ -1,21 +1,25 @@
 import { useEffect, useState, type ReactNode } from "react";
-import type { MyProfileUser } from "@transcendence/shared";
+import type { MyProfileWithMemberships } from "@transcendence/shared";
 import { request } from "../api";
 import { SessionContext } from './contexte';
 
+function recupererUser() {
+    return request<MyProfileWithMemberships>('GET', '/users/me');
+}
+
 export function SessionProvider({ children }: {children: ReactNode}) {
-    const [user, setUser] = useState<MyProfileUser | null>(null);
+    const [user, setUser] = useState<MyProfileWithMemberships | null>(null);
     const [load, setLoad] = useState(true);
 
     useEffect(() => {
-        request<MyProfileUser>('GET', '/users/me')
+        recupererUser()
         .then((u) => setUser(u))
         .catch(() => setUser(null))
         .finally(() => setLoad(false))
     }, []);
 
-    function connect(u: MyProfileUser) {
-        setUser(u);
+    async function connect() {
+        setUser(await recupererUser());
     }
 
     async function disconnect() {
