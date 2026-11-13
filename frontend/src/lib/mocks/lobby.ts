@@ -1,13 +1,10 @@
-import type { Table } from '@transcendence/shared';
-import type { Casino } from '../types/domain';
+import type { PublicCasino, Table } from '@transcendence/shared';
 
-export const casino: Casino = {
+export const casino: PublicCasino = {
   id: 'casino-1',
-  name: 'Casino du Lac',
+  name: 'Casino du lac',
   city: 'Lausanne',
-  address: 'Quai du Lac 1',
-  createdAt: '2026-09-01T10:00:00.000Z',
-  updatedAt: '2026-09-01T10:00:00.000Z',
+  address: 'Quai du lac 1',
 };
 
 export const tables: Table[] = [
