@@ -5,11 +5,13 @@ import { Bandes, Bouton, ChampSaisie, Logo, Notification } from "../../design-sy
 import { ApiError } from "../../lib/api";
 import { login } from "./api";
 import styles from "./LoginPage.module.css";
+import { useSession } from "@/lib/session/contexte";
 
 
 export function LoginPage() {
 	const { t } = useTranslation();
 	const navigate = useNavigate();
+	const { connect } = useSession();
 	const location = useLocation();
 	const [afficherSucces] = useState(location.state?.inscrit === true)
 
@@ -34,7 +36,8 @@ export function LoginPage() {
 
 		setEnCours(true);
 		try {
-			await login(email, password);
+			const user = await login(email, password);
+			connect(user);
 			navigate('/');
 		} catch(err) {
 			if (err instanceof ApiError && err.status === 401)
