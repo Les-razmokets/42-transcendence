@@ -101,7 +101,7 @@ describe('FortyTwoClientService', () => {
       expect(url).toBe(config.tokenUrl);
       expect(init?.method).toBe('POST');
       expect(
-        (init?.headers as Record<string, string>)['Content-Type'],
+        (init!.headers as Record<string, string>)['Content-Type'],
       ).toBe('application/x-www-form-urlencoded');
 
       const body = Object.fromEntries(init?.body as URLSearchParams);
@@ -173,7 +173,7 @@ describe('FortyTwoClientService', () => {
       const [url, init] = fetchMock.mock.calls[0];
       expect(url).toBe(config.profileUrl);
       expect(init?.method).toBe('GET');
-      expect((init?.headers as Record<string, string>).Authorization).toBe(
+      expect((init!.headers as Record<string, string>).Authorization).toBe(
         'Bearer the-token',
       );
       expect(init?.signal).toBeInstanceOf(AbortSignal);

@@ -6,8 +6,6 @@ import {
   HttpCode,
   HttpStatus,
   Get,
-  Redirect,
-  Query,
   Req,
   Res,
 } from '@nestjs/common';
@@ -88,20 +86,18 @@ export class AuthController {
   @Post('logout')
   logout(@Res({ passthrough: true }) res: Response) {
     // Destructure out maxAge to retain matching cookie options (path, domain, secure flags) required to successfully clear it
-    const { maxAge, ...clearOptions } = this.cookieOptions(); // same name/path/sameSite/secure, no maxAge
+    const { maxAge: _maxAge, ...clearOptions } = this.cookieOptions(); // same name/path/sameSite/secure, no maxAge
     // Clear the authentication cookie from the client browser
     res.clearCookie(COOKIE_NAME, clearOptions);
   }
 
   @Public()
   @Throttle({ default: { limit: 5, ttl: 60000 } })
-  @Redirect()
   @Get('42')
-  redirectTo42(@Res({ passthrough: true }) res: Response) {
+  redirectTo42(@Res() res: Response) {
     const state = crypto.randomBytes(32).toString('hex');
     res.cookie(OAUTH_COOKIE, state, buildOauthCookieOptions(600, this.isProd()));
-    const authUrl = this.fortyTwoClient.buildAuthUrl(state);
-    return { url: authUrl, statusCode: 302 }
+    res.redirect(this.fortyTwoClient.buildAuthUrl(state));
   }
 
   @Public()
@@ -110,13 +106,12 @@ export class AuthController {
   async callback42(
     @Res() res: Response,
     @Req() req: Request,
-    @Query('code') code: string,
-    @Query('state') state: string,
   ) {
     const cookieState = req.cookies[OAUTH_COOKIE];
     const frontUrl = this.config.getOrThrow('FRONTEND_URL');
-    const { maxAge, ...clearOauth } = buildOauthCookieOptions(0, this.isProd());
+    const { maxAge: _maxAge, ...clearOauth } = buildOauthCookieOptions(0, this.isProd());
     res.clearCookie(OAUTH_COOKIE, clearOauth);
+    const { code, state } = req.query;
 
     try {
       if (typeof code !== 'string' || typeof state !== 'string' || typeof cookieState !== 'string')
@@ -150,7 +145,7 @@ export class AuthController {
     const pendingToken = req.cookies[OAUTH_PENDING_COOKIE];
     if (typeof pendingToken !== 'string') throw new FortyTwoAuthException();
     const { user, token } = await this.auth.completeFortyTwoSignup(pendingToken, dto);
-    const { maxAge, ...clearOauth } = buildOauthCookieOptions(0, this.isProd());
+    const { maxAge: _maxAge, ...clearOauth } = buildOauthCookieOptions(0, this.isProd());
     res.clearCookie(OAUTH_PENDING_COOKIE, clearOauth);
     res.cookie(COOKIE_NAME, token, this.cookieOptions());
     return user;
