@@ -130,9 +130,11 @@ describe('Casino routes (e2e)', () => {
     await app.init();
 
     prisma = app.get(PrismaService);
-  });
 
-  beforeEach(async () => {
+    // Users and their sessions are created ONCE for the whole file: register and login each
+    // run argon2 (slow on purpose), and no test modifies a user. Only casinos and memberships
+    // are reset before each test. The sessions stay valid because AuthGuard reloads the user
+    // by id, and the ids never change here.
     await prisma.membership.deleteMany();
     await prisma.user.deleteMany();
     await prisma.casino.deleteMany();
@@ -144,6 +146,15 @@ describe('Casino routes (e2e)', () => {
       where: { id: userIds.admin },
       data: { role: Role.ADMIN },
     });
+
+    for (const actor of Object.keys(PEOPLE) as LoggedActor[]) {
+      agents[actor] = await loggedInAgent(PEOPLE[actor].email);
+    }
+  });
+
+  beforeEach(async () => {
+    await prisma.membership.deleteMany();
+    await prisma.casino.deleteMany();
 
     casinoIds.A = (await newCasino('Casino A', 'adgadgad')).id;
     casinoIds.B = (await newCasino('Casino B', 'aldjrfhaucb')).id;
@@ -184,10 +195,6 @@ describe('Casino routes (e2e)', () => {
         role: CasinoRole.OWNER,
       },
     });
-
-    for (const actor of Object.keys(PEOPLE) as LoggedActor[]) {
-      agents[actor] = await loggedInAgent(PEOPLE[actor].email);
-    }
   });
 
   afterAll(async () => {

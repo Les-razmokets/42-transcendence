@@ -1,6 +1,8 @@
 import type { CookieOptions } from 'express';
 
 export const COOKIE_NAME = 'access_token';
+export const OAUTH_COOKIE = 'oauth_token';
+export const OAUTH_PENDING_COOKIE = 'pending_token';
 
 // helper function to build cookies with the right options
 export function buildCookieOptions(
@@ -13,5 +15,20 @@ export function buildCookieOptions(
     secure: secure, // Ensures the cookie is only transmitted over HTTPS (true in production)
     path: '/', // Specifies the URL path for which the cookie is valid (here, the entire site)
     maxAge: lifetimeSeconds * 1000, // Cookie lifetime in milliseconds
+  };
+}
+
+// same flags as the session cookie, but scoped to the 42 routes only:
+// the browser sends the state and pending cookies nowhere else
+export function buildOauthCookieOptions(
+  lifetimeSeconds: number,
+  secure: boolean,
+): CookieOptions {
+  return {
+    httpOnly: true,
+    sameSite: 'lax',
+    secure: secure,
+    path: '/api/auth/42',
+    maxAge: lifetimeSeconds * 1000,
   };
 }

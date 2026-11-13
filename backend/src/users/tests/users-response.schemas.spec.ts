@@ -35,7 +35,7 @@ describe('publicUserSchema', () => {
   });
 
   it('rejette un user sans pseudo', () => {
-    const { pseudo, ...withoutPseudo } = fullUser;
+    const { pseudo: _pseudo, ...withoutPseudo } = fullUser;
 
     expect(() => publicUserSchema.parse(withoutPseudo)).toThrow();
   });
@@ -81,7 +81,7 @@ describe('staffUserSchema', () => {
   });
 
   it('rejette un user dont la clé phone est absente', () => {
-    const { phone, ...withoutPhone } = fullUser;
+    const { phone: _phone, ...withoutPhone } = fullUser;
 
     expect(() => staffUserSchema.parse(withoutPhone)).toThrow();
   });
@@ -159,7 +159,7 @@ describe('adminUserSchema', () => {
   });
 
   it('rejette un user dont la clé deletedAt est absente', () => {
-    const { deletedAt, ...withoutDeletedAt } = fullUser;
+    const { deletedAt: _deletedAt, ...withoutDeletedAt } = fullUser;
 
     expect(() => adminUserSchema.parse(withoutDeletedAt)).toThrow();
   });

@@ -134,6 +134,7 @@ Un `ThrottlerGuard` global limite le nombre de requêtes par IP (`backend/src/ap
 | Par défaut | 100 requêtes par 10 minutes |
 | `POST /api/auth/register` | 3 par minute |
 | `POST /api/auth/login` | 5 par minute (protection contre le brute-force) |
+| `GET /api/auth/42`, `GET /api/auth/42/callback`, `POST /api/auth/42/complete` | 5 par minute chacune |
 | `/api/health` | Aucune limite |
 
 L'IP du client est celle transmise par nginx (`X-Forwarded-For`, avec `trust proxy` activé). En test, on peut couper la limite avec `THROTTLE_DISABLED=true`.
@@ -163,7 +164,7 @@ Corps de `register` :
 | Champ | Règle |
 |---|---|
 | `firstName`, `lastName` | Obligatoires, 50 caractères max (espaces retirés au début et à la fin) |
-| `pseudo` | De 1 à 20 caractères, `a-z`, `0-9`, `_` et `-` uniquement (passé en minuscules) |
+| `pseudo` | De 1 à 20 caractères, `a-z`, `0-9`, `_` et `-` uniquement (passé en minuscules). Ne peut pas commencer par `42` (préfixe réservé aux comptes 42, voir plus bas) |
 | `email` | Email valide, 254 caractères max (passé en minuscules) |
 | `password` | Mot de passe fort (8 caractères minimum, avec une minuscule, une majuscule, un chiffre et un symbole), 128 caractères max |
 | `birthDate` | `YYYY-MM-DD`, 18 ans minimum, pas avant 1900 |
@@ -173,6 +174,100 @@ Erreurs : 409 si l'email ou le pseudo est déjà pris. Au login, 401 `Invalid cr
 
 > [!NOTE]
 > L'inscription **ne connecte pas** l'utilisateur : il faut appeler `login` ensuite.
+
+### Connexion avec 42
+
+| Méthode | Route | Accès | Corps | Réponse |
+|---|---|---|---|---|
+| GET | `/api/auth/42` | Public | – | 302 vers la page d'autorisation de 42 |
+| GET | `/api/auth/42/callback` | Public | – (appelée par 42) | 302 vers le front, voir le tableau des redirections |
+| POST | `/api/auth/42/complete` | Public | `birthDate` (`YYYY-MM-DD`) | 201 + profil (`myProfileUserSchema`), et pose le cookie de session |
+
+#### Le parcours
+
+```mermaid
+sequenceDiagram
+    participant F as Front (navigateur)
+    participant B as Backend
+    participant P as 42 (intra)
+
+    F->>B: GET /api/auth/42 (navigation, pas fetch)
+    B-->>F: 302 vers 42 + cookie oauth_token (state)
+    F->>P: l'utilisateur se connecte et autorise l'app
+    P-->>F: 302 vers /api/auth/42/callback?code=…&state=…
+    F->>B: GET /api/auth/42/callback (cookie oauth_token envoyé)
+    Note over B: vérifie le state,<br/>échange le code contre le profil 42
+    alt compte 42 déjà lié
+        B-->>F: 302 vers FRONTEND_URL + cookie access_token
+    else nouveau compte
+        B-->>F: 302 vers /signup/42 + cookie pending_token
+        F->>B: POST /api/auth/42/complete { birthDate }
+        B-->>F: 201 + profil + cookie access_token
+    else erreur
+        B-->>F: 302 vers /login?error=oauth
+    end
+```
+
+1. **Démarrer** : le bouton « Se connecter avec 42 » est un **lien** vers `/api/auth/42` (`<a href>` ou `window.location`), pas un `fetch`. Le navigateur doit suivre les redirections jusqu'à 42 puis revenir.
+2. **Callback** : 42 renvoie le navigateur vers `/api/auth/42/callback`. Le backend vérifie que le paramètre `state` correspond au cookie `oauth_token` (protection CSRF), puis récupère le profil 42. Cette route ne renvoie **jamais de JSON** : elle redirige toujours vers le front.
+3. **Finaliser l'inscription** : pour un nouveau compte, la page `/signup/42` du front demande la date de naissance, puis appelle `POST /api/auth/42/complete` avec `credentials: 'include'`. Le compte est créé à ce moment-là, pas avant.
+
+#### Les redirections du callback
+
+| Cas | Redirection | Cookie posé |
+|---|---|---|
+| Compte 42 déjà lié | `FRONTEND_URL` | `access_token` (session normale) |
+| Compte 42 inconnu | `FRONTEND_URL/signup/42` | `pending_token` (10 minutes) |
+| Toute erreur | `FRONTEND_URL/login?error=oauth` | aucun |
+
+« Toute erreur » regroupe : `state` absent ou différent du cookie, `code` absent, refus ou panne de 42, compte supprimé, email déjà utilisé par un autre compte. Le backend renvoie **la même redirection** dans tous les cas, exprès : il ne dit pas lequel. Le front affiche un message générique, par exemple « Connexion avec 42 impossible. Si vous avez déjà un compte, connectez-vous avec votre mot de passe. »
+
+Après une redirection vers `FRONTEND_URL`, le front appelle `GET /api/users/me` pour charger l'utilisateur, comme après un login classique.
+
+#### `POST /api/auth/42/complete`
+
+- **Corps** : uniquement `birthDate`, avec les mêmes règles qu'à l'inscription (18 ans minimum). Tout autre champ (`email`, `pseudo`…) renvoie 400 : l'identité vient du profil 42, jamais du front.
+- **Compte créé** : email, prénom et nom repris de 42. Pseudo `42<login>` (par exemple `42jdoe`). Pas de mot de passe.
+- **Erreurs** :
+
+| Code | Cas | Ce que fait le front |
+|---|---|---|
+| 400 | Date de naissance invalide ou moins de 18 ans | Affiche l'erreur sur le champ |
+| 401 | Cookie `pending_token` absent, invalide ou expiré (plus de 10 minutes) | Propose de recommencer la connexion avec 42 |
+| 409 | Compte déjà créé (double envoi), ou email ou pseudo pris entre-temps | Message générique, le message ne dit pas quel champ |
+
+#### Les cookies
+
+| Cookie | Contenu | Path | Durée |
+|---|---|---|---|
+| `oauth_token` | `state` aléatoire (32 octets en hex) | `/api/auth/42` | 10 minutes, effacé au callback |
+| `pending_token` | JWT signé avec `OAUTH_PENDING_SECRET` (profil 42) | `/api/auth/42` | 10 minutes, effacé après `complete` |
+| `access_token` | La session normale (voir la [section 2](#2-authentification)) | `/` | `JWT_EXPIRES_IN_SECONDS` |
+
+Les deux cookies OAuth sont `httpOnly` et `sameSite: lax`, comme la session. Leur `path` les limite aux routes 42 : le navigateur ne les envoie nulle part ailleurs. Nginx ne doit donc **pas** retirer le préfixe `/api`, sinon le navigateur ne les renvoie plus.
+
+`pending_token` est signé avec un secret **différent** de celui de la session : il ne peut pas servir à se connecter, et `AuthGuard` le refuse (401).
+
+#### Règles de sécurité retenues
+
+- **Email (option A)** : on fait confiance à l'email fourni par 42, parce que c'est 42 qui l'attribue et le vérifie (`login@student.42xxx.fr`). Si un compte existe déjà avec cet email, la connexion est **refusée**. Il n'y a **aucune liaison automatique** à un compte existant. Ce choix ne vaut que pour un fournisseur qui vérifie les emails : il faudra le revoir avant d'ajouter GitHub ou Google.
+- **Préfixe `42` réservé** : un pseudo qui commence par `42` vient forcément de 42 OAuth. `register` refuse ce préfixe : sinon quelqu'un pourrait prendre `42jdoe` avant le vrai jdoe, qui ne pourrait plus jamais s'inscrire. Les constantes (`OAUTH_PSEUDO_PREFIX`, `PSEUDO_PATTERN`, `PSEUDO_MAX_LEN`) sont dans `shared/src/pseudo.ts`.
+- **Compte 42 seul** : un compte créé par 42 n'a pas de mot de passe. `POST /api/auth/login` le refuse avec le 401 générique habituel.
+- **Compte supprimé** : un compte 42 lié à un utilisateur supprimé (RGPD) ne peut plus se connecter.
+
+#### Configuration (`.env`)
+
+| Variable | Exemple | Rôle |
+|---|---|---|
+| `FORTY_TWO_UID`, `FORTY_TWO_SECRET` | – | Identifiants de l'application sur l'intra 42 |
+| `FORTY_TWO_CALLBACK_URL` | `https://localhost/api/auth/42/callback` | Doit être **identique** à l'URL de redirection déclarée sur l'intra |
+| `FORTY_TWO_BASE_URL` | `https://api.intra.42.fr` | |
+| `FORTY_TWO_AUTHORIZE`, `FORTY_TWO_TOKEN`, `FORTY_TWO_PROFILE` | `/oauth/authorize`, `/oauth/token`, `/v2/me` | Chemins ajoutés à `FORTY_TWO_BASE_URL` |
+| `FORTY_TWO_TIMEOUT` | `5000` | Délai max d'un appel à 42, en ms (entier positif) |
+| `OAUTH_PENDING_SECRET` | `openssl rand -hex 32` | Secret du `pending_token`, **différent** de `JWT_SECRET` |
+| `FRONTEND_URL` | `https://localhost` | Base des redirections. Doit contenir le schéma (`https://`) |
+
+Le backend refuse de démarrer si une de ces variables manque. En test, `backend/test/setup-env.ts` leur donne des valeurs factices : les tests n'appellent jamais 42.
 
 ### Utilisateurs
 
