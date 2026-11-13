@@ -7,6 +7,7 @@ import {
   HttpStatus,
   Get,
   Redirect,
+  Query,
 } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { myProfileUserSchema } from '@transcendence/shared';
@@ -21,6 +22,7 @@ import { ConfigService } from '@nestjs/config';
 import { Throttle } from '@nestjs/throttler';
 import { FortyTwoClientService } from './oauth/forty-two/forty-two.service';
 import * as crypto from 'crypto';
+import { callbackify } from 'util';
 
 @Controller('auth')
 export class AuthController {
@@ -88,4 +90,15 @@ export class AuthController {
     const authUrl = this.fortyTwoClient.buildAuthUrl(state);
     return { url: authUrl, statusCode: 302 }
   }
-}
+
+  @Public()
+  @Throttle({ default: { limit: 5, ttl: 60000 } })
+  @Get('42/callback')
+  callbackFrom42(
+    @Res() res: Response,
+    @Query('code') code: string,
+    @Query('state') state: string,
+  ) {
+
+  }
+ }

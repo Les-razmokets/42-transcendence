@@ -19,7 +19,7 @@ export class FortyTwoClientService {
       scope: "public",
       state: state,
     });
-    return `${this.config.baseUrl}?${params.toString()}`;
+    return `${this.config.authUrl}?${params.toString()}`;
   }
 
   async exchangeCodeForToken(code: string): Promise<string> {
@@ -63,7 +63,7 @@ export class FortyTwoClientService {
         throw new FortyTwoAuthException();
       const rawData: unknown = await res.json();
       const parsedData = fortyTwoProfileSchema.safeParse(rawData);
-      if (!parsedData.success || !parsedData.data.email)
+      if (!parsedData.success)
         throw new FortyTwoAuthException();
       return parsedData.data;
     } catch {

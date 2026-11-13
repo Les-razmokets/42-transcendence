@@ -15,9 +15,9 @@ export const fortyTwoConfig = registerAs('fortyTwo', () => {
     || !clientSecret
     || !callbackUrl
     || !baseUrl
-    || !authUrl
-    || !tokenUrl
-    || !profileUrl
+    || !process.env.FORTY_TWO_AUTHORIZE
+    || !process.env.FORTY_TWO_TOKEN
+    || !process.env.FORTY_TWO_PROFILE
     || !timeout
   )
     throw new Error('Missing FORTY_TWO_* variables.');
