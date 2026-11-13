@@ -1,10 +1,10 @@
 import { createContext, useContext } from "react";
-import type { MyProfileUser } from "@transcendence/shared";
+import type { MyProfileWithMemberships } from "@transcendence/shared";
 
 export type Session = {
-    user: MyProfileUser | null;
+    user: MyProfileWithMemberships | null;
     load: boolean;
-    connect: (user: MyProfileUser) => void;
+    connect: () => Promise<void>;
     disconnect: () => Promise<void>;
 };
 
@@ -13,7 +13,7 @@ export const SessionContext = createContext<Session | null>(null);
 export function useSession(): Session {
     const session = useContext(SessionContext);
     if (!session) {
-        throw new Error('Use session doit etre utilisé dans un <SessionProvider>');
+        throw new Error('useSession doit être utilisé dans un <SessionProvider>');
     }
     return session;
 }
