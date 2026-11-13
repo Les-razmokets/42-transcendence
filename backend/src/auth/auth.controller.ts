@@ -30,6 +30,8 @@ import { Throttle } from '@nestjs/throttler';
 import { FortyTwoClientService } from './oauth/forty-two/forty-two.service';
 import * as crypto from 'crypto';
 import { FortyTwoAuthException } from './oauth/forty-two/utils/forty-two-auth.exception';
+import { User } from '../generated/prisma/client';
+import { FortyTwoCompleteDto } from './oauth/forty-two/dto/forty-two-complete.dto';
 
 @Controller('auth')
 export class AuthController {
@@ -134,5 +136,23 @@ export class AuthController {
     } catch {
       return res.redirect(`${frontUrl}/login?error=oauth`);
     }
+  }
+
+  @Public()
+  @Throttle({ default: { limit: 5, ttl: 60000 } })
+  @SerializeOptions({ schema: myProfileUserSchema })
+  @Post('42/complete')
+  async complete42signup(
+    @Res({ passthrough: true }) res: Response,
+    @Req() req: Request,
+    @Body() dto: FortyTwoCompleteDto,
+  ): Promise<User> {
+    const pendingToken = req.cookies[OAUTH_PENDING_COOKIE];
+    if (typeof pendingToken !== 'string') throw new FortyTwoAuthException();
+    const { user, token } = await this.auth.completeFortyTwoSignup(pendingToken, dto);
+    const { maxAge, ...clearOauth } = buildOauthCookieOptions(0, this.isProd());
+    res.clearCookie(OAUTH_PENDING_COOKIE, clearOauth);
+    res.cookie(COOKIE_NAME, token, this.cookieOptions());
+    return user;
   }
 }

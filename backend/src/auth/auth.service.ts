@@ -1,4 +1,4 @@
-import { Inject, Injectable, UnauthorizedException } from '@nestjs/common';
+import { ConflictException, Inject, Injectable, UnauthorizedException } from '@nestjs/common';
 import { UsersService } from '../users/users.service';
 import { UsersCreationDto } from '../users/dto/users.dto';
 import { Argon2Hasher } from './argon2-hasher.service';
@@ -11,6 +11,9 @@ import { OAuthProvider } from '@transcendence/shared';
 import { FortyTwoAuthException } from './oauth/forty-two/utils/forty-two-auth.exception';
 import { fortyTwoConfig } from './oauth/forty-two/forty-two.config';
 import type { ConfigType } from '@nestjs/config';
+import { FortyTwoCompleteDto } from './oauth/forty-two/dto/forty-two-complete.dto';
+import { Prisma, User } from '../generated/prisma/client';
+import { pendingSignupSchema } from './oauth/forty-two/utils/forty-two-response.schema';
 
 @Injectable()
 export class AuthService {
@@ -84,5 +87,40 @@ export class AuthService {
       role: account.user.role,
     });
     return { kind: 'login', token } as const;
+  }
+
+  async completeFortyTwoSignup(pendingToken: string, dto: FortyTwoCompleteDto): Promise<{ user: User, token: string}> {
+    let raw: unknown;
+    try {
+      raw = await this.jwt.verifyAsync(pendingToken, { secret: this.fortyTwo.pendingSecret });
+    } catch {
+      throw new FortyTwoAuthException();
+    }
+    const parsed = pendingSignupSchema.safeParse(raw);
+    if (!parsed.success) throw new FortyTwoAuthException();
+    const payload = parsed.data;
+    let user: User;
+    try {
+      user = await this.prisma.user.create({
+        data: {
+          email: payload.email,
+          pseudo: payload.login,
+          firstName: payload.firstName,
+          lastName: payload.lastName,
+          birthDate: dto.birthDate,
+          oauthAccounts: { create: { provider: OAuthProvider.FORTY_TWO, providerAccountId: payload.providerAccountId } },
+        },
+      });
+    } catch (error) {
+      if (
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        error.code === 'P2002'
+      ) {
+        throw new ConflictException();
+      }
+      throw error;
+    }
+    const token = await this.issueToken({ sub: user.id, role: user.role });
+    return { user, token };
   }
 }
