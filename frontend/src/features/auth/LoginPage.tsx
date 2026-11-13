@@ -36,9 +36,9 @@ export function LoginPage() {
 
 		setEnCours(true);
 		try {
-			const user = await login(email, password);
-			connect(user);
-			navigate('/');
+			 await login(email, password);    
+    await connect();
+    navigate('/');
 		} catch(err) {
 			if (err instanceof ApiError && err.status === 401)
 				setError(t('connexion.erreurIdentifiants'));
