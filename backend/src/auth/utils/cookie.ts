@@ -18,6 +18,8 @@ export function buildCookieOptions(
   };
 }
 
+// same flags as the session cookie, but scoped to the 42 routes only:
+// the browser sends the state and pending cookies nowhere else
 export function buildOauthCookieOptions(
   lifetimeSeconds: number,
   secure: boolean,

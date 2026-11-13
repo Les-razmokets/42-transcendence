@@ -506,7 +506,7 @@ describe('42 OAuth (e2e)', () => {
           complete(ADULT, token),
         ]);
 
-        expect(results.map((r) => r.status).sort()).toEqual([201, 409]);
+        expect(results.map((r) => r.status).sort((a, b) => a - b)).toEqual([201, 409]);
         expect(await prisma.user.count()).toBe(1);
       });
 

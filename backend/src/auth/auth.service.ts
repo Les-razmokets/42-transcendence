@@ -54,13 +54,18 @@ export class AuthService {
     return user;
   }
 
+  // signs the session JWT (sub + role only, nothing else readable)
   async issueToken(payload: JwtPayload): Promise<string> {
     return this.jwt.signAsync({ sub: payload.sub, role: payload.role });
   }
 
+  // 42 OAuth callback logic: turns a 42 code into either a session token ('login')
+  // or a pending signup token ('pending'). Never touches cookies: the controller does that.
+  // Any failure throws, and the controller turns it into the generic error redirect.
   async handleFortyTwoCallback(code: string): Promise<{kind: 'login' | 'pending', token: string}> {
     const fortyTwoToken = await this.fortyTwoClient.exchangeCodeForToken(code);
     const profile = await this.fortyTwoClient.readProfile(fortyTwoToken);
+    // The link is found by 42 id only, never by email.
     const account = await this.prisma.oAuthAccount.findUnique({
       where: { 
         provider_providerAccountId: {
@@ -71,15 +76,19 @@ export class AuthService {
       include: { user: true },
     });
     if (!account) {
+      // Email already used by another account: refuse, no automatic linking (option A, see docs/api.md).
       const existing = await this.users.findByEmail(profile.email);
       if (existing) throw new FortyTwoAuthException();
 
+      // No database write yet: the profile waits in a token signed with its own secret,
+      // so it can never be used as a session token. typ is checked again in completeFortyTwoSignup.
       const pendingToken = await this.jwt.signAsync(
         { typ: 'oauth_pending', ...profile },
         { secret: this.fortyTwo.pendingSecret, expiresIn: '10m' },
       )
       return { kind: 'pending', token: pendingToken } as const;
     }
+    // A soft-deleted (GDPR) user keeps their OAuthAccount row: refuse, otherwise 42 would bring the account back.
     if (account.user.deletedAt)
       throw new FortyTwoAuthException();
     const token = await this.issueToken({
@@ -89,18 +98,23 @@ export class AuthService {
     return { kind: 'login', token } as const;
   }
 
+  // Creates the account of a new 42 user once they gave their birth date.
+  // Identity fields come from the signed pending token only; the dto brings just birthDate.
   async completeFortyTwoSignup(pendingToken: string, dto: FortyTwoCompleteDto): Promise<{ user: User, token: string}> {
+    // Expired, forged or signed with another secret: verifyAsync throws, and we answer the generic 401.
     let raw: unknown;
     try {
       raw = await this.jwt.verifyAsync(pendingToken, { secret: this.fortyTwo.pendingSecret });
     } catch {
       throw new FortyTwoAuthException();
     }
+    // A valid signature is not enough: the payload must be a pending signup (typ), with every field.
     const parsed = pendingSignupSchema.safeParse(raw);
     if (!parsed.success) throw new FortyTwoAuthException();
     const payload = parsed.data;
     let user: User;
     try {
+      // Nested create: the user and the 42 link are written in one atomic query. No password.
       user = await this.prisma.user.create({
         data: {
           email: payload.email,
@@ -112,6 +126,8 @@ export class AuthService {
         },
       });
     } catch (error) {
+      // Unique conflict (double submit, race, email or pseudo taken meanwhile): plain 409,
+      // without naming the field. Any other error goes up unchanged.
       if (
         error instanceof Prisma.PrismaClientKnownRequestError &&
         error.code === 'P2002'

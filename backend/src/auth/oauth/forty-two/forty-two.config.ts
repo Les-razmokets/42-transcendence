@@ -1,5 +1,7 @@
 import { registerAs } from "@nestjs/config";
 
+// 42 OAuth settings, read from .env and injected with @Inject(fortyTwoConfig.KEY).
+// Throws at boot if a variable is missing or invalid: better than failing on the first login.
 export const fortyTwoConfig = registerAs('fortyTwo', () => {
   const clientId = process.env.FORTY_TWO_UID;
   const clientSecret = process.env.FORTY_TWO_SECRET;
