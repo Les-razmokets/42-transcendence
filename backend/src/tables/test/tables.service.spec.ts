@@ -19,10 +19,11 @@ describe('TablesService', () => {
     },
   };
 
+  const casinoId = 'f79900e4-ed42-4236-8e93-3bf2ab820f01';
+
   const makeDto = (
     overrides: Partial<CreateTableDto> = {},
   ): CreateTableDto => ({
-    casinoId: 'f79900e4-ed42-4236-8e93-3bf2ab820f01',
     name: 'Table test',
     variant: PokerVariant.TEXAS_HOLDEM,
     smallBlind: 1,
@@ -53,12 +54,13 @@ describe('TablesService', () => {
       const fakeTable = { id: 'table-1' };
       prismaMock.pokerTable.create.mockResolvedValue(fakeTable);
 
-      const created = await service.create(makeDto({ maxSeats: 3 }));
+      const created = await service.create(casinoId, makeDto({ maxSeats: 3 }));
 
       expect(created).toBe(fakeTable);
       expect(prismaMock.pokerTable.create).toHaveBeenCalledWith(
         expect.objectContaining({
           data: expect.objectContaining({
+            casinoId,
             name: 'Table test',
             seats: {
               createMany: {
@@ -72,7 +74,7 @@ describe('TablesService', () => {
 
     it('rejette bigBlind < smallBlind sans appeler Prisma', async () => {
       await expect(
-        service.create(makeDto({ smallBlind: 10, bigBlind: 5 })),
+        service.create(casinoId, makeDto({ smallBlind: 10, bigBlind: 5 })),
       ).rejects.toBeInstanceOf(BadRequestException);
       expect(prismaMock.pokerTable.create).not.toHaveBeenCalled();
     });
@@ -81,13 +83,16 @@ describe('TablesService', () => {
       prismaMock.pokerTable.create.mockResolvedValue({ id: 'table-1' });
 
       await expect(
-        service.create(makeDto({ smallBlind: 5, bigBlind: 5 })),
+        service.create(casinoId, makeDto({ smallBlind: 5, bigBlind: 5 })),
       ).resolves.toBeDefined();
     });
 
     it('rejette OMAHA avec plus de 8 sièges sans appeler Prisma', async () => {
       await expect(
-        service.create(makeDto({ variant: PokerVariant.OMAHA, maxSeats: 9 })),
+        service.create(
+          casinoId,
+          makeDto({ variant: PokerVariant.OMAHA, maxSeats: 9 }),
+        ),
       ).rejects.toBeInstanceOf(BadRequestException);
       expect(prismaMock.pokerTable.create).not.toHaveBeenCalled();
     });
@@ -96,7 +101,10 @@ describe('TablesService', () => {
       prismaMock.pokerTable.create.mockResolvedValue({ id: 'table-1' });
 
       await expect(
-        service.create(makeDto({ variant: PokerVariant.OMAHA, maxSeats: 8 })),
+        service.create(
+          casinoId,
+          makeDto({ variant: PokerVariant.OMAHA, maxSeats: 8 }),
+        ),
       ).resolves.toBeDefined();
     });
 
@@ -104,14 +112,14 @@ describe('TablesService', () => {
       prismaMock.pokerTable.create.mockResolvedValue({ id: 'table-1' });
 
       await expect(
-        service.create(makeDto({ maxSeats: 10 })),
+        service.create(casinoId, makeDto({ maxSeats: 10 })),
       ).resolves.toBeDefined();
     });
 
     it('convertit une erreur Prisma P2003 (casinoId inconnu) en BadRequestException', async () => {
       prismaMock.pokerTable.create.mockRejectedValue(makePrismaError('P2003'));
 
-      await expect(service.create(makeDto())).rejects.toBeInstanceOf(
+      await expect(service.create(casinoId, makeDto())).rejects.toBeInstanceOf(
         BadRequestException,
       );
     });
@@ -120,7 +128,7 @@ describe('TablesService', () => {
       const error = makePrismaError('P2002');
       prismaMock.pokerTable.create.mockRejectedValue(error);
 
-      await expect(service.create(makeDto())).rejects.toBe(error);
+      await expect(service.create(casinoId, makeDto())).rejects.toBe(error);
     });
   });
 

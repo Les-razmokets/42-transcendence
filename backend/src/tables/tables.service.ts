@@ -16,7 +16,7 @@ const tableWithSeats = {
 @Injectable()
 export class TablesService {
   constructor(private readonly prismaService: PrismaService) {}
-  async create(dto: CreateTableDto) {
+  async create(casinoId: string, dto: CreateTableDto) {
     this.assertValidBlinds(dto.smallBlind, dto.bigBlind);
     this.assertValidSeats(dto.variant, dto.maxSeats);
 
@@ -31,6 +31,7 @@ export class TablesService {
               })),
             },
           },
+          casinoId,
         },
         include: tableWithSeats,
       });

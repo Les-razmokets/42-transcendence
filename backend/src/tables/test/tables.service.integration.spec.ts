@@ -20,7 +20,6 @@ describe('TablesService (intégration)', () => {
     name: string,
     overrides: Partial<CreateTableDto> = {},
   ): CreateTableDto => ({
-    casinoId,
     name: `${prefix}-${name}`,
     variant: PokerVariant.TEXAS_HOLDEM,
     smallBlind: 1,
@@ -52,7 +51,10 @@ describe('TablesService (intégration)', () => {
   });
 
   it('crée une table avec maxSeats sièges libres numérotés de 1 à N', async () => {
-    const created = await service.create(makeDto('create', { maxSeats: 4 }));
+    const created = await service.create(
+      casinoId,
+      makeDto('create', { maxSeats: 4 }),
+    );
 
     expect(created.id).toBeDefined();
     expect(created.casinoId).toBe(casinoId);
@@ -63,16 +65,18 @@ describe('TablesService (intégration)', () => {
   it('rejette un casinoId inexistant avec un BadRequestException', async () => {
     await expect(
       service.create(
-        makeDto('nocasino', {
-          casinoId: '00000000-0000-4000-8000-000000000000',
-        }),
+        '00000000-0000-4000-8000-000000000000',
+        makeDto('nocasino'),
       ),
     ).rejects.toBeInstanceOf(BadRequestException);
   });
 
   it('rejette des blindes invalides sans rien écrire en base', async () => {
     await expect(
-      service.create(makeDto('blinds', { smallBlind: 10, bigBlind: 5 })),
+      service.create(
+        casinoId,
+        makeDto('blinds', { smallBlind: 10, bigBlind: 5 }),
+      ),
     ).rejects.toBeInstanceOf(BadRequestException);
 
     await expect(
@@ -81,7 +85,10 @@ describe('TablesService (intégration)', () => {
   });
 
   it('findById renvoie la table sans ses sièges supprimés', async () => {
-    const created = await service.create(makeDto('find', { maxSeats: 3 }));
+    const created = await service.create(
+      casinoId,
+      makeDto('find', { maxSeats: 3 }),
+    );
     await prisma.seat.update({
       where: { tableId_seatNumber: { tableId: created.id, seatNumber: 2 } },
       data: { deletedAt: new Date() },
@@ -94,7 +101,7 @@ describe('TablesService (intégration)', () => {
   });
 
   it('findById lève NotFoundException pour une table supprimée', async () => {
-    const created = await service.create(makeDto('deleted'));
+    const created = await service.create(casinoId, makeDto('deleted'));
     await prisma.pokerTable.update({
       where: { id: created.id },
       data: { deletedAt: new Date() },
@@ -112,8 +119,8 @@ describe('TablesService (intégration)', () => {
   });
 
   it('findAll renvoie les tables non supprimées triées par nom', async () => {
-    await service.create(makeDto('list-b'));
-    await service.create(makeDto('list-a'));
+    await service.create(casinoId, makeDto('list-b'));
+    await service.create(casinoId, makeDto('list-a'));
 
     const names = (await service.findAll())
       .map((table) => table.name)
@@ -126,7 +133,10 @@ describe('TablesService (intégration)', () => {
   });
 
   it('updateTable ne modifie que les champs envoyés et renvoie les sièges', async () => {
-    const created = await service.create(makeDto('update', { maxSeats: 3 }));
+    const created = await service.create(
+      casinoId,
+      makeDto('update', { maxSeats: 3 }),
+    );
 
     const updated = await service.updateTable(created.id, { bigBlind: 4 });
 
@@ -138,7 +148,7 @@ describe('TablesService (intégration)', () => {
   });
 
   it('updateTable horodate moneyUpdatedAt quand moneyOnTable change', async () => {
-    const created = await service.create(makeDto('money'));
+    const created = await service.create(casinoId, makeDto('money'));
 
     const updated = await service.updateTable(created.id, {
       moneyOnTable: 500,
@@ -149,7 +159,7 @@ describe('TablesService (intégration)', () => {
   });
 
   it('updateTable lève NotFoundException pour une table supprimée', async () => {
-    const created = await service.create(makeDto('update-deleted'));
+    const created = await service.create(casinoId, makeDto('update-deleted'));
     await service.deleteTable(created.id);
 
     await expect(
@@ -158,7 +168,7 @@ describe('TablesService (intégration)', () => {
   });
 
   it('deleteTable fait un soft delete : la ligne reste en base avec un deletedAt', async () => {
-    const created = await service.create(makeDto('soft'));
+    const created = await service.create(casinoId, makeDto('soft'));
 
     await service.deleteTable(created.id);
 
@@ -172,7 +182,7 @@ describe('TablesService (intégration)', () => {
   });
 
   it('deleteTable lève NotFoundException pour une table déjà supprimée', async () => {
-    const created = await service.create(makeDto('twice'));
+    const created = await service.create(casinoId, makeDto('twice'));
     await service.deleteTable(created.id);
 
     await expect(service.deleteTable(created.id)).rejects.toBeInstanceOf(

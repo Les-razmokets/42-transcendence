@@ -20,9 +20,12 @@ import { tableSchema, type Table } from '@transcendence/shared';
 export class TablesController {
   constructor(private readonly tablesService: TablesService) {}
 
-  @Post()
-  createTable(@Body() dto: CreateTableDto): Promise<Table> {
-    return this.tablesService.create(dto);
+  @Post(':casinoId')
+  createTable(
+    @Body() dto: CreateTableDto,
+    @Param('casinoId', new ParseUUIDPipe()) casinoId: string,
+  ): Promise<Table> {
+    return this.tablesService.create(casinoId, dto);
   }
 
   @Get(':id')
