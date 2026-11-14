@@ -2,11 +2,11 @@ import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Routes, Route } from 'react-router';
-import type { MyProfileUser } from '@transcendence/shared';
+import type { MyProfileWithMemberships } from '@transcendence/shared';
 import { SessionContext, type Session } from '@/lib/session/contexte';
 import { Layout } from './Layout';
 
-const joueur: MyProfileUser = {
+const joueur: MyProfileWithMemberships = {
   id: 'user-1',
   email: 'joueur@exemple.ch',
   pseudo: 'joueur',
@@ -17,6 +17,7 @@ const joueur: MyProfileUser = {
   role: 'USER',
   createdAt: '2026-11-01T10:00:00.000Z',
   updatedAt: '2026-11-01T10:00:00.000Z',
+  memberships: [{ casinoId: 'casino-1', casinoName: 'Casino du lac', role: 'FLOOR' }],
 };
 
 function renderLayout(session: Partial<Session>) {

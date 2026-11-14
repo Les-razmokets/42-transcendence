@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import type { MyProfileUser } from '@transcendence/shared';
+import type { MyProfileWithMemberships } from '@transcendence/shared';
 import { ApiError, request } from '@/lib/api';
 import { SessionProvider } from './SessionProvider';
 import { useSession } from './contexte';
@@ -12,7 +12,7 @@ vi.mock('@/lib/api', async (importOriginal) => ({
   request: vi.fn(),
 }));
 
-const joueur: MyProfileUser = {
+const joueur: MyProfileWithMemberships = {
   id: 'user-1',
   email: 'joueur@exemple.ch',
   pseudo: 'joueur',
@@ -23,6 +23,7 @@ const joueur: MyProfileUser = {
   role: 'USER',
   createdAt: '2026-11-01T10:00:00.000Z',
   updatedAt: '2026-11-01T10:00:00.000Z',
+  memberships: [{ casinoId: 'casino-1', casinoName: 'Casino du lac', role: 'FLOOR' }],
 };
 
 // Un petit composant qui lit la session et l'affiche, pour pouvoir
@@ -33,7 +34,8 @@ function Lecteur() {
     <>
       <p>{load ? 'chargement' : 'chargé'}</p>
       <p>{user ? `connecté : ${user.pseudo}` : 'déconnecté'}</p>
-      <button onClick={() => connect(joueur)}>connect</button>
+      <p>{user ? `memberships : ${user.memberships.length}` : ''}</p>
+      <button onClick={() => connect().catch(() => {})}>connect</button>
       <button onClick={() => disconnect().catch(() => {})}>disconnect</button>
     </>
   );
@@ -69,7 +71,7 @@ describe('SessionProvider', () => {
     });
 
     it('est en chargement tant que /users/me n\'a pas répondu', async () => {
-      const { promesse, resoudre } = promesseEnAttente<MyProfileUser>();
+      const { promesse, resoudre } = promesseEnAttente<MyProfileWithMemberships>();
       vi.mocked(request).mockReturnValue(promesse);
       renderProvider();
 
@@ -106,15 +108,30 @@ describe('SessionProvider', () => {
   });
 
   describe('connect', () => {
-    it("enregistre l'utilisateur sans nouvelle requête", async () => {
+    it('redemande GET /users/me et enregistre l\'utilisateur avec ses memberships', async () => {
+      vi.mocked(request)
+        .mockRejectedValueOnce(new ApiError(401, 'Unauthorized')) // démarrage : pas connecté
+        .mockResolvedValueOnce(joueur); // connect() après le login
+      renderProvider();
+      await screen.findByText('déconnecté');
+
+      await userEvent.click(screen.getByRole('button', { name: 'connect' }));
+
+      expect(await screen.findByText('connecté : joueur')).toBeInTheDocument();
+      expect(screen.getByText('memberships : 1')).toBeInTheDocument();
+      expect(request).toHaveBeenCalledTimes(2);
+      expect(request).toHaveBeenNthCalledWith(2, 'GET', '/users/me');
+    });
+
+    it('reste déconnecté si /users/me échoue pendant connect', async () => {
       vi.mocked(request).mockRejectedValue(new ApiError(401, 'Unauthorized'));
       renderProvider();
       await screen.findByText('chargé');
 
       await userEvent.click(screen.getByRole('button', { name: 'connect' }));
 
-      expect(screen.getByText('connecté : joueur')).toBeInTheDocument();
-      expect(request).toHaveBeenCalledTimes(1); // seulement le /users/me du démarrage
+      await waitFor(() => expect(request).toHaveBeenCalledTimes(2));
+      expect(screen.getByText('déconnecté')).toBeInTheDocument();
     });
   });
 
