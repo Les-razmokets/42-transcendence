@@ -4,17 +4,19 @@ import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Routes, Route } from 'react-router';
 import '@/lib/i18n';
 import { ApiError } from '@/lib/api';
-import type { MyProfileUser } from '@transcendence/shared';
+import type { MyProfileUser, MyProfileWithMemberships } from '@transcendence/shared';
 import { LoginPage } from './LoginPage';
 import { login } from './api';
 
 vi.mock('./api', () => ({ login: vi.fn() }));
 
-// On remplace la session par un faux : LoginPage n'a besoin que de connect,
-// et le vrai SessionProvider appellerait /users/me au montage.
+// On remplace la session par un faux : le vrai SessionProvider appellerait
+// /users/me au montage. `session` est modifiable test par test
+// (personne connecté, déjà connecté, en chargement…).
 const connect = vi.fn();
+let session: { user: MyProfileWithMemberships | null; load: boolean } = { user: null, load: false };
 vi.mock('@/lib/session/contexte', () => ({
-  useSession: () => ({ user: null, load: false, connect, disconnect: vi.fn() }),
+  useSession: () => ({ ...session, connect, disconnect: vi.fn() }),
 }));
 
 const joueur: MyProfileUser = {
@@ -36,6 +38,7 @@ function renderLogin(state?: unknown) {
       <Routes>
         <Route path="/login" element={<LoginPage />} />
         <Route path="/" element={<p>Page lobby</p>} />
+        <Route path="/reservations" element={<p>Page réservations</p>} />
       </Routes>
     </MemoryRouter>,
   );
@@ -52,6 +55,7 @@ describe('LoginPage', () => {
   beforeEach(() => {
     vi.mocked(login).mockReset();
     connect.mockReset();
+    session = { user: null, load: false };
   });
 
   it('affiche le titre et les champs', () => {
@@ -129,6 +133,54 @@ describe('LoginPage', () => {
     await remplirEtEnvoyer('joueur@exemple.ch', 'mauvais');
 
     expect(await screen.findByText('Trop de tentatives, réessaie dans une minute.')).toBeInTheDocument();
+  });
+
+  describe('retour vers la page demandée (from)', () => {
+    it("après le login, renvoie vers la page que SafeRoute avait bloquée", async () => {
+      vi.mocked(login).mockResolvedValue(joueur);
+      renderLogin({ from: '/reservations' });
+
+      await remplirEtEnvoyer('joueur@exemple.ch', 'MotDePasse1!');
+
+      expect(await screen.findByText('Page réservations')).toBeInTheDocument();
+      expect(screen.queryByText('Page lobby')).not.toBeInTheDocument();
+    });
+
+    it('sans from, renvoie vers le lobby', async () => {
+      vi.mocked(login).mockResolvedValue(joueur);
+      renderLogin();
+
+      await remplirEtEnvoyer('joueur@exemple.ch', 'MotDePasse1!');
+
+      expect(await screen.findByText('Page lobby')).toBeInTheDocument();
+    });
+  });
+
+  describe('session déjà connue', () => {
+    const joueurConnecte: MyProfileWithMemberships = { ...joueur, memberships: [] };
+
+    it("n'affiche rien pendant le chargement de la session", () => {
+      session = { user: null, load: true };
+      renderLogin();
+
+      expect(screen.queryByRole('heading', { name: 'Connexion' })).not.toBeInTheDocument();
+      expect(screen.queryByText('Page lobby')).not.toBeInTheDocument();
+    });
+
+    it('redirige vers le lobby si on est déjà connecté', () => {
+      session = { user: joueurConnecte, load: false };
+      renderLogin();
+
+      expect(screen.getByText('Page lobby')).toBeInTheDocument();
+      expect(screen.queryByRole('heading', { name: 'Connexion' })).not.toBeInTheDocument();
+    });
+
+    it('redirige vers from si on est déjà connecté', () => {
+      session = { user: joueurConnecte, load: false };
+      renderLogin({ from: '/reservations' });
+
+      expect(screen.getByText('Page réservations')).toBeInTheDocument();
+    });
   });
 
   it("affiche « compte créé » quand on arrive depuis l'inscription", () => {
