@@ -81,7 +81,7 @@ describe('LoginPage', () => {
     expect(await screen.findByText('Page lobby')).toBeInTheDocument();
   });
 
-  it("enregistre dans la session l'utilisateur renvoyé par le login", async () => {
+  it('recharge la session (connect) après un login réussi', async () => {
     vi.mocked(login).mockResolvedValue(joueur);
     renderLogin();
 
@@ -89,7 +89,18 @@ describe('LoginPage', () => {
 
     await screen.findByText('Page lobby');
     expect(connect).toHaveBeenCalledTimes(1);
-    expect(connect).toHaveBeenCalledWith(joueur);
+    expect(connect).toHaveBeenCalledWith();
+  });
+
+  it("affiche l'erreur générique et ne redirige pas si connect échoue après le login", async () => {
+    vi.mocked(login).mockResolvedValue(joueur);
+    connect.mockRejectedValue(new TypeError('Failed to fetch'));
+    renderLogin();
+
+    await remplirEtEnvoyer('joueur@exemple.ch', 'MotDePasse1!');
+
+    expect(await screen.findByText('Une erreur est survenue, réessaie plus tard.')).toBeInTheDocument();
+    expect(screen.queryByText('Page lobby')).not.toBeInTheDocument();
   });
 
   it("n'enregistre rien dans la session si le login échoue", async () => {

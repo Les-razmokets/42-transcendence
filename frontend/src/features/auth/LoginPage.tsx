@@ -1,5 +1,5 @@
 import { useEffect, useState, type SubmitEvent } from "react";
-import { Link, useNavigate, useLocation} from "react-router";
+import { Link, useNavigate, useLocation, Navigate} from "react-router";
 import { useTranslation } from "react-i18next";
 import { Bandes, Bouton, ChampSaisie, Logo, Notification } from "../../design-system";
 import { ApiError } from "../../lib/api";
@@ -11,9 +11,10 @@ import { useSession } from "@/lib/session/contexte";
 export function LoginPage() {
 	const { t } = useTranslation();
 	const navigate = useNavigate();
-	const { connect } = useSession();
+	const { connect, user, load } = useSession();
 	const location = useLocation();
 	const [afficherSucces] = useState(location.state?.inscrit === true)
+	const [destination] = useState<string>(location.state?.from ?? '/');
 
 	useEffect(() => {
 		if (location.state?.inscrit)
@@ -36,9 +37,9 @@ export function LoginPage() {
 
 		setEnCours(true);
 		try {
-			 await login(email, password);    
-    await connect();
-    navigate('/');
+			await login(email, password);
+			await connect();
+			navigate(destination, { replace: true});
 		} catch(err) {
 			if (err instanceof ApiError && err.status === 401)
 				setError(t('connexion.erreurIdentifiants'));
@@ -50,6 +51,10 @@ export function LoginPage() {
 			setEnCours(false);
 		}
 	}
+	if (load)
+		return (null);
+	if (user)
+		return <Navigate to={destination} replace/>
 
 	return (
 		<div className={styles.page}>
