@@ -24,7 +24,14 @@ export const reservationSchema = z.object({
   leftAt: isoDate.nullable(),
   cancelledAt: isoDate.nullable(),
   status: z.enum(ReservationStatus),
+
   //payment: paymentSchema.nullable() -> To complete when payment schema created.
 });
 export type Reservation = z.infer<typeof reservationSchema>;
 export type ReservationInput = z.input<typeof reservationSchema>;
+
+export const floorReservationSchema = reservationSchema.extend({
+  user: z.object({ pseudo: z.string() }),
+  seat: z.object({ seatNumber: z.int() }),
+});
+export type FloorReservation = z.infer<typeof floorReservationSchema>;
