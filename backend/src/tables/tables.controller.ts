@@ -14,13 +14,15 @@ import { TablesService } from './tables.service';
 import { CreateTableDto } from './dto/create-table.dto';
 import { UpdateTableDto } from './dto/update-table.dto';
 import { tableSchema, type Table } from '@transcendence/shared';
+import { RequireCasinoRole } from '../casinos/utils/casinos-role.decorator';
 
 @SerializeOptions({ schema: tableSchema })
-@Controller('tables')
+@Controller('casinos/:casinoId/tables')
 export class TablesController {
   constructor(private readonly tablesService: TablesService) {}
 
-  @Post(':casinoId')
+  @RequireCasinoRole('OWNER')
+  @Post()
   createTable(
     @Body() dto: CreateTableDto,
     @Param('casinoId', new ParseUUIDPipe()) casinoId: string,
@@ -29,26 +31,37 @@ export class TablesController {
   }
 
   @Get(':id')
-  async findOne(@Param('id', new ParseUUIDPipe()) id: string): Promise<Table> {
-    return await this.tablesService.findById(id);
+  async findOne(
+    @Param('id', new ParseUUIDPipe()) id: string,
+    @Param('casinoId', new ParseUUIDPipe()) casinoId: string,
+  ): Promise<Table> {
+    return await this.tablesService.findById(casinoId, id);
   }
 
   @Get()
-  async findAll(): Promise<Table[]> {
-    return await this.tablesService.findAll();
+  async findAll(
+    @Param('casinoId', new ParseUUIDPipe()) casinoId: string,
+  ): Promise<Table[]> {
+    return await this.tablesService.findAll(casinoId);
   }
 
+  @RequireCasinoRole('OWNER')
   @Delete(':id')
   @HttpCode(204)
-  async deleteTable(@Param('id', new ParseUUIDPipe()) id: string) {
-    await this.tablesService.deleteTable(id);
+  async deleteTable(
+    @Param('casinoId', new ParseUUIDPipe()) casinoId: string,
+    @Param('id', new ParseUUIDPipe()) id: string,
+  ) {
+    await this.tablesService.deleteTable(casinoId, id);
   }
 
+  @RequireCasinoRole('OWNER')
   @Patch(':id')
   async updateTable(
     @Param('id', new ParseUUIDPipe()) id: string,
+    @Param('casinoId', new ParseUUIDPipe()) casinoId: string,
     @Body() dto: UpdateTableDto,
   ): Promise<Table> {
-    return await this.tablesService.updateTable(id, dto);
+    return await this.tablesService.updateTable(casinoId, id, dto);
   }
 }

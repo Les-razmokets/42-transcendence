@@ -94,7 +94,7 @@ describe('TablesService (intégration)', () => {
       data: { deletedAt: new Date() },
     });
 
-    const found = await service.findById(created.id);
+    const found = await service.findById(casinoId, created.id);
 
     expect(found.id).toBe(created.id);
     expect(found.seats.map((seat) => seat.seatNumber)).toEqual([1, 3]);
@@ -107,14 +107,14 @@ describe('TablesService (intégration)', () => {
       data: { deletedAt: new Date() },
     });
 
-    await expect(service.findById(created.id)).rejects.toBeInstanceOf(
+    await expect(service.findById(casinoId, created.id)).rejects.toBeInstanceOf(
       NotFoundException,
     );
   });
 
   it('findById lève NotFoundException pour un id inconnu', async () => {
     await expect(
-      service.findById('00000000-0000-4000-8000-000000000000'),
+      service.findById(casinoId, '00000000-0000-4000-8000-000000000000'),
     ).rejects.toBeInstanceOf(NotFoundException);
   });
 
@@ -122,12 +122,12 @@ describe('TablesService (intégration)', () => {
     await service.create(casinoId, makeDto('list-b'));
     await service.create(casinoId, makeDto('list-a'));
 
-    const names = (await service.findAll())
+    const names = (await service.findAll(casinoId))
       .map((table) => table.name)
       .filter((name) => name.startsWith(`${prefix}-list`));
 
     expect(names).toEqual([`${prefix}-list-a`, `${prefix}-list-b`]);
-    await expect(service.findAll()).resolves.not.toContainEqual(
+    await expect(service.findAll(casinoId)).resolves.not.toContainEqual(
       expect.objectContaining({ name: `${prefix}-deleted` }),
     );
   });
@@ -138,7 +138,9 @@ describe('TablesService (intégration)', () => {
       makeDto('update', { maxSeats: 3 }),
     );
 
-    const updated = await service.updateTable(created.id, { bigBlind: 4 });
+    const updated = await service.updateTable(casinoId, created.id, {
+      bigBlind: 4,
+    });
 
     expect(updated.bigBlind).toBe(4);
     expect(updated.smallBlind).toBe(created.smallBlind);
@@ -150,7 +152,7 @@ describe('TablesService (intégration)', () => {
   it('updateTable horodate moneyUpdatedAt quand moneyOnTable change', async () => {
     const created = await service.create(casinoId, makeDto('money'));
 
-    const updated = await service.updateTable(created.id, {
+    const updated = await service.updateTable(casinoId, created.id, {
       moneyOnTable: 500,
     });
 
@@ -160,19 +162,19 @@ describe('TablesService (intégration)', () => {
 
   it('updateTable lève NotFoundException pour une table supprimée', async () => {
     const created = await service.create(casinoId, makeDto('update-deleted'));
-    await service.deleteTable(created.id);
+    await service.deleteTable(casinoId, created.id);
 
     await expect(
-      service.updateTable(created.id, { smallBlind: 1 }),
+      service.updateTable(casinoId, created.id, { smallBlind: 1 }),
     ).rejects.toBeInstanceOf(NotFoundException);
   });
 
   it('deleteTable fait un soft delete : la ligne reste en base avec un deletedAt', async () => {
     const created = await service.create(casinoId, makeDto('soft'));
 
-    await service.deleteTable(created.id);
+    await service.deleteTable(casinoId, created.id);
 
-    await expect(service.findById(created.id)).rejects.toBeInstanceOf(
+    await expect(service.findById(casinoId, created.id)).rejects.toBeInstanceOf(
       NotFoundException,
     );
     const row = await prisma.pokerTable.findUnique({
@@ -183,16 +185,40 @@ describe('TablesService (intégration)', () => {
 
   it('deleteTable lève NotFoundException pour une table déjà supprimée', async () => {
     const created = await service.create(casinoId, makeDto('twice'));
-    await service.deleteTable(created.id);
+    await service.deleteTable(casinoId, created.id);
 
-    await expect(service.deleteTable(created.id)).rejects.toBeInstanceOf(
-      NotFoundException,
-    );
+    await expect(
+      service.deleteTable(casinoId, created.id),
+    ).rejects.toBeInstanceOf(NotFoundException);
+  });
+
+  it("deleteTable lève NotFoundException pour une table d'un autre casino, sans la supprimer", async () => {
+    const created = await service.create(casinoId, makeDto('other-casino'));
+    const otherCasino = await prisma.casino.create({
+      data: {
+        name: `${prefix}-other-casino`,
+        city: 'Test',
+        address: `${prefix}-other-address`,
+      },
+    });
+
+    try {
+      await expect(
+        service.deleteTable(otherCasino.id, created.id),
+      ).rejects.toBeInstanceOf(NotFoundException);
+
+      const row = await prisma.pokerTable.findUnique({
+        where: { id: created.id },
+      });
+      expect(row?.deletedAt).toBeNull();
+    } finally {
+      await prisma.casino.delete({ where: { id: otherCasino.id } });
+    }
   });
 
   it('deleteTable lève NotFoundException pour un id inconnu', async () => {
     await expect(
-      service.deleteTable('00000000-0000-4000-8000-000000000000'),
+      service.deleteTable(casinoId, '00000000-0000-4000-8000-000000000000'),
     ).rejects.toBeInstanceOf(NotFoundException);
   });
 });

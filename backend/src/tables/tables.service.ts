@@ -46,9 +46,9 @@ export class TablesService {
     }
   }
 
-  async findById(id: string) {
+  async findById(casinoId: string, id: string) {
     const table = await this.prismaService.pokerTable.findUnique({
-      where: { id, deletedAt: null },
+      where: { id, deletedAt: null, casinoId },
       include: tableWithSeats,
     });
     if (!table) {
@@ -57,17 +57,17 @@ export class TablesService {
     return table;
   }
 
-  async findAll() {
+  async findAll(casinoId: string) {
     const tables = await this.prismaService.pokerTable.findMany({
-      where: { deletedAt: null },
+      where: { deletedAt: null, casinoId },
       orderBy: { name: 'asc' },
       include: tableWithSeats,
     });
     return tables;
   }
 
-  async updateTable(id: string, dto: UpdateTableDto) {
-    const table = await this.findById(id);
+  async updateTable(casinoId: string, id: string, dto: UpdateTableDto) {
+    const table = await this.findById(casinoId, id);
     const smallBlind = dto.smallBlind ?? table.smallBlind;
     const bigBlind = dto.bigBlind ?? table.bigBlind;
     const variant = dto.variant ?? table.variant;
@@ -84,9 +84,9 @@ export class TablesService {
     });
   }
 
-  async deleteTable(id: string) {
+  async deleteTable(casinoId: string, id: string) {
     const { count } = await this.prismaService.pokerTable.updateMany({
-      where: { id, deletedAt: null },
+      where: { id, deletedAt: null, casinoId },
       data: { deletedAt: new Date() },
     });
     if (count === 0) {
