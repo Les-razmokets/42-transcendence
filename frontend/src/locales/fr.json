@@ -55,5 +55,8 @@
     "placesLibres_other": "{{count}} libres",
     "aucuneTable": "Aucune table ouverte pour le moment.",
     "erreurChargement": "Impossible de charger les tables, réessaie plus tard."
+  },
+  "entete": {
+    "monCompte": "Mon compte"
   }
 }

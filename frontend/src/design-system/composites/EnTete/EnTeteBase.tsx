@@ -19,7 +19,7 @@ export function EnTeteBase(props: EnTeteBaseProps) {
             <div className={styles.barre}>
                 {left}
                 {center}
-                <Link to="/compte" aria-label={libelleAccount} className={styles.linkAccount}>
+                <Link to="/account" aria-label={libelleAccount} className={styles.linkAccount}>
                     <Avatar nom={userName}/>
                 </Link>
             </div>

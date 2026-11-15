@@ -10,10 +10,10 @@ import { NotFoundPage } from './features/NotFoundPage';
 import { ForgotPasswordPage } from './features/auth/ForgotPasswordPage';
 import { SafeRoute } from './SafeRoute';
 
+
 export const router = createBrowserRouter([
   {
     path: '/',
-    element: <Layout />,
     children: [
       // publiques
       { path: 'login', element: <LoginPage /> },
@@ -24,10 +24,15 @@ export const router = createBrowserRouter([
       {
         element: <SafeRoute />,
         children: [
-          { index: true, element: <LobbyPage /> },
+          {
+            element: <Layout />,
+            children: [
+              { index: true, element: <LobbyPage /> },
+              { path: 'reservations', element: <ReservationPage /> },
+              { path: 'account', element: <AccountPage /> },
+            ],
+          },
           { path: 'tables/:tableId', element: <TablePage /> },
-          { path: 'reservations', element: <ReservationPage /> },
-          { path: 'account', element: <AccountPage /> },
         ],
       },
 
