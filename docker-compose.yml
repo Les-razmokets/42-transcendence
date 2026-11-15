@@ -95,10 +95,15 @@ services:
         condition: service_healthy
     ports:
       - 127.0.0.1:3000:3000
+    env_file:
+      - .env
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD} 
     restart: unless-stopped
     volumes:
       - grafana-data:/var/lib/grafana
       - ./infra/grafana/provisioning/datasources/datasource.yml:/etc/grafana/provisioning/datasources/datasource.yml
+      - ./infra/grafana/provisioning/dashboards:/etc/grafana/provisioning/dashboards
 volumes:
   db_data:
   prometheus-data:

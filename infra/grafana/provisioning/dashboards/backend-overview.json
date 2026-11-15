@@ -1,0 +1,37 @@
+{
+  "title": "Backend overview",
+  "uid": "backend-overview",
+  "timezone": "browser",
+  "schemaVersion": 39,
+  "refresh": "10s",
+  "time": { "from": "now-15m", "to": "now" },
+  "panels": [
+    {
+      "id": 1,
+      "title": "Mémoire (RSS)",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 0 },
+      "targets": [
+        { "expr": "process_resident_memory_bytes", "refId": "A" }
+      ]
+    },
+    {
+      "id": 2,
+      "title": "CPU (taux d'utilisation)",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 0 },
+      "targets": [
+        { "expr": "rate(process_cpu_seconds_total[1m])", "refId": "A" }
+      ]
+    },
+    {
+      "id": 3,
+      "title": "Event loop lag",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 8 },
+      "targets": [
+        { "expr": "nodejs_eventloop_lag_seconds", "refId": "A" }
+      ]
+    }
+  ]
+}

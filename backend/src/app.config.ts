@@ -6,8 +6,10 @@ import { NestExpressApplication } from '@nestjs/platform-express';
 import { Reflector } from '@nestjs/core';
 import { missingResponseSchema } from './common/missing-response.schema';
 import cookieParser from 'cookie-parser';
+import { collectDefaultMetrics } from '@prometheus-io/client';
 
 export function configureApp(app: NestExpressApplication) {
+  collectDefaultMetrics();
   app.set('trust proxy', 1);
   app.setGlobalPrefix('api');
   app.useGlobalPipes(
