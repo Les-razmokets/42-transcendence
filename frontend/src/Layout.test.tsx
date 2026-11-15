@@ -1,8 +1,8 @@
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Routes, Route } from 'react-router';
 import type { MyProfileWithMemberships } from '@transcendence/shared';
+import '@/lib/i18n';
 import { SessionContext, type Session } from '@/lib/session/contexte';
 import { Layout } from './Layout';
 
@@ -20,58 +20,50 @@ const joueur: MyProfileWithMemberships = {
   memberships: [{ casinoId: 'casino-1', casinoName: 'Casino du lac', role: 'FLOOR' }],
 };
 
-function renderLayout(session: Partial<Session>) {
+function renderLayout(user: MyProfileWithMemberships | null) {
   const valeur: Session = {
-    user: null,
+    user,
     load: false,
     connect: vi.fn(),
-    disconnect: vi.fn().mockResolvedValue(undefined),
-    ...session,
+    disconnect: vi.fn(),
   };
 
-  render(
+  return render(
     <SessionContext.Provider value={valeur}>
       <MemoryRouter initialEntries={['/']}>
         <Routes>
           <Route element={<Layout />}>
             <Route path="/" element={<p>Page lobby</p>} />
-            <Route path="/login" element={<p>Page login</p>} />
           </Route>
         </Routes>
       </MemoryRouter>
     </SessionContext.Provider>,
   );
-
-  return valeur;
 }
 
 describe('Layout', () => {
   it("affiche la page de l'URL dans le <main>", () => {
-    renderLayout({ user: joueur });
+    renderLayout(joueur);
 
     expect(screen.getByRole('main')).toHaveTextContent('Page lobby');
   });
 
-  it('affiche le lien Connexion si personne n\'est connecté', () => {
-    renderLayout({ user: null });
+  it("affiche l'en-tête avec les initiales de l'utilisateur", () => {
+    renderLayout(joueur);
 
-    expect(screen.getByRole('link', { name: 'Connexion' })).toHaveAttribute('href', '/login');
-    expect(screen.queryByRole('button', { name: 'Déconnexion' })).not.toBeInTheDocument();
+    expect(screen.getByRole('banner')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Mon compte' })).toHaveTextContent('JD');
   });
 
-  it('affiche le bouton Déconnexion si un utilisateur est connecté', () => {
-    renderLayout({ user: joueur });
+  it("le lien de l'avatar mène à /account", () => {
+    renderLayout(joueur);
 
-    expect(screen.getByRole('button', { name: 'Déconnexion' })).toBeInTheDocument();
-    expect(screen.queryByRole('link', { name: 'Connexion' })).not.toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Mon compte' })).toHaveAttribute('href', '/account');
   });
 
-  it('déconnecte puis renvoie vers /login au clic sur Déconnexion', async () => {
-    const session = renderLayout({ user: joueur });
+  it("n'affiche rien si personne n'est connecté", () => {
+    const { container } = renderLayout(null);
 
-    await userEvent.click(screen.getByRole('button', { name: 'Déconnexion' }));
-
-    expect(session.disconnect).toHaveBeenCalledTimes(1);
-    expect(await screen.findByText('Page login')).toBeInTheDocument();
+    expect(container).toBeEmptyDOMElement();
   });
 });

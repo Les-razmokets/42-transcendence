@@ -1,0 +1,21 @@
+.grille {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: var(--espace-24);
+    list-style: none;
+    margin: 0;
+    padding: var(--marge-page-desktop);
+}
+
+@media (max-width: 1024px) {
+    .grille {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+@media (max-width: 640px) {
+    .grille {
+        grid-template-columns: 1fr;
+        padding: var(--marge-page-mobile);
+    }
+}
