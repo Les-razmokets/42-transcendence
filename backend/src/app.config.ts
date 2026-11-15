@@ -8,8 +8,12 @@ import { missingResponseSchema } from './common/missing-response.schema';
 import cookieParser from 'cookie-parser';
 import { collectDefaultMetrics } from '@prometheus-io/client';
 
+let metricsCollected = false;
 export function configureApp(app: NestExpressApplication) {
-  collectDefaultMetrics();
+  if (!metricsCollected) {
+    collectDefaultMetrics();
+    metricsCollected = true;
+  }
   app.set('trust proxy', 1);
   app.setGlobalPrefix('api');
   app.useGlobalPipes(
