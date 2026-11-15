@@ -15,25 +15,27 @@ export function LobbyPage() {
 	const [error, setError] = useState(false);
 
 	useEffect(() => {
-        let annule = false;
+    let annule = false;
 
-        Promise.all([getTables(), getCasinos()])
-            .then(([listeTables, listeCasinos]) => {
-                if (annule) return;
-                setTables(listeTables.filter((table) => table.status === 'OPEN'));
-                setCasinos(new Map(listeCasinos.map((c) => [c.id, c.name])));
-            })
-            .catch(() => {
-                if (!annule) setError(true);
-            })
-            .finally(() => {
-                if (!annule) setLoad(false);
-            });
+    async function charger() {
+        try {
+            const [listeTables, listeCasinos] = await Promise.all([getTables(), getCasinos()]);
+            if (annule) 
+				return;
+            setTables(listeTables.filter((table) => table.status === 'OPEN'));
+            setCasinos(new Map(listeCasinos.map((c) => [c.id, c.name])));
+        } catch {
+            if (!annule) 
+				setError(true);
+        } finally {
+            if (!annule) 
+				setLoad(false);
+        }
+    }
 
-        return () => {
-            annule = true;
-        };
-    }, []);
+		charger();
+		return () => { annule = true; };
+	}, []);
 
 	if (load)
 		return null;
