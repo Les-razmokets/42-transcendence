@@ -9,6 +9,12 @@ const VARIANTES: Record<Table['variant'], string> = {
 
 const chf = (centimes: number) => String(centimes / 100);
 
+const formatCHF = new Intl.NumberFormat('fr-CH', {
+    style: 'currency',
+    currency: 'CHF',
+    maximumFractionDigits: 0,
+});
+
 export function toPlaces(table: Table): EtatChaise[] {
     return table.seats.map((s) => (s.status === 'FREE' ? 'libre' : 'occupee'));
 }
@@ -18,5 +24,12 @@ export function details(table: Table, t: TFunction): string {
     const dispo = libres === 0 
         ? t('lobby.complete')
         : t('lobby.placesLibres', { count: libres });
-    return `${VARIANTES[table.variant]} ${chf(table.smallBlind)}/${chf(table.bigBlind)} · ${dispo}`; 
+    const block = [
+        `${VARIANTES[table.variant]} ${chf(table.smallBlind)}/${chf(table.bigBlind)}`,
+        dispo,
+    ];
+    if (table.moneyOnTable > 0)
+        block.push(t('lobby.enJeu', { montant: formatCHF.format(table.moneyOnTable / 100) }));
+
+    return block.join(' · ');
 }

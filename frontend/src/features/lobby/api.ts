@@ -1,7 +1,7 @@
 import { request } from '../../lib/api';
 import type { PublicCasino, Table } from '@transcendence/shared';
 
-//a voir au a la pr de fred tsk-54 TODOO
+//TODO tsk-54 la route devient /casinos/:casinoId/tables
 export function getTables() {
     return request<Table[]>('GET', '/tables');
 }
