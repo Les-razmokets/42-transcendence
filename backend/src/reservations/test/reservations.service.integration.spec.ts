@@ -1,13 +1,17 @@
-import { BadRequestException, ConflictException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ConflictException,
+  NotFoundException,
+} from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
-import { AppModule } from '../app.module';
+import { AppModule } from '../../app.module';
 import {
   PokerVariant,
   ReservationStatus,
   SeatStatus,
-} from '../generated/prisma/enums';
-import { PrismaService } from '../prisma/prisma.service';
-import { ReservationsService } from './reservations.service';
+} from '../../generated/prisma/enums';
+import { PrismaService } from '../../prisma/prisma.service';
+import { ReservationsService } from '../reservations.service';
 
 // Test d'intégration : utilise la vraie base de dev (DATABASE_URL), jamais la prod.
 // C'est ici qu'on prouve que les index partiels de la migration empêchent
@@ -23,6 +27,8 @@ describe('ReservationsService (intégration)', () => {
 
   // Préfixe unique par exécution, pour ne nettoyer que nos propres données
   const prefix = `r-${Date.now().toString(36)}`;
+  // Demain 18h UTC, soit J+1. Dans ce fichier, « J+n » compte depuis aujourd'hui :
+  // addHours(arrivalAt, 24 * k) tombe donc sur J+(k+1).
   const arrivalAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
   arrivalAt.setUTCHours(18, 0, 0, 0);
   const addHours = (date: Date, hours: number) =>
@@ -257,5 +263,219 @@ describe('ReservationsService (intégration)', () => {
         arrivalAt,
       }),
     ).rejects.toBeInstanceOf(BadRequestException);
+  });
+
+  describe('findAllForUser', () => {
+    it('ne renvoie que les réservations du joueur, annulées comprises, la plus lointaine en premier', async () => {
+      const owner = await createUser('list-owner');
+      const other = await createUser('list-other');
+      // Insertion directe : on teste la lecture, pas les règles de création.
+      // Place 9 réservée par personne d'autre, sur trois journées casino distinctes.
+      const soon = await prisma.reservation.create({
+        data: {
+          userId: owner.id,
+          seatId: seatIds[9],
+          arrivalAt,
+          status: ReservationStatus.CANCELLED,
+          cancelledAt: new Date(),
+        },
+      });
+      const later = await prisma.reservation.create({
+        data: {
+          userId: owner.id,
+          seatId: seatIds[9],
+          arrivalAt: addHours(arrivalAt, 48),
+          status: ReservationStatus.PENDING_PAYMENT,
+        },
+      });
+      await prisma.reservation.create({
+        data: {
+          userId: other.id,
+          seatId: seatIds[9],
+          arrivalAt: addHours(arrivalAt, 24),
+          status: ReservationStatus.PENDING_PAYMENT,
+        },
+      });
+
+      const reservations = await service.findAllForUser(owner.id);
+
+      expect(reservations.map((r) => r.id)).toEqual([later.id, soon.id]);
+      expect(reservations.every((r) => r.userId === owner.id)).toBe(true);
+    });
+
+    it('renvoie un tableau vide pour un joueur sans réservation', async () => {
+      const user = await createUser('list-empty');
+
+      await expect(service.findAllForUser(user.id)).resolves.toEqual([]);
+    });
+  });
+
+  describe('cancel', () => {
+    // Insertion directe en CONFIRMED : le paiement n'existe pas encore,
+    // service.create ne produit que des PENDING_PAYMENT.
+    const createConfirmed = (userId: string, seatId: string, at: Date) =>
+      prisma.reservation.create({
+        data: {
+          userId,
+          seatId,
+          arrivalAt: at,
+          status: ReservationStatus.CONFIRMED,
+        },
+      });
+
+    it('annule une réservation CONFIRMED, libère la place, et refuse une 2ᵉ annulation', async () => {
+      const owner = await createUser('cancel-owner');
+      const next = await createUser('cancel-next');
+      // place 4 : libre ce jour-là (le test « 409 joueur » n'a rien pu y créer)
+      const reservation = await createConfirmed(
+        owner.id,
+        seatIds[4],
+        arrivalAt,
+      );
+
+      const cancelled = await service.cancel(owner.id, reservation.id);
+
+      expect(cancelled.status).toBe(ReservationStatus.CANCELLED);
+      expect(cancelled.cancelledAt).toBeInstanceOf(Date);
+      // la place est de nouveau réservable par un autre joueur, le même jour
+      await expect(
+        service.create(next.id, { seatId: seatIds[4], arrivalAt }),
+      ).resolves.toBeDefined();
+      // une réservation déjà annulée ne peut pas l'être une 2ᵉ fois
+      await expect(
+        service.cancel(owner.id, reservation.id),
+      ).rejects.toBeInstanceOf(ConflictException);
+    });
+
+    it("un joueur ne peut pas annuler la réservation d'un autre (404, rien ne change)", async () => {
+      const owner = await createUser('cancel-victim');
+      const intruder = await createUser('cancel-intruder');
+      // place 9, J+5 (arrivalAt + 4 jours) : journée que les tests de liste n'utilisent pas
+      const reservation = await createConfirmed(
+        owner.id,
+        seatIds[9],
+        addHours(arrivalAt, 96),
+      );
+
+      await expect(
+        service.cancel(intruder.id, reservation.id),
+      ).rejects.toBeInstanceOf(NotFoundException);
+      await expect(
+        prisma.reservation.findUniqueOrThrow({ where: { id: reservation.id } }),
+      ).resolves.toMatchObject({
+        status: ReservationStatus.CONFIRMED,
+        cancelledAt: null,
+      });
+    });
+
+    it('lève NotFoundException pour un id inconnu', async () => {
+      const user = await createUser('cancel-unknown');
+
+      await expect(
+        service.cancel(user.id, '00000000-0000-4000-8000-000000000000'),
+      ).rejects.toBeInstanceOf(NotFoundException);
+    });
+  });
+
+  describe('expirePendingPayments', () => {
+    const minutesAgo = (minutes: number) =>
+      new Date(Date.now() - minutes * 60 * 1000);
+
+    // place 1, journées J+2 à J+4 (dayOffset 1 à 3) : jamais utilisées par les autres tests
+    const insert = (
+      userId: string,
+      status: ReservationStatus,
+      createdAt: Date,
+      dayOffset: number,
+    ) =>
+      prisma.reservation.create({
+        data: {
+          userId,
+          seatId: seatIds[1],
+          arrivalAt: addHours(arrivalAt, 24 * dayOffset),
+          status,
+          createdAt,
+        },
+      });
+
+    const statusOf = async (id: string) =>
+      (await prisma.reservation.findUniqueOrThrow({ where: { id } })).status;
+
+    it('expire les PENDING_PAYMENT de plus de 15 min, et seulement elles', async () => {
+      const stalePlayer = await createUser('expire-stale');
+      const freshPlayer = await createUser('expire-fresh');
+      const confirmedPlayer = await createUser('expire-confirmed');
+      const stale = await insert(
+        stalePlayer.id,
+        ReservationStatus.PENDING_PAYMENT,
+        minutesAgo(20),
+        1,
+      );
+      const fresh = await insert(
+        freshPlayer.id,
+        ReservationStatus.PENDING_PAYMENT,
+        minutesAgo(5),
+        2,
+      );
+      const confirmed = await insert(
+        confirmedPlayer.id,
+        ReservationStatus.CONFIRMED,
+        minutesAgo(20),
+        3,
+      );
+
+      // Pas d'assertion sur le nombre renvoyé : le cron du conteneur backend tourne
+      // sur la même base et peut avoir déjà expiré `stale` (et d'autres lignes).
+      // Le nombre est vérifié par le test unitaire ; ici on vérifie les statuts.
+      await service.expirePendingPayments();
+
+      await expect(statusOf(stale.id)).resolves.toBe(ReservationStatus.EXPIRED);
+      await expect(statusOf(fresh.id)).resolves.toBe(
+        ReservationStatus.PENDING_PAYMENT,
+      );
+      await expect(statusOf(confirmed.id)).resolves.toBe(
+        ReservationStatus.CONFIRMED,
+      );
+    });
+
+    it('libère la place et le joueur après l’expiration', async () => {
+      const late = await createUser('expire-late');
+      const next = await createUser('expire-next');
+      // place 1, J+5 (arrivalAt + 4 jours) : libre (le test précédent s'arrête à J+4)
+      const day = addHours(arrivalAt, 24 * 4);
+      // Créée « fraîche » : aucun cron (celui du conteneur backend tourne sur la
+      // même base) ne peut l'expirer avant qu'on vérifie qu'elle bloque la place.
+      const pending = await prisma.reservation.create({
+        data: {
+          userId: late.id,
+          seatId: seatIds[1],
+          arrivalAt: day,
+          status: ReservationStatus.PENDING_PAYMENT,
+        },
+      });
+      // tant qu'elle n'a pas expiré, la réservation bloque la place
+      await expect(
+        service.create(next.id, { seatId: seatIds[1], arrivalAt: day }),
+      ).rejects.toBeInstanceOf(ConflictException);
+
+      // on la vieillit au-delà du délai de paiement, puis on expire
+      await prisma.reservation.update({
+        where: { id: pending.id },
+        data: { createdAt: minutesAgo(16) },
+      });
+      await service.expirePendingPayments();
+      await expect(statusOf(pending.id)).resolves.toBe(
+        ReservationStatus.EXPIRED,
+      );
+
+      // la place est réservable par un autre joueur, le même jour
+      await expect(
+        service.create(next.id, { seatId: seatIds[1], arrivalAt: day }),
+      ).resolves.toBeDefined();
+      // et le joueur peut réserver une autre place le même jour
+      await expect(
+        service.create(late.id, { seatId: seatIds[7], arrivalAt: day }),
+      ).resolves.toBeDefined();
+    });
   });
 });

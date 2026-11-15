@@ -10,7 +10,7 @@ import { Reflector } from '@nestjs/core';
 import { Test } from '@nestjs/testing';
 import request from 'supertest';
 import { z } from 'zod';
-import { missingResponseSchema } from './missing-response.schema';
+import { missingResponseSchema } from '../missing-response.schema';
 
 @Controller()
 class FakeController {

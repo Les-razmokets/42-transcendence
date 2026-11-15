@@ -6,13 +6,13 @@ import { MemoryRouter, Routes, Route } from 'react-router';
 import { EnTeteLobby, EnTeteTable } from './index';
 import styles from './EnTete.module.css';
 
-// <Link> a besoin d'un routeur : on rend l'en-tête sur "/" et une page factice sur "/compte"
+// <Link> a besoin d'un routeur : on rend l'en-tête sur "/" et une page factice sur "/account"
 function renderAvecRouteur(ui: ReactElement) {
   return render(
     <MemoryRouter initialEntries={['/']}>
       <Routes>
         <Route path="/" element={ui} />
-        <Route path="/compte" element={<p>Page compte</p>} />
+        <Route path="/account" element={<p>Page compte</p>} />
       </Routes>
     </MemoryRouter>,
   );
@@ -33,10 +33,10 @@ describe('EnTete (base commune)', () => {
     expect(screen.getByRole('banner')).toHaveClass(styles.enTete);
   });
 
-  it('affiche un lien vers /compte nommé par libelleAccount', () => {
+  it('affiche un lien vers /account nommé par libelleAccount', () => {
     renderAvecRouteur(<EnTeteLobby userName="Dusan Fama" libelleAccount="Mon compte" />);
 
-    expect(screen.getByRole('link', { name: 'Mon compte' })).toHaveAttribute('href', '/compte');
+    expect(screen.getByRole('link', { name: 'Mon compte' })).toHaveAttribute('href', '/account');
   });
 
   it("le nom du lien vient de libelleAccount, pas des initiales de l'avatar", () => {
@@ -106,6 +106,36 @@ describe('EnTeteLobby', () => {
     expect(enfants[1]).toHaveClass(styles.desktop);
     expect(enfants[2]).toBe(screen.getByRole('link', { name: 'Mon compte' }));
   });
+
+  it('les deux logos sont des liens vers le lobby (/)', () => {
+    renderAvecRouteur(<EnTeteLobby userName="Dusan Fama" libelleAccount="Mon compte" />);
+
+    const liensLogo = screen.getAllByRole('link', { name: 'FLOOR' });
+
+    expect(liensLogo).toHaveLength(2);
+    liensLogo.forEach((lien) => expect(lien).toHaveAttribute('href', '/'));
+  });
+
+  it('revient au lobby au clic sur le logo depuis une autre page', async () => {
+    const user = userEvent.setup();
+    const enTete = <EnTeteLobby userName="Dusan Fama" libelleAccount="Mon compte" />;
+
+    render(
+      <MemoryRouter initialEntries={['/account']}>
+        <Routes>
+          <Route path="/" element={<>{enTete}<p>Page lobby</p></>} />
+          <Route path="/account" element={<>{enTete}<p>Page compte</p></>} />
+        </Routes>
+      </MemoryRouter>,
+    );
+
+    expect(screen.getByText('Page compte')).toBeInTheDocument();
+
+    await user.click(screen.getAllByRole('link', { name: 'FLOOR' })[1]);
+
+    expect(screen.getByText('Page lobby')).toBeInTheDocument();
+    expect(screen.queryByText('Page compte')).toBeNull();
+  });
 });
 
 describe('EnTeteTable', () => {
@@ -161,7 +191,7 @@ describe('EnTeteTable', () => {
 
     const lien = screen.getByRole('link', { name: 'Mon compte' });
 
-    expect(lien).toHaveAttribute('href', '/compte');
+    expect(lien).toHaveAttribute('href', '/account');
     expect(lien).toHaveTextContent('DF');
   });
 

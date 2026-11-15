@@ -1,0 +1,1 @@
+export const CASINO_ROLE_KEY = 'requiredCasinoRole';

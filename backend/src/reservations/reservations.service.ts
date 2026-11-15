@@ -2,6 +2,7 @@ import {
   Injectable,
   ConflictException,
   BadRequestException,
+  NotFoundException,
   Logger,
 } from '@nestjs/common';
 import { CreateReservationDto } from './dto/create-reservation.dto';
@@ -13,6 +14,8 @@ import {
   SeatStatus,
 } from '../generated/prisma/enums';
 import { isCasinoClosed, casinoDay } from './casino-day';
+
+const PAYMENT_DELAY_MS = 15 * 60 * 1000;
 
 @Injectable()
 export class ReservationsService {
@@ -67,6 +70,59 @@ export class ReservationsService {
       }
       throw error;
     }
+  }
+
+  findAllForUser(userId: string) {
+    return this.prismaService.reservation.findMany({
+      where: { userId },
+      orderBy: { arrivalAt: 'desc' },
+    });
+  }
+
+  async cancel(userId: string, reservationId: string) {
+    const reservation = await this.prismaService.reservation.findFirst({
+      where: { id: reservationId, userId },
+    });
+    const now = new Date();
+    if (!reservation) throw new NotFoundException('Reservation not found');
+    if (reservation.status !== ReservationStatus.CONFIRMED)
+      throw new ConflictException(
+        'Only a confirmed reservation can be cancelled',
+      );
+    if (now >= reservation.arrivalAt)
+      throw new ConflictException('The arrival time has passed');
+    try {
+      return await this.prismaService.reservation.update({
+        // status and arrival time re-checked atomically: the row may have
+        // changed, or arrival time passed, since the findFirst above
+        where: {
+          id: reservationId,
+          status: ReservationStatus.CONFIRMED,
+          arrivalAt: { gt: now },
+        },
+        data: { status: ReservationStatus.CANCELLED, cancelledAt: now },
+      });
+    } catch (error) {
+      if (
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        error.code === 'P2025'
+      )
+        throw new ConflictException(
+          'The reservation changed and can no longer be cancelled',
+        );
+      throw error;
+    }
+  }
+
+  async expirePendingPayments() {
+    const { count } = await this.prismaService.reservation.updateMany({
+      where: {
+        status: ReservationStatus.PENDING_PAYMENT,
+        createdAt: { lte: new Date(Date.now() - PAYMENT_DELAY_MS) },
+      },
+      data: { status: ReservationStatus.EXPIRED },
+    });
+    return count;
   }
 
   private async assertSeatAvailable(seatId: string, isToday: boolean) {

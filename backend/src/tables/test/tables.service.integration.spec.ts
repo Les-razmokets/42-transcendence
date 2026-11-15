@@ -1,10 +1,10 @@
 import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
-import { AppModule } from '../app.module';
-import { PokerVariant } from '../generated/prisma/enums';
-import { PrismaService } from '../prisma/prisma.service';
-import { CreateTableDto } from './dto/create-table.dto';
-import { TablesService } from './tables.service';
+import { AppModule } from '../../app.module';
+import { PokerVariant } from '../../generated/prisma/enums';
+import { PrismaService } from '../../prisma/prisma.service';
+import { CreateTableDto } from '../dto/create-table.dto';
+import { TablesService } from '../tables.service';
 
 // Test d'intégration : utilise la vraie base de dev (DATABASE_URL), jamais la prod.
 describe('TablesService (intégration)', () => {

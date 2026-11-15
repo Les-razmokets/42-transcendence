@@ -20,6 +20,7 @@ import { PaymentsModule } from './payments/payments.module';
 import { PrismaModule } from './prisma/prisma.module';
 import { APP_GUARD } from '@nestjs/core';
 import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
+import { ScheduleModule } from '@nestjs/schedule';
 
 @Module({
   imports: [
@@ -31,6 +32,10 @@ import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
       throttlers: [{ ttl: 600000, limit: 100 }],
       skipIf: () => process.env.THROTTLE_DISABLED === 'true',
     }),
+    // Crons off when SCHEDULER_DISABLED=true (tests: avoids extra crons on the shared DB)
+    ...(process.env.SCHEDULER_DISABLED === 'true'
+      ? []
+      : [ScheduleModule.forRoot()]),
     HealthModule,
     MetricsModule,
     AuthModule,

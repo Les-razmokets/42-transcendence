@@ -10,21 +10,13 @@ import {
 
 import { Test } from '@nestjs/testing';
 import request from 'supertest';
-import { AppModule } from '../src/app.module'; // adjust
-import { configureApp } from '../src/app.config'; // or inline the same setup as in your other e2e specs
-import { PrismaService } from '../src/prisma/prisma.service'; // adjust
+import { AppModule } from '../src/app.module';
+import { configureApp } from '../src/app.config';
+import { PrismaService } from '../src/prisma/prisma.service';
 import { NestExpressApplication } from '@nestjs/platform-express';
 
 /*
  * Rate limiting e2e spec.
- *
- * ASSUMPTIONS TO CHECK (change the constants below to match your real configuration):
- *  - ThrottlerModule.forRoot has `skipIf: () => process.env.THROTTLE_DISABLED === 'true'`, and your
- *    e2e environment file sets THROTTLE_DISABLED=true so the other suites are not throttled.
- *    THIS spec turns throttling back on with THROTTLE_DISABLED=false.
- *  - LOGIN_LIMIT / REGISTER_LIMIT / DEFAULT_LIMIT match your @Throttle values and your global default.
- *  - HEALTH_PATH is the real path of the health route, marked @SkipThrottle().
- *  - ThrottlerGuard is registered before AuthGuard (this spec proves it).
  *
  * The in-memory throttler storage lives as long as the app, so a FRESH app is built for each test:
  * a bucket filled by one test can never leak into the next one.

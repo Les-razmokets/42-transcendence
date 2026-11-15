@@ -15,14 +15,6 @@ import { configureApp } from '../src/app.config';
 import { PrismaService } from '../src/prisma/prisma.service';
 import { NestExpressApplication } from '@nestjs/platform-express';
 
-/*
- * ASSUMPTIONS TO CHECK:
- *  - login returns 200 (@HttpCode(HttpStatus.OK)). If you keep the default 201, change LOGIN_STATUS.
- *  - the response uses the "my profile" schema (same keys as register).
- *  - User has nullable `passwordHash` and nullable `deletedAt`.
- *  - Run against a TEST database: beforeEach wipes the User table.
- */
-
 describe('POST /api/auth/login (e2e)', () => {
   let app: NestExpressApplication;
   let prisma: PrismaService;

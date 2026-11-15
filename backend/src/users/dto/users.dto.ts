@@ -14,7 +14,7 @@ import {
   MinDate,
 } from 'class-validator';
 
-const trim = ({ value }: { value: unknown }) =>
+export const trim = ({ value }: { value: unknown }) =>
   typeof value === 'string' ? value.trim() : value;
 export const trimToLower = ({ value }: { value: unknown }) =>
   typeof value === 'string' ? value.trim().toLowerCase() : value;

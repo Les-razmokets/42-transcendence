@@ -4,7 +4,7 @@ import { HealthDto } from './dto/health.dto';
 import {
   healthResponseSchema,
   HealthResponse,
-} from './health-response.schemas';
+} from '@transcendence/shared';
 import { Public } from '../auth/utils/public.decorator';
 import { SkipThrottle } from '@nestjs/throttler';
 
