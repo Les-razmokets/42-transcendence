@@ -8,6 +8,17 @@ import { RegisterPage } from './features/auth/RegisterPage';
 import { AccountPage } from './features/account/AccountPage';
 import { NotFoundPage } from './features/NotFoundPage';
 import { ForgotPasswordPage } from './features/auth/ForgotPasswordPage';
+import { AdminLayout } from './features/admin/AdminLayout';
+import { CasinoLayout } from './features/admin/CasinoLayout';
+import {
+  AdminHomePage,
+  CasinosPage,
+  CasinoTablesPage,
+  CasinoTablePage,
+  CasinoReservationsPage,
+  CasinoMembersPage,
+  CasinoSettingsPage,
+} from './features/admin/AdminPages';
 
 export const router = createBrowserRouter([
   {
@@ -19,8 +30,28 @@ export const router = createBrowserRouter([
       { path: 'reservations', element: <ReservationPage /> },
       { path: 'login', element: <LoginPage /> },
       { path: 'register', element: <RegisterPage /> },
-      { path: 'forgot-password', element: <ForgotPasswordPage/> },
+      { path: 'forgot-password', element: <ForgotPasswordPage /> },
       { path: 'account', element: <AccountPage /> },
+      { path: '*', element: <NotFoundPage /> },
+    ],
+  },
+  {
+    path: '/admin',
+    element: <AdminLayout />,
+    children: [
+      { index: true, element: <AdminHomePage /> },
+      { path: 'casinos', element: <CasinosPage /> },
+      {
+        path: 'casinos/:casinoId',
+        element: <CasinoLayout />,
+        children: [
+          { index: true, element: <CasinoTablesPage /> },
+          { path: 'tables/:tableId', element: <CasinoTablePage /> },
+          { path: 'reservations', element: <CasinoReservationsPage /> },
+          { path: 'members', element: <CasinoMembersPage /> },
+          { path: 'settings', element: <CasinoSettingsPage /> },
+        ],
+      },
       { path: '*', element: <NotFoundPage /> },
     ],
   },
