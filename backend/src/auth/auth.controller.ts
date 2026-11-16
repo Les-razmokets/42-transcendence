@@ -8,6 +8,7 @@ import {
   Get,
   Req,
   Res,
+  Logger,
 } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { myProfileUserSchema } from '@transcendence/shared';
@@ -30,9 +31,12 @@ import * as crypto from 'crypto';
 import { FortyTwoAuthException } from './oauth/forty-two/utils/forty-two-auth.exception';
 import { User } from '../generated/prisma/client';
 import { FortyTwoCompleteDto } from './oauth/forty-two/dto/forty-two-complete.dto';
+import { AUTH_ROUTE } from '../common/routes';
 
-@Controller('auth')
+@Controller(AUTH_ROUTE)
 export class AuthController {
+  private readonly logger = new Logger(AuthController.name);
+
   constructor(
     private readonly auth: AuthService,
     private readonly config: ConfigService,
@@ -43,7 +47,7 @@ export class AuthController {
   private cookieOptions() {
     return buildCookieOptions(
       getJwtLifetimeSeconds(this.config),
-      this.config.get('NODE_ENV') === 'production',
+      this.isProd(),
     );
   }
 
@@ -141,7 +145,9 @@ export class AuthController {
       // New account: nothing is written yet. The signed pending token waits for the birth date.
       res.cookie(OAUTH_PENDING_COOKIE, result.token, buildOauthCookieOptions(600, this.isProd()))
       return res.redirect(`${frontUrl}/signup/42`);
-    } catch {
+    } catch (error) {
+      if (!(error instanceof FortyTwoAuthException))
+        this.logger.error('42 OAuth callback failed', error instanceof Error ? error.stack : String(error));
       return res.redirect(`${frontUrl}/login?error=oauth`);
     }
   }

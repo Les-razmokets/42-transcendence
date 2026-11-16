@@ -1,4 +1,5 @@
 import type { CookieOptions } from 'express';
+import { OAUTH_42_PATH } from '../../common/routes';
 
 export const COOKIE_NAME = 'access_token';
 export const OAUTH_COOKIE = 'oauth_token';
@@ -28,7 +29,7 @@ export function buildOauthCookieOptions(
     httpOnly: true,
     sameSite: 'lax',
     secure: secure,
-    path: '/api/auth/42',
+    path: OAUTH_42_PATH,
     maxAge: lifetimeSeconds * 1000,
   };
 }

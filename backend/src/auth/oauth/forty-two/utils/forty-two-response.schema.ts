@@ -18,9 +18,9 @@ export const fortyTwoProfileSchema = z.object({
     .toLowerCase()
     .regex(PSEUDO_PATTERN)
     .max(PSEUDO_MAX_LEN - OAUTH_PSEUDO_PREFIX.length),
-  email: z.email(),
-  first_name: z.string(),
-  last_name: z.string(),
+  email: z.email().trim().toLowerCase().pipe(z.email().max(254)),
+  first_name: z.string().trim().min(1).max(50),
+  last_name: z.string().trim().min(1).max(50),
 }).transform((data) => {
   const fullLogin = `${OAUTH_PSEUDO_PREFIX}${data.login}`;
   return {
