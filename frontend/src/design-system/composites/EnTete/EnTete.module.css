@@ -43,3 +43,22 @@
 .details {
     color: var(--texte-secondaire);
 }
+
+.linkLogo {
+    color: inherit;
+    text-decoration: none;
+}
+
+@media (max-width: 640px) {
+    .mobile {
+        display: inline-flex;
+    }
+
+    .desktop {
+        display: none;
+    }
+
+    .barre {
+        padding: var(--espace-16) var(--marge-page-mobile);
+    }
+}
