@@ -63,6 +63,7 @@
     "@nestjs/throttler": "^6.7.1",
     "@prisma/adapter-pg": "^7.10.0",
     "@prisma/client": "^7.10.0",
+    "@prometheus-io/client": "^0.16.1",
     "@transcendence/shared": "*",
     "argon2": "^0.45.1",
     "class-transformer": "^0.5.1",
