@@ -9,6 +9,8 @@ COMPOSE = docker compose
 PRISMA = cd $(BACKDIR) && npx prisma
 TESTBACK = docker compose run --rm backend npm test && docker compose run --rm backend npm run test:e2e
 TESTFRONT = docker compose run --rm frontend npm test -- --run
+SEED = $(COMPOSE) exec -T db sh -c 'psql -U "$$POSTGRES_USER" -d "$$POSTGRES_DB" -v ON_ERROR_STOP=1' < backend/prisma/seed/seed_dev.sql
+
 
 # Colors
 GREEN = \033[0;32m
@@ -71,9 +73,9 @@ logs:
 # Applique les migrations existantes (non interactif)
 deploy:
 	$(call spin,🗄️  Applying migrations...,$(PRISMA) migrate deploy)
-	
+
 testback:
-	@$(TESTBACK) 
+	@$(TESTBACK)
 
 testfront:
 	@$(TESTFRONT)
@@ -86,7 +88,7 @@ migrate:
 
 studio:
 	@$(PRISMA) studio
-	
+
 clean: down
 
 # ⚠️ Supprime aussi le volume : toutes les donnees de la base sont perdues
