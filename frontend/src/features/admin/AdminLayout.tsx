@@ -10,6 +10,7 @@ const classeLien = ({ isActive }: { isActive: boolean }) =>
 export function AdminLayout() {
   const { t } = useTranslation();
   const user = useCurrentUser();
+  if (!user) return null;
 
   if (!hasAdminAccess(user)) {
     return (

@@ -8,6 +8,7 @@ import styles from './Admin.module.css';
 export function AdminHomePage() {
   const { t } = useTranslation();
   const user = useCurrentUser();
+  if (!user) return null;
 
   return (
     <>
@@ -33,6 +34,7 @@ export function AdminHomePage() {
 export function CasinosPage() {
   const { t } = useTranslation();
   const user = useCurrentUser();
+  if (!user) return null;
 
   if (user.role !== 'ADMIN') return <p>{t('admin.accesRefuse')}</p>;
   return <h1 className="typo-titre-1">{t('admin.casinos')}</h1>;
@@ -67,6 +69,7 @@ export function CasinoSettingsPage() {
   const { t } = useTranslation();
   const user = useCurrentUser();
   const { casinoId = '' } = useParams();
+  if (!user) return null;
 
   if (!canManageCasino(getCasinoAccess(user, casinoId))) {
     return <p>{t('admin.accesRefuse')}</p>;

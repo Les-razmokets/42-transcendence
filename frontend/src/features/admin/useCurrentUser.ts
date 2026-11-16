@@ -1,6 +1,5 @@
-import { currentUserMock } from '../../lib/mocks/session';
+import { useSession } from '../../lib/session/contexte';
 
-// endroit à changer quand le SessionProvider (TSK-55) sera mergé.
 export function useCurrentUser() {
-  return currentUserMock;
+  return useSession().user;
 }

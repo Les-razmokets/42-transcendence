@@ -11,6 +11,7 @@ export function CasinoLayout() {
   const { t } = useTranslation();
   const user = useCurrentUser();
   const { casinoId = '' } = useParams();
+  if (!user) return null;
   const access = getCasinoAccess(user, casinoId);
 
   if (access === null) {
