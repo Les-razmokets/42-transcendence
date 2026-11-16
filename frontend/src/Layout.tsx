@@ -1,15 +1,25 @@
-import { Link, Outlet } from 'react-router';
+import { Outlet } from "react-router";
+import { useTranslation } from "react-i18next";
+import { EnTeteLobby } from "./design-system/composites/EnTete";
+import { useSession } from "./lib/session/contexte";
 
 export function Layout() {
-  return (
-    <>
-      <nav>
-        <Link to="/">Lobby</Link> <Link to="/reservations">Réservations</Link>{' '}
-        <Link to="/account">Compte</Link> <Link to="/login">Connexion</Link>
-      </nav>
-      <main>
-        <Outlet />
-      </main>
-    </>
-  );
+    const { user } = useSession();
+    const { t } = useTranslation();
+
+    // SafeRoute garantit déjà user, mais TypeScript ne le sait pas
+    if (!user)
+        return null;
+
+    return (
+        <>
+            <EnTeteLobby
+                userName={`${user.firstName} ${user.lastName}`}
+                libelleAccount={t('entete.monCompte')}
+            />
+            <main>
+                <Outlet />
+            </main>
+        </>
+    );
 }

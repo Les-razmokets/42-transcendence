@@ -1,5 +1,6 @@
 import { Logo } from "../../primitives/Logo";
 import { EnTeteBase } from "./EnTeteBase";
+import { Link } from "react-router";
 import styles from "./EnTete.module.css";
 
 type EnTeteLobbyProps = {
@@ -13,8 +14,8 @@ export function EnTeteLobby(props: EnTeteLobbyProps) {
         {...props}
         left={
             <>
-            <span className={styles.mobile}><Logo variante="m"/></span>
-            <span className={styles.desktop}><Logo variante="l"/></span>
+                <Link to="/" className={`${styles.linkLogo} ${styles.mobile}`}><Logo variante="m"/></Link>
+                <Link to="/" className={`${styles.linkLogo} ${styles.desktop}`}><Logo variante="l"/></Link>
             </>
         }
         />

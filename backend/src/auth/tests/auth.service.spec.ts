@@ -5,6 +5,10 @@ import { Argon2Hasher } from '../argon2-hasher.service';
 import { UsersService } from '../../users/users.service';
 import { UsersCreationDto } from '../../users/dto/users.dto';
 import { JwtService } from '@nestjs/jwt';
+import { FortyTwoClientService } from '../oauth/forty-two/forty-two.service';
+import { PrismaService } from '../../prisma/prisma.service';
+import { fortyTwoConfig } from '../oauth/forty-two/forty-two.config';
+import { ConfigType } from '@nestjs/config';
 
 // In ESM mode (--experimental-vm-modules) `jest` is not a global: it must be imported from @jest/globals.
 
@@ -41,6 +45,9 @@ describe('AuthService.register', () => {
       users as unknown as UsersService,
       hasher as unknown as Argon2Hasher,
       jwt as unknown as JwtService,
+      {} as unknown as FortyTwoClientService,
+      {} as unknown as PrismaService,
+      {} as unknown as ConfigType<typeof fortyTwoConfig>,
     );
   });
 

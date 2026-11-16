@@ -8,6 +8,7 @@ import { RegisterPage } from './features/auth/RegisterPage';
 import { AccountPage } from './features/account/AccountPage';
 import { NotFoundPage } from './features/NotFoundPage';
 import { ForgotPasswordPage } from './features/auth/ForgotPasswordPage';
+import { SafeRoute } from './SafeRoute';
 import { AdminLayout } from './features/admin/AdminLayout';
 import { CasinoLayout } from './features/admin/CasinoLayout';
 import {
@@ -23,36 +24,54 @@ import {
 export const router = createBrowserRouter([
   {
     path: '/',
-    element: <Layout />,
     children: [
-      { index: true, element: <LobbyPage /> },
-      { path: 'tables/:tableId', element: <TablePage /> },
-      { path: 'reservations', element: <ReservationPage /> },
+      // publiques
       { path: 'login', element: <LoginPage /> },
       { path: 'register', element: <RegisterPage /> },
       { path: 'forgot-password', element: <ForgotPasswordPage /> },
-      { path: 'account', element: <AccountPage /> },
+
+      // safe
+      {
+        element: <SafeRoute />,
+        children: [
+          {
+            element: <Layout />,
+            children: [
+              { index: true, element: <LobbyPage /> },
+              { path: 'reservations', element: <ReservationPage /> },
+              { path: 'account', element: <AccountPage /> },
+            ],
+          },
+          { path: 'tables/:tableId', element: <TablePage /> },
+        ],
+      },
+
       { path: '*', element: <NotFoundPage /> },
     ],
   },
   {
     path: '/admin',
-    element: <AdminLayout />,
+    element: <SafeRoute />,
     children: [
-      { index: true, element: <AdminHomePage /> },
-      { path: 'casinos', element: <CasinosPage /> },
       {
-        path: 'casinos/:casinoId',
-        element: <CasinoLayout />,
+        element: <AdminLayout />,
         children: [
-          { index: true, element: <CasinoTablesPage /> },
-          { path: 'tables/:tableId', element: <CasinoTablePage /> },
-          { path: 'reservations', element: <CasinoReservationsPage /> },
-          { path: 'members', element: <CasinoMembersPage /> },
-          { path: 'settings', element: <CasinoSettingsPage /> },
+          { index: true, element: <AdminHomePage /> },
+          { path: 'casinos', element: <CasinosPage /> },
+          {
+            path: 'casinos/:casinoId',
+            element: <CasinoLayout />,
+            children: [
+              { index: true, element: <CasinoTablesPage /> },
+              { path: 'tables/:tableId', element: <CasinoTablePage /> },
+              { path: 'reservations', element: <CasinoReservationsPage /> },
+              { path: 'members', element: <CasinoMembersPage /> },
+              { path: 'settings', element: <CasinoSettingsPage /> },
+            ],
+          },
+          { path: '*', element: <NotFoundPage /> },
         ],
       },
-      { path: '*', element: <NotFoundPage /> },
     ],
   },
 ]);
