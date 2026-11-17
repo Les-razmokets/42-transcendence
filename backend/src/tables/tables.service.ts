@@ -6,7 +6,7 @@ import {
 import { PrismaService } from '../prisma/prisma.service';
 import { Prisma } from '../generated/prisma/client';
 import { CreateTableDto } from './dto/create-table.dto';
-import { UpdateTableDto } from './dto/update-table.dto';
+import { PutTableDto } from './dto/put-table.dto';
 import { PokerVariant } from '../generated/prisma/enums';
 
 const tableWithSeats = {
@@ -66,19 +66,17 @@ export class TablesService {
     return tables;
   }
 
-  async updateTable(casinoId: string, id: string, dto: UpdateTableDto) {
+  async updateTable(casinoId: string, id: string, dto: PutTableDto) {
     const table = await this.findById(casinoId, id);
-    const smallBlind = dto.smallBlind ?? table.smallBlind;
-    const bigBlind = dto.bigBlind ?? table.bigBlind;
-    const variant = dto.variant ?? table.variant;
-    this.assertValidBlinds(smallBlind, bigBlind);
-    this.assertValidSeats(variant, table.maxSeats);
+    this.assertValidBlinds(dto.smallBlind, dto.bigBlind);
+    this.assertValidSeats(dto.variant, dto.maxSeats);
 
+    if (table.maxSeats !== dto.maxSeats)
+      throw new BadRequestException('Invalid numbers of seats');
     return await this.prismaService.pokerTable.update({
       where: { id },
       data: {
         ...dto,
-        ...(dto.moneyOnTable !== undefined && { moneyUpdatedAt: new Date() }),
       },
       include: tableWithSeats,
     });

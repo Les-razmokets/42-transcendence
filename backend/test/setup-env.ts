@@ -16,6 +16,7 @@ process.env.FORTY_TWO_AUTHORIZE = '/oauth/authorize';
 process.env.FORTY_TWO_TOKEN = '/oauth/token';
 process.env.FORTY_TWO_PROFILE = '/v2/me';
 process.env.FORTY_TWO_TIMEOUT = '5000';
-process.env.OAUTH_PENDING_SECRET = 'test-pending-secret-not-the-jwt-secret-0123456789';
+process.env.OAUTH_PENDING_SECRET =
+  'test-pending-secret-not-the-jwt-secret-0123456789';
 
 export {}; // makes this file a module, which ts-jest with isolatedModules requires

@@ -1,4 +1,9 @@
-import { ConflictException, Inject, Injectable, UnauthorizedException } from '@nestjs/common';
+import {
+  ConflictException,
+  Inject,
+  Injectable,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { UsersService } from '../users/users.service';
 import { UsersCreationDto } from '../users/dto/users.dto';
 import { Argon2Hasher } from './argon2-hasher.service';
@@ -62,12 +67,14 @@ export class AuthService {
   // 42 OAuth callback logic: turns a 42 code into either a session token ('login')
   // or a pending signup token ('pending'). Never touches cookies: the controller does that.
   // Any failure throws, and the controller turns it into the generic error redirect.
-  async handleFortyTwoCallback(code: string): Promise<{kind: 'login' | 'pending', token: string}> {
+  async handleFortyTwoCallback(
+    code: string,
+  ): Promise<{ kind: 'login' | 'pending'; token: string }> {
     const fortyTwoToken = await this.fortyTwoClient.exchangeCodeForToken(code);
     const profile = await this.fortyTwoClient.readProfile(fortyTwoToken);
     // The link is found by 42 id only, never by email.
     const account = await this.prisma.oAuthAccount.findUnique({
-      where: { 
+      where: {
         provider_providerAccountId: {
           provider: OAuthProvider.FORTY_TWO,
           providerAccountId: profile.providerAccountId,
@@ -85,12 +92,11 @@ export class AuthService {
       const pendingToken = await this.jwt.signAsync(
         { typ: 'oauth_pending', ...profile },
         { secret: this.fortyTwo.pendingSecret, expiresIn: '10m' },
-      )
+      );
       return { kind: 'pending', token: pendingToken } as const;
     }
     // A soft-deleted (GDPR) user keeps their OAuthAccount row: refuse, otherwise 42 would bring the account back.
-    if (account.user.deletedAt)
-      throw new FortyTwoAuthException();
+    if (account.user.deletedAt) throw new FortyTwoAuthException();
     const token = await this.issueToken({
       sub: account.user.id,
       role: account.user.role,
@@ -100,11 +106,16 @@ export class AuthService {
 
   // Creates the account of a new 42 user once they gave their birth date.
   // Identity fields come from the signed pending token only; the dto brings just birthDate.
-  async completeFortyTwoSignup(pendingToken: string, dto: FortyTwoCompleteDto): Promise<{ user: User, token: string}> {
+  async completeFortyTwoSignup(
+    pendingToken: string,
+    dto: FortyTwoCompleteDto,
+  ): Promise<{ user: User; token: string }> {
     // Expired, forged or signed with another secret: verifyAsync throws, and we answer the generic 401.
     let raw: unknown;
     try {
-      raw = await this.jwt.verifyAsync(pendingToken, { secret: this.fortyTwo.pendingSecret });
+      raw = await this.jwt.verifyAsync(pendingToken, {
+        secret: this.fortyTwo.pendingSecret,
+      });
     } catch {
       throw new FortyTwoAuthException();
     }
@@ -122,7 +133,12 @@ export class AuthService {
           firstName: payload.firstName,
           lastName: payload.lastName,
           birthDate: dto.birthDate,
-          oauthAccounts: { create: { provider: OAuthProvider.FORTY_TWO, providerAccountId: payload.providerAccountId } },
+          oauthAccounts: {
+            create: {
+              provider: OAuthProvider.FORTY_TWO,
+              providerAccountId: payload.providerAccountId,
+            },
+          },
         },
       });
     } catch (error) {

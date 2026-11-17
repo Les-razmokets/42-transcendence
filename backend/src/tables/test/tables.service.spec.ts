@@ -189,14 +189,18 @@ describe('TablesService', () => {
       prismaMock.pokerTable.findUnique.mockResolvedValue(null);
 
       await expect(
-        service.updateTable(casinoId, 'inconnue', { smallBlind: 1 }),
+        service.updateTable(casinoId, 'inconnue', makeDto()),
       ).rejects.toBeInstanceOf(NotFoundException);
       expect(prismaMock.pokerTable.update).not.toHaveBeenCalled();
     });
 
-    it('rejette une bigBlind inférieure à la smallBlind déjà en base', async () => {
+    it('rejette une bigBlind inférieure à la smallBlind du DTO', async () => {
       await expect(
-        service.updateTable(casinoId, 'table-1', { bigBlind: 2 }),
+        service.updateTable(
+          casinoId,
+          'table-1',
+          makeDto({ smallBlind: 10, bigBlind: 5 }),
+        ),
       ).rejects.toBeInstanceOf(BadRequestException);
       expect(prismaMock.pokerTable.update).not.toHaveBeenCalled();
     });
@@ -208,39 +212,35 @@ describe('TablesService', () => {
       });
 
       await expect(
-        service.updateTable(casinoId, 'table-1', {
-          variant: PokerVariant.OMAHA,
-        }),
+        service.updateTable(
+          casinoId,
+          'table-1',
+          makeDto({ variant: PokerVariant.OMAHA, maxSeats: 9 }),
+        ),
       ).rejects.toBeInstanceOf(BadRequestException);
       expect(prismaMock.pokerTable.update).not.toHaveBeenCalled();
     });
 
-    it('renvoie la table mise à jour sans toucher moneyUpdatedAt si moneyOnTable est absent', async () => {
+    // TODO étape 4 : remplacer par l'ajout / retrait réel des places
+    it('rejette un changement de maxSeats sans appeler update', async () => {
+      await expect(
+        service.updateTable(casinoId, 'table-1', makeDto({ maxSeats: 8 })),
+      ).rejects.toBeInstanceOf(BadRequestException);
+      expect(prismaMock.pokerTable.update).not.toHaveBeenCalled();
+    });
+
+    it('remplace toute la configuration et renvoie la table mise à jour', async () => {
       const updated = { id: 'table-1' };
       prismaMock.pokerTable.update.mockResolvedValue(updated);
+      const dto = makeDto({ name: 'Renommée', smallBlind: 2, bigBlind: 4 });
 
-      await expect(
-        service.updateTable(casinoId, 'table-1', {
-          smallBlind: 2,
-          bigBlind: 4,
-        }),
-      ).resolves.toBe(updated);
+      await expect(service.updateTable(casinoId, 'table-1', dto)).resolves.toBe(
+        updated,
+      );
       expect(prismaMock.pokerTable.update).toHaveBeenCalledWith(
         expect.objectContaining({
           where: { id: 'table-1' },
-          data: { smallBlind: 2, bigBlind: 4 },
-        }),
-      );
-    });
-
-    it('met à jour moneyUpdatedAt quand moneyOnTable est fourni, même à 0', async () => {
-      prismaMock.pokerTable.update.mockResolvedValue({ id: 'table-1' });
-
-      await service.updateTable(casinoId, 'table-1', { moneyOnTable: 0 });
-
-      expect(prismaMock.pokerTable.update).toHaveBeenCalledWith(
-        expect.objectContaining({
-          data: { moneyOnTable: 0, moneyUpdatedAt: expect.any(Date) },
+          data: dto,
         }),
       );
     });

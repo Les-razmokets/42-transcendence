@@ -1,4 +1,8 @@
-import { OAUTH_PSEUDO_PREFIX, PSEUDO_MAX_LEN, PSEUDO_PATTERN } from '@transcendence/shared';
+import {
+  OAUTH_PSEUDO_PREFIX,
+  PSEUDO_MAX_LEN,
+  PSEUDO_PATTERN,
+} from '@transcendence/shared';
 import { Transform } from 'class-transformer';
 import {
   IsString,

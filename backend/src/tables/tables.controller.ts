@@ -6,13 +6,13 @@ import {
   Get,
   Param,
   SerializeOptions,
-  Patch,
+  Put,
   Delete,
   HttpCode,
 } from '@nestjs/common';
 import { TablesService } from './tables.service';
 import { CreateTableDto } from './dto/create-table.dto';
-import { UpdateTableDto } from './dto/update-table.dto';
+import { PutTableDto } from './dto/put-table.dto';
 import { tableSchema, type Table } from '@transcendence/shared';
 import { RequireCasinoRole } from '../casinos/utils/casinos-role.decorator';
 
@@ -56,11 +56,11 @@ export class TablesController {
   }
 
   @RequireCasinoRole('OWNER')
-  @Patch(':id')
+  @Put(':id')
   async updateTable(
     @Param('id', new ParseUUIDPipe()) id: string,
     @Param('casinoId', new ParseUUIDPipe()) casinoId: string,
-    @Body() dto: UpdateTableDto,
+    @Body() dto: PutTableDto,
   ): Promise<Table> {
     return await this.tablesService.updateTable(casinoId, id, dto);
   }

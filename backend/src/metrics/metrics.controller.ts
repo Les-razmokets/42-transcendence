@@ -1,4 +1,4 @@
-// Read metrics and send it in text to prometheus 
+// Read metrics and send it in text to prometheus
 
 import { Controller, Get, Res } from '@nestjs/common';
 import type { Response } from 'express';

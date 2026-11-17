@@ -55,7 +55,9 @@ describe('AuthService: 42 OAuth', () => {
   let jwt: JwtService;
 
   let fortyTwoClient: {
-    exchangeCodeForToken: jest.Mock<FortyTwoClientService['exchangeCodeForToken']>;
+    exchangeCodeForToken: jest.Mock<
+      FortyTwoClientService['exchangeCodeForToken']
+    >;
     readProfile: jest.Mock<FortyTwoClientService['readProfile']>;
   };
   let users: { findByEmail: jest.Mock<UsersService['findByEmail']> };
@@ -71,7 +73,8 @@ describe('AuthService: 42 OAuth', () => {
 
   beforeEach(async () => {
     fortyTwoClient = {
-      exchangeCodeForToken: jest.fn<FortyTwoClientService['exchangeCodeForToken']>(),
+      exchangeCodeForToken:
+        jest.fn<FortyTwoClientService['exchangeCodeForToken']>(),
       readProfile: jest.fn<FortyTwoClientService['readProfile']>(),
     };
     users = { findByEmail: jest.fn<UsersService['findByEmail']>() };
@@ -112,8 +115,12 @@ describe('AuthService: 42 OAuth', () => {
     it('exchanges the code, then reads the profile with the 42 token', async () => {
       await service.handleFortyTwoCallback('the-code');
 
-      expect(fortyTwoClient.exchangeCodeForToken).toHaveBeenCalledWith('the-code');
-      expect(fortyTwoClient.readProfile).toHaveBeenCalledWith('42-access-token');
+      expect(fortyTwoClient.exchangeCodeForToken).toHaveBeenCalledWith(
+        'the-code',
+      );
+      expect(fortyTwoClient.readProfile).toHaveBeenCalledWith(
+        '42-access-token',
+      );
     });
 
     it('looks the account up by (FORTY_TWO, 42 id)', async () => {
@@ -185,7 +192,9 @@ describe('AuthService: 42 OAuth', () => {
 
       it('the pending token is signed with the pending secret and carries the profile', async () => {
         const { token } = await service.handleFortyTwoCallback('code');
-        const payload = await jwt.verifyAsync(token, { secret: PENDING_SECRET });
+        const payload = await jwt.verifyAsync(token, {
+          secret: PENDING_SECRET,
+        });
 
         expect(payload).toMatchObject({ typ: 'oauth_pending', ...PROFILE });
       });
@@ -207,7 +216,10 @@ describe('AuthService: 42 OAuth', () => {
 
       it('never puts the 42 access token in the pending token', async () => {
         const { token } = await service.handleFortyTwoCallback('code');
-        const decoded = Buffer.from(token.split('.')[1], 'base64url').toString();
+        const decoded = Buffer.from(
+          token.split('.')[1],
+          'base64url',
+        ).toString();
         expect(decoded).not.toContain('42-access-token');
       });
 
@@ -294,14 +306,21 @@ describe('AuthService: 42 OAuth', () => {
     describe('rejects the pending token (401, nothing created)', () => {
       const cases: [string, () => Promise<string>][] = [
         ['garbage', async () => 'not.a.token'],
-        ['signed with the session secret', () => pendingToken({}, SESSION_SECRET)],
+        [
+          'signed with the session secret',
+          () => pendingToken({}, SESSION_SECRET),
+        ],
         ['expired', () => pendingToken({}, PENDING_SECRET, -10)],
         ['without typ', () => pendingToken({ typ: undefined })],
         ['with another typ', () => pendingToken({ typ: 'access' })],
         ['with a missing field', () => pendingToken({ email: undefined })],
         [
           'a real session token',
-          () => jwt.signAsync({ sub: 'u1', role: 'USER' }, { secret: SESSION_SECRET }),
+          () =>
+            jwt.signAsync(
+              { sub: 'u1', role: 'USER' },
+              { secret: SESSION_SECRET },
+            ),
         ],
       ];
 
@@ -315,11 +334,18 @@ describe('AuthService: 42 OAuth', () => {
       it('an edited payload that was not re-signed', async () => {
         const [header, , signature] = (await pendingToken()).split('.');
         const forged = Buffer.from(
-          JSON.stringify({ typ: 'oauth_pending', ...PROFILE, email: 'victim@example.com' }),
+          JSON.stringify({
+            typ: 'oauth_pending',
+            ...PROFILE,
+            email: 'victim@example.com',
+          }),
         ).toString('base64url');
 
         await expect(
-          service.completeFortyTwoSignup(`${header}.${forged}.${signature}`, dto),
+          service.completeFortyTwoSignup(
+            `${header}.${forged}.${signature}`,
+            dto,
+          ),
         ).rejects.toThrow(FortyTwoAuthException);
         expect(prisma.user.create).not.toHaveBeenCalled();
       });

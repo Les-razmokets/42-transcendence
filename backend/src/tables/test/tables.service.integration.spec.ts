@@ -132,32 +132,49 @@ describe('TablesService (intégration)', () => {
     );
   });
 
-  it('updateTable ne modifie que les champs envoyés et renvoie les sièges', async () => {
+  it('updateTable remplace la config et conserve les sièges', async () => {
     const created = await service.create(
       casinoId,
       makeDto('update', { maxSeats: 3 }),
     );
 
-    const updated = await service.updateTable(casinoId, created.id, {
-      bigBlind: 4,
-    });
+    const updated = await service.updateTable(
+      casinoId,
+      created.id,
+      makeDto('update-renamed', {
+        variant: PokerVariant.OMAHA,
+        smallBlind: 5,
+        bigBlind: 10,
+        maxSeats: 3,
+      }),
+    );
 
-    expect(updated.bigBlind).toBe(4);
-    expect(updated.smallBlind).toBe(created.smallBlind);
-    expect(updated.variant).toBe(created.variant);
-    expect(updated.moneyUpdatedAt).toBeNull();
+    expect(updated.name).toBe(`${prefix}-update-renamed`);
+    expect(updated.variant).toBe(PokerVariant.OMAHA);
+    expect(updated.smallBlind).toBe(5);
+    expect(updated.bigBlind).toBe(10);
+    expect(updated.maxSeats).toBe(3);
     expect(updated.seats.map((seat) => seat.seatNumber)).toEqual([1, 2, 3]);
   });
 
-  it('updateTable horodate moneyUpdatedAt quand moneyOnTable change', async () => {
-    const created = await service.create(casinoId, makeDto('money'));
+  // TODO étape 4 : remplacer par l'ajout / retrait réel des places
+  it('updateTable refuse un changement de maxSeats et ne touche pas la table', async () => {
+    const created = await service.create(
+      casinoId,
+      makeDto('update-seats', { maxSeats: 3 }),
+    );
 
-    const updated = await service.updateTable(casinoId, created.id, {
-      moneyOnTable: 500,
-    });
+    await expect(
+      service.updateTable(
+        casinoId,
+        created.id,
+        makeDto('update-seats', { maxSeats: 6 }),
+      ),
+    ).rejects.toBeInstanceOf(BadRequestException);
 
-    expect(updated.moneyOnTable).toBe(500);
-    expect(updated.moneyUpdatedAt).toBeInstanceOf(Date);
+    const after = await service.findById(casinoId, created.id);
+    expect(after.maxSeats).toBe(3);
+    expect(after.seats).toHaveLength(3);
   });
 
   it('updateTable lève NotFoundException pour une table supprimée', async () => {
@@ -165,7 +182,7 @@ describe('TablesService (intégration)', () => {
     await service.deleteTable(casinoId, created.id);
 
     await expect(
-      service.updateTable(casinoId, created.id, { smallBlind: 1 }),
+      service.updateTable(casinoId, created.id, makeDto('update-deleted')),
     ).rejects.toBeInstanceOf(NotFoundException);
   });
 

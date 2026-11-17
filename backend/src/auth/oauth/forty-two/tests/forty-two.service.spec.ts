@@ -81,8 +81,9 @@ describe('FortyTwoClientService', () => {
 
     it('URL-encodes the state', () => {
       expect(url().searchParams.get('state')).toBe('the-state');
-      expect(new URL(service.buildAuthUrl('a&b=c')).searchParams.get('state'))
-        .toBe('a&b=c');
+      expect(
+        new URL(service.buildAuthUrl('a&b=c')).searchParams.get('state'),
+      ).toBe('a&b=c');
     });
   });
 
@@ -100,9 +101,9 @@ describe('FortyTwoClientService', () => {
       const [url, init] = fetchMock.mock.calls[0];
       expect(url).toBe(config.tokenUrl);
       expect(init?.method).toBe('POST');
-      expect(
-        (init!.headers as Record<string, string>)['Content-Type'],
-      ).toBe('application/x-www-form-urlencoded');
+      expect((init!.headers as Record<string, string>)['Content-Type']).toBe(
+        'application/x-www-form-urlencoded',
+      );
 
       const body = Object.fromEntries(init?.body as URLSearchParams);
       expect(body).toEqual({
