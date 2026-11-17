@@ -113,6 +113,13 @@ describe('POST /api/auth/register (e2e)', () => {
       expect(res.body.email).toBe('mixedcase@example.com');
       expect(res.body.pseudo).toBe('mixedpseudo');
     });
+
+    it.each(['a42', 'jdoe42', '4', '4two'])(
+      'accepts "%s" (only a leading "42" is reserved)',
+      async (pseudo) => {
+        await register(validBody({ pseudo })).expect(201);
+      },
+    );
   });
 
   describe('privilege escalation', () => {
@@ -205,6 +212,12 @@ describe('POST /api/auth/register (e2e)', () => {
         () => validBody({ pseudo: 'bad pseudo!' }),
       ],
       ['pseudo over 20 chars', () => validBody({ pseudo: 'a'.repeat(21) })],
+      // the "42" prefix is reserved for accounts created through 42 OAuth
+      ['pseudo with the reserved 42 prefix', () => validBody({ pseudo: '42jdoe' })],
+      [
+        'pseudo with the reserved prefix after normalization',
+        () => validBody({ pseudo: '  42JDoe ' }),
+      ],
       [
         'under 18',
         () => {

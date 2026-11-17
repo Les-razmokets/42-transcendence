@@ -16,7 +16,7 @@ services:
   backend:
     build:
       context: .
-      dockerfile: backend/Dockerfile 
+      dockerfile: backend/Dockerfile
     depends_on:
       db:
         condition: service_healthy
@@ -33,7 +33,7 @@ services:
   frontend:
     build:
       context: .
-      dockerfile: frontend/Dockerfile 
+      dockerfile: frontend/Dockerfile
     healthcheck:
       test: ["CMD-SHELL", "wget --spider -q http://127.0.0.1:5173/"]
       interval: 5s
@@ -69,8 +69,37 @@ services:
       - ./infra/nginx/certs:/infra/nginx/certs
       - ./infra/nginx/default.conf:/etc/nginx/conf.d/default.conf
     ports:
-      - 127.0.0.1:443:443
-      - 127.0.0.1:80:80
+      - "127.0.0.1:${HTTPS_PORT:-443}:443"
+      - "127.0.0.1:${HTTP_PORT:-80}:80"
     restart: unless-stopped
+  prometheus:
+    image: prom/prometheus:v3.16.0
+    healthcheck:
+      test: ["CMD-SHELL", "wget --spider -q http://127.0.0.1:9090/-/healthy"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    ports:
+      - 127.0.0.1:9090:9090
+    restart: unless-stopped
+    volumes:
+      - ./infra/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus-data:/prometheus
+  grafana:
+    image: grafana/grafana:13.2.5-distroless
+    depends_on:
+      prometheus:
+        condition: service_healthy
+    ports:
+      - 127.0.0.1:3001:3000
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD:?GRAFANA_ADMIN_PASSWORD manquant dans .env}
+    restart: unless-stopped
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - ./infra/grafana/provisioning/datasources/datasource.yml:/etc/grafana/provisioning/datasources/datasource.yml
+      - ./infra/grafana/provisioning/dashboards:/etc/grafana/provisioning/dashboards
 volumes:
   db_data:
+  prometheus-data:
+  grafana-data:

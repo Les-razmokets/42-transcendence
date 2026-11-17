@@ -171,8 +171,11 @@ Les autres statuts sont terminaux et libèrent la place.
   Les réservations actives dessus sont déplacées vers des places libres par le code, et le joueur est notifié.
 - **`maxSeats` réaugmente** : on restaure les places soft-deletées (`deletedAt = null`) au lieu d'en créer de nouvelles,
   sinon le `@@unique([tableId, seatNumber])` bloque.
-- **Pseudo** : obligatoire. À l'inscription OAuth, pré-rempli avec le login 42 / GitHub (modifiable),
-  avec un suffixe (`alice_2`) s'il est déjà pris. C'est lui qui s'affiche aux autres joueurs, jamais le nom réel.
+- **Pseudo** : obligatoire. C'est lui qui s'affiche aux autres joueurs, jamais le nom réel.
+  À l'inscription avec 42, il vaut `42<login>` (par exemple `42jdoe`) et n'est pas modifiable. Le préfixe `42` est réservé :
+  `register` le refuse, donc ce pseudo ne peut pas déjà être pris (les logins 42 sont uniques), et un pseudo en `42…`
+  vient forcément de 42. Choix fait pour un projet d'école ; à revoir si l'app devient publique ou si on ajoute GitHub / Google.
+  Détails dans [`docs/api.md`](api.md#connexion-avec-42).
 - **Place libre pour un joueur** = `Seat.status = FREE`, pas de `deletedAt`, et aucune réservation active dessus.
   Le service le vérifie dans une transaction qui verrouille la place (`SELECT ... FOR UPDATE`) : sinon un floor qui passe
   la place en `OCCUPIED` pendant qu'un joueur réserve laisserait passer les deux. Inversement, le floor ne peut pas passer

@@ -1,3 +1,4 @@
+import { OAUTH_PSEUDO_PREFIX, PSEUDO_MAX_LEN, PSEUDO_PATTERN } from '@transcendence/shared';
 import { Transform } from 'class-transformer';
 import {
   IsString,
@@ -47,9 +48,12 @@ export class UsersCreationDto {
   @Transform(trimToLower)
   @IsString()
   @MinLength(1)
-  @MaxLength(20)
-  @Matches(/^[a-z0-9_-]+$/, {
+  @MaxLength(PSEUDO_MAX_LEN)
+  @Matches(PSEUDO_PATTERN, {
     message: 'pseudo: letters, numbers, "_" and "-" only',
+  })
+  @Matches(new RegExp(`^(?!${OAUTH_PSEUDO_PREFIX})`), {
+    message: `pseudo: the "${OAUTH_PSEUDO_PREFIX}" prefix is reserved`,
   })
   pseudo: string;
 
