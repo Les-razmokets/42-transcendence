@@ -72,6 +72,7 @@ export class TablesService {
     this.assertValidBlinds(dto.smallBlind, dto.bigBlind);
     this.assertValidSeats(dto.variant, dto.maxSeats);
 
+	// TODO étape 4 : ajout / retrait des places
     if (table.maxSeats !== dto.maxSeats)
       throw new BadRequestException('maxSeats cannot be changed yet');
     return await this.prismaService.pokerTable.update({
