@@ -1,7 +1,7 @@
 import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import { Prisma } from '../../generated/prisma/client';
-import { PokerVariant } from '../../generated/prisma/enums';
+import { PokerVariant, TableStatus } from '../../generated/prisma/enums';
 import { PrismaService } from '../../prisma/prisma.service';
 import { CreateTableDto } from '../dto/create-table.dto';
 import { TablesService } from '../tables.service';
@@ -241,6 +241,68 @@ describe('TablesService', () => {
         expect.objectContaining({
           where: { id: 'table-1' },
           data: dto,
+        }),
+      );
+    });
+  });
+
+  describe('updateState', () => {
+    beforeEach(() => {
+      prismaMock.pokerTable.findUnique.mockResolvedValue({ id: 'table-1' });
+    });
+
+    it('lève NotFoundException sans appeler update si la table n’existe pas', async () => {
+      prismaMock.pokerTable.findUnique.mockResolvedValue(null);
+
+      await expect(
+        service.updateState(casinoId, 'inconnue', {
+          status: TableStatus.PAUSED,
+        }),
+      ).rejects.toBeInstanceOf(NotFoundException);
+      expect(prismaMock.pokerTable.update).not.toHaveBeenCalled();
+    });
+
+    it('change le statut sans toucher moneyUpdatedAt si moneyOnTable est absent', async () => {
+      const updated = { id: 'table-1' };
+      prismaMock.pokerTable.update.mockResolvedValue(updated);
+
+      await expect(
+        service.updateState(casinoId, 'table-1', {
+          status: TableStatus.PAUSED,
+        }),
+      ).resolves.toBe(updated);
+      expect(prismaMock.pokerTable.update).toHaveBeenCalledTimes(1);
+      expect(prismaMock.pokerTable.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { id: 'table-1' },
+          data: { status: TableStatus.PAUSED },
+        }),
+      );
+    });
+
+    it('met à jour moneyUpdatedAt quand moneyOnTable est fourni, même à 0', async () => {
+      prismaMock.pokerTable.update.mockResolvedValue({ id: 'table-1' });
+
+      await service.updateState(casinoId, 'table-1', { moneyOnTable: 0 });
+
+      expect(prismaMock.pokerTable.update).toHaveBeenCalledTimes(1);
+      expect(prismaMock.pokerTable.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: { moneyOnTable: 0, moneyUpdatedAt: expect.any(Date) },
+        }),
+      );
+    });
+
+    it('renvoie la table avec ses sièges', async () => {
+      prismaMock.pokerTable.update.mockResolvedValue({ id: 'table-1' });
+
+      await service.updateState(casinoId, 'table-1', {
+        status: TableStatus.OPEN,
+      });
+
+      expect(prismaMock.pokerTable.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          include: expect.objectContaining({ seats: expect.anything() }),
         }),
       );
     });

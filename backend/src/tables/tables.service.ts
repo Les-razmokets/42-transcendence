@@ -6,6 +6,7 @@ import {
 import { PrismaService } from '../prisma/prisma.service';
 import { Prisma } from '../generated/prisma/client';
 import { CreateTableDto } from './dto/create-table.dto';
+import { TableStateDto } from './dto/table-state.dto';
 import { PutTableDto } from './dto/put-table.dto';
 import { PokerVariant } from '../generated/prisma/enums';
 
@@ -72,7 +73,7 @@ export class TablesService {
     this.assertValidSeats(dto.variant, dto.maxSeats);
 
     if (table.maxSeats !== dto.maxSeats)
-      throw new BadRequestException('Invalid numbers of seats');
+      throw new BadRequestException('maxSeats cannot be changed yet');
     return await this.prismaService.pokerTable.update({
       where: { id },
       data: {
@@ -90,6 +91,18 @@ export class TablesService {
     if (count === 0) {
       throw new NotFoundException(`Table with ID ${id} not found`);
     }
+  }
+
+  async updateState(casinoId: string, id: string, dto: TableStateDto) {
+    await this.findById(casinoId, id);
+    return await this.prismaService.pokerTable.update({
+      where: { id },
+      data: {
+        ...dto,
+        ...(dto.moneyOnTable !== undefined && { moneyUpdatedAt: new Date() }),
+      },
+      include: tableWithSeats,
+    });
   }
 
   private assertValidBlinds(smallBlind: number, bigBlind: number) {

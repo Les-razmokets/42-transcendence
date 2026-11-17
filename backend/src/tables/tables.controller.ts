@@ -9,9 +9,11 @@ import {
   Put,
   Delete,
   HttpCode,
+  Patch,
 } from '@nestjs/common';
 import { TablesService } from './tables.service';
 import { CreateTableDto } from './dto/create-table.dto';
+import { TableStateDto } from './dto/table-state.dto';
 import { PutTableDto } from './dto/put-table.dto';
 import { tableSchema, type Table } from '@transcendence/shared';
 import { RequireCasinoRole } from '../casinos/utils/casinos-role.decorator';
@@ -63,5 +65,15 @@ export class TablesController {
     @Body() dto: PutTableDto,
   ): Promise<Table> {
     return await this.tablesService.updateTable(casinoId, id, dto);
+  }
+
+  @RequireCasinoRole('FLOOR')
+  @Patch(':id/state')
+  async updateState(
+    @Param('id', new ParseUUIDPipe()) id: string,
+    @Param('casinoId', new ParseUUIDPipe()) casinoId: string,
+    @Body() dto: TableStateDto,
+  ): Promise<Table> {
+    return await this.tablesService.updateState(casinoId, id, dto);
   }
 }

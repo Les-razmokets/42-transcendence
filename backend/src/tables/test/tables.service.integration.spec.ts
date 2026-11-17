@@ -1,7 +1,7 @@
 import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { AppModule } from '../../app.module';
-import { PokerVariant } from '../../generated/prisma/enums';
+import { PokerVariant, TableStatus } from '../../generated/prisma/enums';
 import { PrismaService } from '../../prisma/prisma.service';
 import { CreateTableDto } from '../dto/create-table.dto';
 import { TablesService } from '../tables.service';
@@ -184,6 +184,57 @@ describe('TablesService (intégration)', () => {
     await expect(
       service.updateTable(casinoId, created.id, makeDto('update-deleted')),
     ).rejects.toBeInstanceOf(NotFoundException);
+  });
+
+  it('updateState horodate moneyUpdatedAt quand moneyOnTable est envoyé', async () => {
+    const created = await service.create(casinoId, makeDto('state-money'));
+
+    const updated = await service.updateState(casinoId, created.id, {
+      moneyOnTable: 500,
+    });
+
+    expect(updated.moneyOnTable).toBe(500);
+    expect(updated.moneyUpdatedAt).toBeInstanceOf(Date);
+    expect(updated.status).toBe(created.status);
+    expect(updated.seats).toHaveLength(created.maxSeats);
+  });
+
+  it('updateState change le statut sans horodater moneyUpdatedAt', async () => {
+    const created = await service.create(casinoId, makeDto('state-status'));
+
+    const updated = await service.updateState(casinoId, created.id, {
+      status: TableStatus.PAUSED,
+    });
+
+    expect(updated.status).toBe(TableStatus.PAUSED);
+    expect(updated.moneyOnTable).toBe(created.moneyOnTable);
+    expect(updated.moneyUpdatedAt).toBeNull();
+  });
+
+  it('updateState lève NotFoundException pour une table d’un autre casino', async () => {
+    const created = await service.create(casinoId, makeDto('state-other'));
+    const otherCasino = await prisma.casino.create({
+      data: {
+        name: `${prefix}-state-casino`,
+        city: 'Test',
+        address: `${prefix}-state-address`,
+      },
+    });
+
+    try {
+      await expect(
+        service.updateState(otherCasino.id, created.id, {
+          status: TableStatus.PAUSED,
+        }),
+      ).rejects.toBeInstanceOf(NotFoundException);
+
+      const row = await prisma.pokerTable.findUnique({
+        where: { id: created.id },
+      });
+      expect(row?.status).toBe(TableStatus.OPEN);
+    } finally {
+      await prisma.casino.delete({ where: { id: otherCasino.id } });
+    }
   });
 
   it('deleteTable fait un soft delete : la ligne reste en base avec un deletedAt', async () => {
