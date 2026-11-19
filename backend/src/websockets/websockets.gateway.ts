@@ -10,6 +10,7 @@ import {
   WebSocketServer,
 } from '@nestjs/websockets';
 import { Server, Socket } from 'socket.io';
+import { Public } from '../auth/utils/public.decorator';
 
 @WebSocketGateway()
 export class WebsocketsGateway
@@ -18,6 +19,7 @@ export class WebsocketsGateway
   @WebSocketServer() server: Server;
   private readonly logger: Logger = new Logger(WebsocketsGateway.name);
 
+  @Public()
   @SubscribeMessage('ping')
   handleMessage(
     @MessageBody() _message: string,
