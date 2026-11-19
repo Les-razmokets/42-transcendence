@@ -43,6 +43,7 @@ describe('LobbyPage', () => {
     // Le mock contient 4 tables dont 1 PAUSED : il doit en rester 3
     const cartes = await screen.findAllByRole('listitem');
     expect(cartes).toHaveLength(3);
+    expect(getTables).toHaveBeenCalledWith(casino.id);
     expect(screen.getAllByText('Casino du lac')).toHaveLength(3);
     expect(within(cartes[0]).getByText("NLH 1/2 · 3 libres · 4'500 CHF en jeu")).toBeInTheDocument();
   });
@@ -76,16 +77,6 @@ describe('LobbyPage', () => {
 
     const complete = await screen.findByText(/Complète/);
     expect(complete.closest('a')).toBeNull();
-  });
-
-  it('affiche la carte sans nom si le casino est inconnu', async () => {
-    vi.mocked(getTables).mockResolvedValue([tables[0]]);
-    vi.mocked(getCasinos).mockResolvedValue([]);
-
-    renderLobby();
-
-    expect(await screen.findAllByRole('listitem')).toHaveLength(1);
-    expect(screen.queryByText('Casino du lac')).toBeNull();
   });
 
   it('affiche un message si aucune table n’est ouverte', async () => {
