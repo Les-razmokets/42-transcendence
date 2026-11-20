@@ -49,6 +49,20 @@
     "bientot": "Cette fonctionnalité arrive bientôt. En attendant, contacte le support.",
     "retour": "Retour à la connexion"
   },
+  "admin": {
+    "titre": "Administration",
+    "mesCasinos": "Mes casinos",
+    "casinos": "Casinos",
+    "menuCasino": "Menu du casino",
+    "tables": "Tables",
+    "table": "Table {{id}}",
+    "reservations": "Réservations",
+    "personnel": "Personnel",
+    "reglages": "Réglages",
+    "accesRefuse": "Tu n'as pas accès à cette page.",
+    "aucunCasino": "Tu ne gères aucun casino.",
+    "retourSite": "Retour au site"
+  },
   "lobby": {
     "complete": "Complète",
     "placesLibres_one": "{{count}} libre",
@@ -61,3 +75,4 @@
     "monCompte": "Mon compte"
   }
 }
+
