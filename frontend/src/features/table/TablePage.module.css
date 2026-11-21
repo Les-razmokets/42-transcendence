@@ -1,5 +1,61 @@
+/* La page prend tout l'écran : en-tête en haut, la scène 3D prend toute la place restante */
 .page {
+    display: flex;
+    flex-direction: column;
     height: 100dvh;
     background: var(--fond-page);
+}
+
+.contenu {
+    flex: 1;
+    min-height: 0; /* sans ça, un enfant flex ne peut pas rétrécir sous la taille de son contenu */
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--espace-12);
+    padding: var(--espace-16) var(--marge-page-desktop) var(--espace-24);
+}
+
+.consigne {
+    margin: 0;
+    color: var(--texte-secondaire);
+}
+
+.scene {
+    flex: 1;
+    min-height: 0;
+    width: 100%;
     view-transition-class: zoom-table;
+}
+
+/* Légende Libre / Occupée / Ta place */
+.legende {
+    display: flex;
+    gap: var(--espace-24);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.elementLegende {
+    display: flex;
+    align-items: center;
+    gap: var(--espace-8);
+    color: var(--texte-secondaire);
+}
+
+.pastille {
+    width: var(--espace-12);
+    height: var(--espace-12);
+    border: 1px solid var(--fond-profond);
+}
+
+.libre { background: var(--chaise-libre); }
+.occupee { background: var(--chaise-occupee); }
+.taPlace { background: var(--chaise-selection); }
+
+@media (max-width: 640px) {
+    .contenu {
+        padding: var(--espace-12) var(--marge-page-mobile) var(--espace-16);
+    }
 }

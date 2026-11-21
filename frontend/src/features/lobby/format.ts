@@ -19,13 +19,17 @@ export function toPlaces(table: Table): EtatChaise[] {
     return table.seats.map((s) => (s.status === 'FREE' ? 'libre' : 'occupee'));
 }
 
+export function jeu(table: Table): string {
+    return `${VARIANTES[table.variant]} ${chf(table.smallBlind)}/${chf(table.bigBlind)}`;
+}
+
 export function details(table: Table, t: TFunction): string {
     const libres = table.seats.filter((s) => s.status === 'FREE').length;
     const dispo = libres === 0 
         ? t('lobby.complete')
         : t('lobby.placesLibres', { count: libres });
     const block = [
-        `${VARIANTES[table.variant]} ${chf(table.smallBlind)}/${chf(table.bigBlind)}`,
+        jeu(table),
         dispo,
     ];
     if (table.moneyOnTable > 0)
