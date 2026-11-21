@@ -69,6 +69,9 @@
       "libre": "Libre",
       "occupee": "Occupée",
       "taPlace": "Ta place"
-    }
+    },
+    "seLever": "Changer de place",
+    "confirmer": "Confirmer la place {{place}}",
+    "titrePlace": "Place {{place}} · {{table}}"
   }
 }

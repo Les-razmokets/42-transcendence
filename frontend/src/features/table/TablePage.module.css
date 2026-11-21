@@ -4,28 +4,53 @@
     flex-direction: column;
     height: 100dvh;
     background: var(--fond-page);
+    transition: background-color var(--duree-zoom-table) var(--courbe-entree-sortie);
 }
 
+/* Assis : fond sombre derrière la table, comme l'écran « Vue 1re personne » de Figma */
+.pageAssise {
+    background: var(--fond-profond);
+}
+
+/* La scène remplit toute la zone ; consigne, bouton et légende flottent par-dessus.
+   Ainsi la taille du canvas ne change jamais quand ces éléments apparaissent ou disparaissent. */
 .contenu {
+    position: relative;
     flex: 1;
-    min-height: 0; /* sans ça, un enfant flex ne peut pas rétrécir sous la taille de son contenu */
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: var(--espace-12);
-    padding: var(--espace-16) var(--marge-page-desktop) var(--espace-24);
-}
-
-.consigne {
-    margin: 0;
-    color: var(--texte-secondaire);
+    min-height: 0;
 }
 
 .scene {
-    flex: 1;
-    min-height: 0;
-    width: 100%;
+    position: absolute;
+    inset: 0;
     view-transition-class: zoom-table;
+}
+
+.consigne {
+    position: absolute;
+    top: var(--espace-16);
+    left: 0;
+    right: 0;
+    margin: 0;
+    text-align: center;
+    color: var(--texte-secondaire);
+    pointer-events: none;
+}
+
+.bas {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: var(--espace-24);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--espace-16);
+    pointer-events: none; /* les clics traversent vers la 3D… */
+}
+
+.bas > * {
+    pointer-events: auto; /* …sauf sur le bouton et la légende */
 }
 
 /* Légende Libre / Occupée / Ta place */
@@ -55,7 +80,12 @@
 .taPlace { background: var(--chaise-selection); }
 
 @media (max-width: 640px) {
-    .contenu {
-        padding: var(--espace-12) var(--marge-page-mobile) var(--espace-16);
+    .consigne {
+        top: var(--espace-12);
+    }
+
+    .bas {
+        bottom: var(--espace-16);
     }
 }
+

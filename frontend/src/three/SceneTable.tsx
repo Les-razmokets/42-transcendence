@@ -1,7 +1,7 @@
 import { useGLTF } from '@react-three/drei';
 import { Canvas } from '@react-three/fiber';
 import { Suspense } from 'react';
-import { CameraDessus } from './CameraDessus';
+import { CameraTable } from './CameraTable';
 import { URL_MODELE } from './modele';
 import { Table } from './Table';
 import type { EtatChaise } from './tokens3d';
@@ -9,9 +9,12 @@ import type { EtatChaise } from './tokens3d';
 export type SceneTableProps = {
   places: EtatChaise[];
   onChoisir?: (index: number) => void;
+  placeAssise?: number | null;
+  onAssis?: () => void;
+  onDebout?: () => void;
 };
 
-export function SceneTable({ places, onChoisir }: SceneTableProps) {
+export function SceneTable({ places, onChoisir, placeAssise = null, onAssis, onDebout }: SceneTableProps) {
   return (
     <Canvas flat dpr={[1, 2]}>
 
@@ -22,8 +25,8 @@ export function SceneTable({ places, onChoisir }: SceneTableProps) {
       <directionalLight position={[3.2, 2.5, 2.8]} intensity={0.4} color="#e6f2ff" />
 
       <Suspense fallback={null}>
-        <Table places={places} onChoisir={onChoisir}/>
-        <CameraDessus />
+        <Table places={places} onChoisir={onChoisir} interactif={placeAssise === null}/>
+        <CameraTable placeAssise={placeAssise} onAssis={onAssis} onDebout={onDebout}/>
       </Suspense>
     </Canvas>
   );

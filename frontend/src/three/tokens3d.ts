@@ -36,7 +36,7 @@ export function couleurChaise(etat: EtatChaise): string {
 
 /** Caméra de la vue du dessus */
 export const camera3D = {
-  hauteurDessus: 5.2,
+  objectifAssisMm: 18,
   objectifMm: 28,
   capteurMm: 36,
 } as const;

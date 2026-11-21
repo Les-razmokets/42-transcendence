@@ -8,13 +8,14 @@ import { couleurChaise, couleurs3D, type EtatChaise } from './tokens3d';
 type TableProps = {
   places: EtatChaise[];
   onChoisir?: (index: number) => void;
+  interactif?: boolean;
 };
 
-export function Table({ places, onChoisir }: TableProps) {
+export function Table({ places, onChoisir, interactif = true }: TableProps) {
   const { scene } = useGLTF(URL_MODELE);
   const [survol, setSurvol] = useState<number | null>(null);
 
-  useCursor(survol !== null);
+  useCursor(interactif && survol !== null);
 
   
   const { copie, tissus } = useMemo(() => {
@@ -38,6 +39,7 @@ export function Table({ places, onChoisir }: TableProps) {
   }, [scene]);
 
   function placeLibre(objet: Object3D): number | null {
+    if (!interactif) return null;
     const index = trouverPlace(objet);
     return index !== null && places[index] === 'libre' ? index : null;
   }
@@ -47,9 +49,9 @@ export function Table({ places, onChoisir }: TableProps) {
       if (!tissu) return;
       tissu.color.set(couleurChaise(places[i] ?? 'occupee'));
       tissu.emissive.set(couleurs3D.lueurSurvol);
-      tissu.emissiveIntensity = i === survol && places[i] === 'libre' ? 0.35 : 0;
+      tissu.emissiveIntensity = interactif && i === survol && places[i] === 'libre' ? 0.35 : 0;
     });
-  }, [tissus, places, survol]);
+  }, [tissus, places, survol, interactif]);
 
   return (
     <primitive
