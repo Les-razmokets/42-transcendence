@@ -1,2 +1,21 @@
 body { margin: 0;}
 *, *::before, *::after { box-sizing: border-box;}
+
+/* Zoom carte du lobby → table 3D (View Transitions, déclenché par <Link viewTransition>) */
+::view-transition-group(.zoom-table) {
+  animation-duration: var(--duree-zoom-table);
+  animation-timing-function: var(--courbe-entree-sortie);
+}
+::view-transition-old(.zoom-table),
+::view-transition-new(.zoom-table) {
+  height: 100%;
+  object-fit: contain;
+}
+/* L'image de la carte (PNG) s'efface vite : on évite de voir deux tables superposées */
+::view-transition-old(.zoom-table) {
+  animation-duration: calc(var(--duree-zoom-table) * 0.35);
+}
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation-duration: var(--duree-zoom-table);
+}

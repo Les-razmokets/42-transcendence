@@ -41,6 +41,7 @@
     transition: 
         filter var(--duree-table-survol) var(--courbe-sortie),
         transform var(--duree-table-survol) var(--courbe-sortie);
+    view-transition-class: zoom-table;
 }
 
 .carte:hover .cadreTable {

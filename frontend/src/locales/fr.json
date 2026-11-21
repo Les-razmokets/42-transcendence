@@ -59,5 +59,8 @@
   },
   "entete": {
     "monCompte": "Mon compte"
+  },
+    "table": {
+    "erreurChargement": "Impossible de charger cette table, réessaie plus tard."
   }
 }

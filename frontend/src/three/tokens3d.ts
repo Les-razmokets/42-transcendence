@@ -13,6 +13,8 @@ export const couleurs3D = {
   chaiseOccupee: "#716b4b",  // --chaise-occupee  (creme-900)
   chaiseSelection: "#d72e2f",// --chaise-selection (rouge-500)
   contour: "#121c36",        // contours des objets (bleu-900)
+  lueurSurvol: "#fceea6",    // --lueur-chaise-survol → --etat-focus (creme-500)
+
 } as const;
 
 /** Durées des animations de caméra, en secondes (GSAP travaille en secondes). */

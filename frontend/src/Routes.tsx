@@ -9,6 +9,7 @@ import { AccountPage } from './features/account/AccountPage';
 import { NotFoundPage } from './features/NotFoundPage';
 import { ForgotPasswordPage } from './features/auth/ForgotPasswordPage';
 import { SafeRoute } from './SafeRoute';
+import { chargerTable } from './features/table/loader';
 
 
 export const router = createBrowserRouter([
@@ -32,7 +33,7 @@ export const router = createBrowserRouter([
               { path: 'account', element: <AccountPage /> },
             ],
           },
-          { path: 'tables/:tableId', element: <TablePage /> },
+            { path: 'tables/:tableId', element: <TablePage />, loader: chargerTable },
         ],
       },
 

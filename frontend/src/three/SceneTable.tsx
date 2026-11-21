@@ -8,12 +8,12 @@ import type { EtatChaise } from './tokens3d';
 
 export type SceneTableProps = {
   places: EtatChaise[];
+  onChoisir?: (index: number) => void;
 };
 
-export function SceneTable({ places }: SceneTableProps) {
+export function SceneTable({ places, onChoisir }: SceneTableProps) {
   return (
-    <Canvas flat dpr={[1, 2]} style={{ background: 'var(--fond-profond)' }}>
-      <CameraDessus />
+    <Canvas flat dpr={[1, 2]}>
 
       {/* Repris de jeton_floor.blend (Blender Z-haut → Three Y-haut : (x, y, z) → (x, z, −y)) */}
       <ambientLight intensity={0.55} />
@@ -22,7 +22,8 @@ export function SceneTable({ places }: SceneTableProps) {
       <directionalLight position={[3.2, 2.5, 2.8]} intensity={0.4} color="#e6f2ff" />
 
       <Suspense fallback={null}>
-        <Table places={places} />
+        <Table places={places} onChoisir={onChoisir}/>
+        <CameraDessus />
       </Suspense>
     </Canvas>
   );
