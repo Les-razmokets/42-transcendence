@@ -33,12 +33,12 @@ transcendence/
 │   ├── .storybook/          # config Storybook
 │   ├── public/
 │   │   ├── images/
-│   │   ├── models/          # fichiers .glb (3D)
-│   │   └── locales/{en,fr,..}/   # i18n prêt dès le jour 1
+│   │   └── models/          # fichiers .glb (3D)
 │   └── src/
 │       ├── design-system/   # tokens, primitives, composites
 │       ├── features/        # écrans par domaine (auth, lobby, table, account…)
-│       ├── lib/             # outils partagés (i18n, API…)
+│       ├── lib/             # outils partagés (i18n, API, formateurs…)
+│       ├── locales/         # traductions : fr.json (i18n prêt dès le jour 1)
 │       └── three/           # scène 3D de la table
 └── infra/
     ├── nginx/               # reverse proxy HTTPS

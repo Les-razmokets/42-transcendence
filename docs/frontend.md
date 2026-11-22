@@ -498,10 +498,4 @@ flowchart TD
 
 ### Points connus à traiter
 
-- **L'app n'utilise pas encore le design system.** `main.tsx` importe `index.css`, et `App.tsx` et `App.css` sont encore le **template de démarrage de Vite**. `tokens.css` et les polices `@fontsource` ne sont chargés **que dans Storybook** (`.storybook/preview.tsx`). Quand on branchera les vrais écrans, il faudra importer ces fichiers dans `main.tsx` et retirer le template.
-- **`src/stories/`** contient les exemples générés par Storybook à l'installation (`Button`, `Header`, `Page`). Ils ne font pas partie du projet et peuvent être supprimés.
-- **`features/`, `lib/` et `three/` sont vides** (`.gitkeep`) : ils seront remplis avec les écrans, le client API et la scène 3D.
-- **Pas encore de variable `VITE_API_URL`** pour l'URL du backend : à ajouter avec le client API dans `lib/`.
-- **i18n** : `public/locales/` est prévu dans [`architecture.md`](architecture.md) mais pas encore créé.
-- **`tokens.css`** cite un fichier `tokens3d.ts` (couleurs de la table pour les matériaux Three.js) qui n'existe pas encore.
 - **Autocomplétion des tokens dans VS Code** : par défaut, VS Code ne propose les `var(--…)` que s'ils sont déclarés dans le fichier ouvert. Installe une extension comme *CSS Var Complete* pour qu'il indexe `tokens.css`.
