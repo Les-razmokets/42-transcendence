@@ -37,7 +37,7 @@ transcendence/
 │   │   └── locales/{en,fr,..}/   # i18n prêt dès le jour 1
 │   └── src/
 │       ├── design-system/   # tokens, primitives, composites
-│       ├── features/        # écrans par domaine (auth, booking, lobby…)
+│       ├── features/        # écrans par domaine (auth, lobby, table, account…)
 │       ├── lib/             # outils partagés (i18n, API…)
 │       └── three/           # scène 3D de la table
 └── infra/

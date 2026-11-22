@@ -13,9 +13,9 @@ Vue d'ensemble du frontend : [`docs/frontend.md`](../../../docs/frontend.md).
 | Fichier / dossier | Rôle | Utilisé par |
 |---|---|---|
 | `api.ts` | Client HTTP : un wrapper autour de `fetch` qui connaît l'URL du backend, ajoute le token d'authentification et convertit les erreurs HTTP en erreurs JS | Toutes les features |
-| `socket.ts` | Client WebSocket : connexion, reconnexion, messages typés (mises à jour des places et des réservations en temps réel) | `lobby`, `table`, `booking` |
+| `socket.ts` | Client WebSocket : connexion, reconnexion, messages typés (mises à jour des places et des réservations en temps réel) | `lobby`, `table`, `account` |
 | `i18n.ts` | Initialisation d'i18next et choix de la langue | `main.tsx`, toutes les features |
-| `formatage.ts` | Fonctions pures : `formaterPrix(centimes)`, `formaterDate(date)`, durées… | `booking`, `account`… |
+| `formatage.ts` | Fonctions pures : `formaterPrix(centimes)`, `formaterDate(date)`, durées… | `lobby`, `table`, `account`… |
 | `validation.ts` | Vérifications de formulaires : e-mail, mot de passe… | `auth`, `account` |
 
 Les noms sont indicatifs : ils seront fixés au moment d'écrire le code.
@@ -24,8 +24,8 @@ Les noms sont indicatifs : ils seront fixés au moment d'écrire le code.
 
 ```mermaid
 sequenceDiagram
-    participant P as features/booking<br/>(écran)
-    participant A as features/booking/api.ts
+    participant P as features/table<br/>(écran)
+    participant A as features/table/api.ts
     participant L as lib/api.ts
     participant B as Backend NestJS
 

@@ -2,7 +2,6 @@ import { createBrowserRouter } from 'react-router';
 import { Layout } from './Layout';
 import { LobbyPage } from './features/lobby/LobbyPage';
 import { TablePage } from './features/table/TablePage';
-import { ReservationPage } from './features/booking/ReservationPage';
 import { LoginPage } from './features/auth/LoginPage';
 import { RegisterPage } from './features/auth/RegisterPage';
 import { AccountPage } from './features/account/AccountPage';
@@ -40,7 +39,6 @@ export const router = createBrowserRouter([
             element: <Layout />,
             children: [
               { index: true, element: <LobbyPage /> },
-              { path: 'reservations', element: <ReservationPage /> },
               { path: 'account', element: <AccountPage /> },
             ],
           },

@@ -79,10 +79,9 @@ frontend/
 │   │   └── composites/      # assemblages de primitives : CarteTable, EnTete…
 │   ├── features/            # 🧭 les écrans, un dossier par domaine
 │   │   ├── auth/            # connexion, inscription
-│   │   ├── account/         # profil, réglages
-│   │   ├── booking/         # réservation, paiement
+│   │   ├── account/         # profil, réglages, mes réservations
 │   │   ├── lobby/           # choix du casino et de la table
-│   │   └── table/           # vue d'une table
+│   │   └── table/           # table 3D, choix de la place, buy-in, paiement
 │   ├── lib/                 # 🔧 outils techniques partagés, sans JSX
 │   └── three/               # 🎲 scène 3D (Three.js / R3F)
 ├── index.html
@@ -159,7 +158,7 @@ flowchart TD
 - ❌ Le design system n'importe **jamais** `features/` ni `lib/` : il doit rester utilisable sans le métier.
 - ❌ Une feature n'importe pas une autre feature. Si deux features partagent quelque chose, ce quelque chose monte dans `lib/` ou dans le design system.
 
-**Pourquoi ?** Si `Bouton` importait du code de `booking`, toucher à la réservation pourrait casser tous les boutons de l'app. Les dépendances à sens unique empêchent ces effets de bord.
+**Pourquoi ?** Si `Bouton` importait du code de `table`, toucher à la réservation pourrait casser tous les boutons de l'app. Les dépendances à sens unique empêchent ces effets de bord.
 
 ---
 
