@@ -6,10 +6,17 @@ import { NestExpressApplication } from '@nestjs/platform-express';
 import { Reflector } from '@nestjs/core';
 import { missingResponseSchema } from './common/missing-response.schema';
 import cookieParser from 'cookie-parser';
+import { collectDefaultMetrics } from '@prometheus-io/client';
+import { API_PREFIX } from './common/routes';
 
+let metricsCollected = false;
 export function configureApp(app: NestExpressApplication) {
+  if (!metricsCollected) {
+    collectDefaultMetrics();
+    metricsCollected = true;
+  }
   app.set('trust proxy', 1);
-  app.setGlobalPrefix('api');
+  app.setGlobalPrefix(API_PREFIX);
   app.useGlobalPipes(
     new ValidationPipe({
       whitelist: true, // validator will strip validated (returned) object of any properties that do not use any validation decorators.

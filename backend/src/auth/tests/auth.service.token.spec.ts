@@ -5,6 +5,9 @@ import { AuthService } from '../auth.service';
 import { Argon2Hasher } from '../argon2-hasher.service';
 import { UsersService } from '../../users/users.service';
 import { JwtPayload } from '../utils/jwt.payload';
+import { FortyTwoClientService } from '../oauth/forty-two/forty-two.service';
+import { PrismaService } from '../../prisma/prisma.service';
+import { fortyTwoConfig } from '../oauth/forty-two/forty-two.config';
 import { Role } from '../../generated/prisma/client'; // value import: we use Role.ADMIN below
 
 /*
@@ -41,6 +44,10 @@ describe('AuthService.issueToken', () => {
         AuthService,
         { provide: UsersService, useValue: {} },
         { provide: Argon2Hasher, useValue: {} },
+        // issueToken does not touch the 42 dependencies: empty stubs are enough
+        { provide: FortyTwoClientService, useValue: {} },
+        { provide: PrismaService, useValue: {} },
+        { provide: fortyTwoConfig.KEY, useValue: {} },
       ],
     }).compile();
 

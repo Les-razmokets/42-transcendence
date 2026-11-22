@@ -11,6 +11,17 @@ import { ForgotPasswordPage } from './features/auth/ForgotPasswordPage';
 import { SafeRoute } from './SafeRoute';
 import { chargerTable } from './features/table/loader';
 
+import { AdminLayout } from './features/admin/AdminLayout';
+import { CasinoLayout } from './features/admin/CasinoLayout';
+import {
+  AdminHomePage,
+  CasinosPage,
+  CasinoTablesPage,
+  CasinoTablePage,
+  CasinoReservationsPage,
+  CasinoMembersPage,
+  CasinoSettingsPage,
+} from './features/admin/AdminPages';
 
 export const router = createBrowserRouter([
   {
@@ -38,6 +49,31 @@ export const router = createBrowserRouter([
       },
 
       { path: '*', element: <NotFoundPage /> },
+    ],
+  },
+  {
+    path: '/admin',
+    element: <SafeRoute />,
+    children: [
+      {
+        element: <AdminLayout />,
+        children: [
+          { index: true, element: <AdminHomePage /> },
+          { path: 'casinos', element: <CasinosPage /> },
+          {
+            path: 'casinos/:casinoId',
+            element: <CasinoLayout />,
+            children: [
+              { index: true, element: <CasinoTablesPage /> },
+              { path: 'tables/:tableId', element: <CasinoTablePage /> },
+              { path: 'reservations', element: <CasinoReservationsPage /> },
+              { path: 'members', element: <CasinoMembersPage /> },
+              { path: 'settings', element: <CasinoSettingsPage /> },
+            ],
+          },
+          { path: '*', element: <NotFoundPage /> },
+        ],
+      },
     ],
   },
 ]);

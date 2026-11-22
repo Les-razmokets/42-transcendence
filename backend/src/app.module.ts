@@ -10,6 +10,7 @@ import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { ConfigModule } from '@nestjs/config';
 import { HealthModule } from './health/health.module';
+import { MetricsModule } from './metrics/metrics.module';
 import { AuthModule } from './auth/auth.module';
 import { UsersModule } from './users/users.module';
 import { CasinosModule } from './casinos/casinos.module';
@@ -18,8 +19,10 @@ import { ReservationsModule } from './reservations/reservations.module';
 import { PaymentsModule } from './payments/payments.module';
 import { PrismaModule } from './prisma/prisma.module';
 import { APP_GUARD } from '@nestjs/core';
-import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
+import { ThrottlerModule } from '@nestjs/throttler';
 import { ScheduleModule } from '@nestjs/schedule';
+import { WebsocketsModule } from './websockets/websockets.module';
+import { AppThrottlerGuard } from './common/app.throttler.guard';
 
 @Module({
   imports: [
@@ -36,6 +39,7 @@ import { ScheduleModule } from '@nestjs/schedule';
       ? []
       : [ScheduleModule.forRoot()]),
     HealthModule,
+    MetricsModule,
     AuthModule,
     UsersModule,
     CasinosModule,
@@ -43,8 +47,9 @@ import { ScheduleModule } from '@nestjs/schedule';
     ReservationsModule,
     PaymentsModule,
     PrismaModule,
+    WebsocketsModule,
   ],
   controllers: [AppController],
-  providers: [AppService, { provide: APP_GUARD, useClass: ThrottlerGuard }],
+  providers: [AppService, { provide: APP_GUARD, useClass: AppThrottlerGuard }],
 })
 export class AppModule {}
