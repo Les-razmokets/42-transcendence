@@ -5,7 +5,7 @@ import { Bouton, Notification } from '@/design-system';
 import { EnTeteTable } from '@/design-system/composites/EnTete';
 import { useSession } from '@/lib/session/contexte';
 import { SceneTable } from '@/three';
-import { jeu } from '../lobby/format';
+import { formaterJeu } from '@/lib/format';
 import { placesTable } from './format';
 import { LegendePlaces } from './LegendePlaces';
 import type { chargerTable } from './loader';
@@ -48,8 +48,8 @@ export function TablePage() {
         ? t('table.titrePlace', { place: choisie + 1, table: table.name })
         : casino.name;
     const details = etape === 'assis'
-        ? `${casino.name} · ${jeu(table)}`
-        : `${table.name} · ${jeu(table)}`;
+        ? `${casino.name} · ${formaterJeu(table)}`
+        : `${table.name} · ${formaterJeu(table)}`;
 
     return (
         <div className={`${styles.page} ${assise ? styles.pageAssise : ''}`}>
