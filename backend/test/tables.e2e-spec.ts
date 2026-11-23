@@ -15,6 +15,7 @@ import { PrismaService } from '../src/prisma/prisma.service';
 import {
   CasinoRole,
   PokerVariant,
+  SeatStatus,
   TableStatus,
 } from '../src/generated/prisma/enums';
 
@@ -86,7 +87,7 @@ describe('/api/casinos/:casinoId/tables (e2e)', () => {
   const readTable = (id: string) =>
     prisma.pokerTable.findUniqueOrThrow({ where: { id } });
 
-  // full PUT body, same maxSeats as newTable (changing it is not handled yet)
+  // full PUT body, same maxSeats as newTable
   const putBody = (overrides: Record<string, unknown> = {}) => ({
     name: `${prefix}-renamed`,
     variant: PokerVariant.OMAHA,
@@ -343,6 +344,99 @@ describe('/api/casinos/:casinoId/tables (e2e)', () => {
         .expect(404);
 
       expect((await readTable(otherTableId)).status).toBe(TableStatus.OPEN);
+    });
+  });
+
+  describe('PATCH /:id/seats/:seatNumber (FLOOR and above): walk-in', () => {
+    const seatUrl = (
+      casino: string,
+      table: string,
+      seatNumber: number | string,
+    ) => `${tablesUrl(casino)}/${table}/seats/${seatNumber}`;
+    const readSeat = (table: string, seatNumber: number) =>
+      prisma.seat.findUniqueOrThrow({
+        where: { tableId_seatNumber: { tableId: table, seatNumber } },
+      });
+
+    it('FLOOR seats a walk-in -> 200, returns the whole table', async () => {
+      const res = await floor
+        .patch(seatUrl(casinoId, tableId, 2))
+        .send({ status: SeatStatus.OCCUPIED })
+        .expect(200);
+
+      expect(res.body.id).toBe(tableId);
+      expect(res.body.seats).toHaveLength(3);
+      expect(
+        res.body.seats.find((s: { seatNumber: number }) => s.seatNumber === 2)
+          .status,
+      ).toBe(SeatStatus.OCCUPIED);
+      expect((await readSeat(tableId, 2)).status).toBe(SeatStatus.OCCUPIED);
+    });
+
+    it('OWNER can do it too (role hierarchy), and free the seat again', async () => {
+      await owner
+        .patch(seatUrl(casinoId, tableId, 1))
+        .send({ status: SeatStatus.OCCUPIED })
+        .expect(200);
+      await owner
+        .patch(seatUrl(casinoId, tableId, 1))
+        .send({ status: SeatStatus.FREE })
+        .expect(200);
+
+      expect((await readSeat(tableId, 1)).status).toBe(SeatStatus.FREE);
+    });
+
+    it('unknown status -> 400', async () => {
+      await floor
+        .patch(seatUrl(casinoId, tableId, 1))
+        .send({ status: 'RESERVED' })
+        .expect(400);
+    });
+
+    it('extra field -> 400 (forbidNonWhitelisted), seat unchanged', async () => {
+      await floor
+        .patch(seatUrl(casinoId, tableId, 1))
+        .send({ status: SeatStatus.OCCUPIED, seatNumber: 3 })
+        .expect(400);
+
+      expect((await readSeat(tableId, 1)).status).toBe(SeatStatus.FREE);
+    });
+
+    it('seatNumber that is not an integer -> 400', async () => {
+      await floor
+        .patch(seatUrl(casinoId, tableId, 'abc'))
+        .send({ status: SeatStatus.OCCUPIED })
+        .expect(400);
+    });
+
+    it('seat number outside the table -> 404', async () => {
+      await floor
+        .patch(seatUrl(casinoId, tableId, 4))
+        .send({ status: SeatStatus.OCCUPIED })
+        .expect(404);
+    });
+
+    it('no membership -> 404', async () => {
+      await plain
+        .patch(seatUrl(casinoId, tableId, 1))
+        .send({ status: SeatStatus.OCCUPIED })
+        .expect(404);
+    });
+
+    it('not logged in -> 401', async () => {
+      await request(server())
+        .patch(seatUrl(casinoId, tableId, 1))
+        .send({ status: SeatStatus.OCCUPIED })
+        .expect(401);
+    });
+
+    it('table of another casino -> 404, that seat is untouched', async () => {
+      await floor
+        .patch(seatUrl(casinoId, otherTableId, 1))
+        .send({ status: SeatStatus.OCCUPIED })
+        .expect(404);
+
+      expect((await readSeat(otherTableId, 1)).status).toBe(SeatStatus.FREE);
     });
   });
 });

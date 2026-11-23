@@ -421,6 +421,238 @@ describe('TablesService (intégration)', () => {
     });
   });
 
+  describe('updateSeat : walk-in', () => {
+    const HOUR_MS = 60 * 60 * 1000;
+    const inMs = (ms: number) => new Date(Date.now() + ms);
+
+    // Ces réservations tombent aujourd'hui ou demain (journée casino) : on
+    // les efface après chaque test pour que l'index unique « une réservation
+    // active par joueur et par journée » ne fasse pas échouer le suivant.
+    const walkInTableIds: string[] = [];
+    afterEach(async () => {
+      await prisma.reservation.deleteMany({
+        where: { seat: { tableId: { in: walkInTableIds } } },
+      });
+    });
+
+    const newWalkInTable = async (name: string) => {
+      const created = await service.create(casinoId, makeDto(`walkin-${name}`));
+      walkInTableIds.push(created.id);
+      return created;
+    };
+
+    const seatRow = (tableId: string, seatNumber: number) =>
+      prisma.seat.findUniqueOrThrow({
+        where: { tableId_seatNumber: { tableId, seatNumber } },
+      });
+
+    const setSeat = (tableId: string, seatNumber: number, status: SeatStatus) =>
+      prisma.seat.update({
+        where: { tableId_seatNumber: { tableId, seatNumber } },
+        data: { status },
+      });
+
+    describe('passage en OCCUPIED', () => {
+      it('place FREE sans réservation -> OCCUPIED, renvoie la table avec ses places', async () => {
+        const created = await newWalkInTable('free');
+
+        const updated = await service.updateSeat(casinoId, created.id, 2, {
+          status: SeatStatus.OCCUPIED,
+        });
+
+        expect(updated.id).toBe(created.id);
+        expect(updated.seats).toHaveLength(created.maxSeats);
+        expect(
+          updated.seats.find((seat) => seat.seatNumber === 2)?.status,
+        ).toBe(SeatStatus.OCCUPIED);
+        expect((await seatRow(created.id, 2)).status).toBe(SeatStatus.OCCUPIED);
+        expect((await seatRow(created.id, 1)).status).toBe(SeatStatus.FREE);
+      });
+
+      it('place déjà OCCUPIED -> OCCUPIED : idempotent, pas d’erreur', async () => {
+        const created = await newWalkInTable('idem-occupied');
+        await setSeat(created.id, 1, SeatStatus.OCCUPIED);
+
+        await expect(
+          service.updateSeat(casinoId, created.id, 1, {
+            status: SeatStatus.OCCUPIED,
+          }),
+        ).resolves.toMatchObject({ id: created.id });
+        expect((await seatRow(created.id, 1)).status).toBe(SeatStatus.OCCUPIED);
+      });
+
+      it.each([ReservationStatus.CONFIRMED, ReservationStatus.PENDING_PAYMENT])(
+        '409 si une réservation %s arrive dans moins de 2 h, la place reste FREE',
+        async (status) => {
+          const created = await newWalkInTable(`soon-${status}`);
+          await reserve(created.id, 1, status, inMs(HOUR_MS));
+
+          await expect(
+            service.updateSeat(casinoId, created.id, 1, {
+              status: SeatStatus.OCCUPIED,
+            }),
+          ).rejects.toBeInstanceOf(ConflictException);
+          expect((await seatRow(created.id, 1)).status).toBe(SeatStatus.FREE);
+        },
+      );
+
+      it('409 si le joueur CONFIRMED est en retard (arrivalAt dépassé de 10 min)', async () => {
+        const created = await newWalkInTable('late');
+        await reserve(
+          created.id,
+          1,
+          ReservationStatus.CONFIRMED,
+          inMs(-10 * 60 * 1000),
+        );
+
+        await expect(
+          service.updateSeat(casinoId, created.id, 1, {
+            status: SeatStatus.OCCUPIED,
+          }),
+        ).rejects.toBeInstanceOf(ConflictException);
+      });
+
+      it('autorise le walk-in si la réservation CONFIRMED est dans plus de 2 h', async () => {
+        const created = await newWalkInTable('later');
+        await reserve(
+          created.id,
+          1,
+          ReservationStatus.CONFIRMED,
+          inMs(12 * HOUR_MS),
+        );
+
+        const updated = await service.updateSeat(casinoId, created.id, 1, {
+          status: SeatStatus.OCCUPIED,
+        });
+
+        expect(
+          updated.seats.find((seat) => seat.seatNumber === 1)?.status,
+        ).toBe(SeatStatus.OCCUPIED);
+      });
+
+      it('ignore les réservations passées, annulées ou sur une autre place', async () => {
+        const created = await newWalkInTable('ignored');
+        await reserve(created.id, 1, ReservationStatus.CONFIRMED, pastDay());
+        await reserve(
+          created.id,
+          2,
+          ReservationStatus.CANCELLED,
+          inMs(HOUR_MS),
+        );
+        await reserve(
+          created.id,
+          3,
+          ReservationStatus.CONFIRMED,
+          inMs(HOUR_MS),
+        );
+
+        for (const seatNumber of [1, 2]) {
+          await expect(
+            service.updateSeat(casinoId, created.id, seatNumber, {
+              status: SeatStatus.OCCUPIED,
+            }),
+          ).resolves.toMatchObject({ id: created.id });
+        }
+      });
+    });
+
+    describe('passage en FREE', () => {
+      it('place OCCUPIED sans réservation SEATED -> FREE', async () => {
+        const created = await newWalkInTable('release');
+        await setSeat(created.id, 1, SeatStatus.OCCUPIED);
+
+        const updated = await service.updateSeat(casinoId, created.id, 1, {
+          status: SeatStatus.FREE,
+        });
+
+        expect(
+          updated.seats.find((seat) => seat.seatNumber === 1)?.status,
+        ).toBe(SeatStatus.FREE);
+        expect((await seatRow(created.id, 1)).status).toBe(SeatStatus.FREE);
+      });
+
+      it('409 si une réservation SEATED occupe la place (il faut passer par leave)', async () => {
+        const created = await newWalkInTable('seated');
+        await setSeat(created.id, 1, SeatStatus.OCCUPIED);
+        await reserve(created.id, 1, ReservationStatus.SEATED, inMs(-HOUR_MS));
+
+        await expect(
+          service.updateSeat(casinoId, created.id, 1, {
+            status: SeatStatus.FREE,
+          }),
+        ).rejects.toBeInstanceOf(ConflictException);
+        expect((await seatRow(created.id, 1)).status).toBe(SeatStatus.OCCUPIED);
+      });
+
+      it('une réservation COMPLETED sur la place ne bloque pas', async () => {
+        const created = await newWalkInTable('completed');
+        await setSeat(created.id, 1, SeatStatus.OCCUPIED);
+        await reserve(
+          created.id,
+          1,
+          ReservationStatus.COMPLETED,
+          inMs(-HOUR_MS),
+        );
+
+        await expect(
+          service.updateSeat(casinoId, created.id, 1, {
+            status: SeatStatus.FREE,
+          }),
+        ).resolves.toMatchObject({ id: created.id });
+      });
+    });
+
+    describe('404', () => {
+      it('numéro de place qui n’existe pas', async () => {
+        const created = await newWalkInTable('unknown-seat');
+
+        await expect(
+          service.updateSeat(casinoId, created.id, 99, {
+            status: SeatStatus.OCCUPIED,
+          }),
+        ).rejects.toBeInstanceOf(NotFoundException);
+      });
+
+      it('place supprimée par une baisse de maxSeats', async () => {
+        const created = await newWalkInTable('removed-seat');
+        await service.updateTable(
+          casinoId,
+          created.id,
+          makeDto('walkin-removed-seat', { maxSeats: 4 }),
+        );
+
+        await expect(
+          service.updateSeat(casinoId, created.id, 6, {
+            status: SeatStatus.OCCUPIED,
+          }),
+        ).rejects.toBeInstanceOf(NotFoundException);
+        expect((await seatRow(created.id, 6)).status).toBe(SeatStatus.FREE);
+      });
+
+      it('table d’un autre casino, sans toucher la place', async () => {
+        const created = await newWalkInTable('other-casino');
+        const otherCasino = await prisma.casino.create({
+          data: {
+            name: `${prefix}-walkin-casino`,
+            city: 'Test',
+            address: `${prefix}-walkin-address`,
+          },
+        });
+
+        try {
+          await expect(
+            service.updateSeat(otherCasino.id, created.id, 1, {
+              status: SeatStatus.OCCUPIED,
+            }),
+          ).rejects.toBeInstanceOf(NotFoundException);
+          expect((await seatRow(created.id, 1)).status).toBe(SeatStatus.FREE);
+        } finally {
+          await prisma.casino.delete({ where: { id: otherCasino.id } });
+        }
+      });
+    });
+  });
+
   it('updateTable lève NotFoundException pour une table supprimée', async () => {
     const created = await service.create(casinoId, makeDto('update-deleted'));
     await service.deleteTable(casinoId, created.id);
