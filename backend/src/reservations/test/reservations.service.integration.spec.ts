@@ -478,4 +478,186 @@ describe('ReservationsService (intégration)', () => {
       ).resolves.toBeDefined();
     });
   });
+
+  describe('findForFloor : réservations actives d’une journée casino', () => {
+    // Journée casino fixe et lointaine, en heure d'hiver (Paris = UTC+1) :
+    // elle va du 12/03/2030 5 h au 13/03/2030 5 h, heure de Paris.
+    const DAY = '2030-03-12';
+    const paris = (iso: string) => new Date(`${iso}+01:00`);
+
+    let floorTableId: string;
+    let floorTableName: string;
+    const floorSeatIds: Record<number, string> = {};
+    let otherCasinoId: string;
+    let otherCasinoSeatId: string;
+
+    const book = async (
+      name: string,
+      seatId: string,
+      arrival: Date,
+      status: ReservationStatus = ReservationStatus.CONFIRMED,
+    ) => {
+      const user = await createUser(`floor-${name}`);
+      return prisma.reservation.create({
+        data: { userId: user.id, seatId, status, arrivalAt: arrival },
+      });
+    };
+
+    beforeAll(async () => {
+      floorTableName = `${prefix}-floor-table`;
+      const table = await prisma.pokerTable.create({
+        data: {
+          casinoId,
+          name: floorTableName,
+          variant: PokerVariant.TEXAS_HOLDEM,
+          smallBlind: 1,
+          bigBlind: 2,
+          maxSeats: 10,
+          seats: {
+            createMany: {
+              data: Array.from({ length: 10 }, (_, i) => ({
+                seatNumber: i + 1,
+              })),
+            },
+          },
+        },
+        include: { seats: true },
+      });
+      floorTableId = table.id;
+      for (const seat of table.seats) {
+        floorSeatIds[seat.seatNumber] = seat.id;
+      }
+
+      const otherCasino = await prisma.casino.create({
+        data: {
+          name: `${prefix}-floor-other-casino`,
+          city: 'Test',
+          address: `${prefix}-floor-other-address`,
+        },
+      });
+      otherCasinoId = otherCasino.id;
+      const otherTable = await prisma.pokerTable.create({
+        data: {
+          casinoId: otherCasinoId,
+          name: `${prefix}-floor-other-table`,
+          variant: PokerVariant.TEXAS_HOLDEM,
+          smallBlind: 1,
+          bigBlind: 2,
+          maxSeats: 2,
+          seats: { create: { seatNumber: 1 } },
+        },
+        include: { seats: true },
+      });
+      otherCasinoSeatId = otherTable.seats[0].id;
+    });
+
+    afterAll(async () => {
+      await prisma.reservation.deleteMany({
+        where: { seat: { table: { casinoId: otherCasinoId } } },
+      });
+      await prisma.seat.deleteMany({
+        where: { table: { casinoId: otherCasinoId } },
+      });
+      await prisma.pokerTable.deleteMany({
+        where: { casinoId: otherCasinoId },
+      });
+      await prisma.casino.delete({ where: { id: otherCasinoId } });
+    });
+
+    afterEach(async () => {
+      await prisma.reservation.deleteMany({
+        where: {
+          seat: {
+            table: { id: floorTableId },
+          },
+        },
+      });
+      await prisma.reservation.deleteMany({
+        where: { seatId: otherCasinoSeatId },
+      });
+    });
+
+    it('renvoie les réservations actives du jour, triées par arrivalAt, avec joueur, place et table', async () => {
+      const late = await book(
+        'late',
+        floorSeatIds[1],
+        paris('2030-03-12T22:00'),
+      );
+      const early = await book(
+        'early',
+        floorSeatIds[2],
+        paris('2030-03-12T19:00'),
+        ReservationStatus.PENDING_PAYMENT,
+      );
+      const seated = await book(
+        'seated',
+        floorSeatIds[3],
+        paris('2030-03-12T20:00'),
+        ReservationStatus.SEATED,
+      );
+
+      const result = await service.findForFloor(casinoId, DAY);
+
+      expect(result.map((r) => r.id)).toEqual([early.id, seated.id, late.id]);
+      expect(result[0]).toMatchObject({
+        user: { pseudo: `${prefix}-floor-early` },
+        seat: {
+          seatNumber: 2,
+          table: { id: floorTableId, name: floorTableName },
+        },
+      });
+    });
+
+    it('utilise la journée casino : 4 h 30 le lendemain en fait partie, 4 h 30 le jour même non', async () => {
+      const afterMidnight = await book(
+        'after-midnight',
+        floorSeatIds[1],
+        paris('2030-03-13T04:30'),
+      );
+      await book('previous-night', floorSeatIds[2], paris('2030-03-12T04:30'));
+      await book('next-day', floorSeatIds[3], paris('2030-03-13T05:30'));
+
+      const result = await service.findForFloor(casinoId, DAY);
+
+      expect(result.map((r) => r.id)).toEqual([afterMidnight.id]);
+    });
+
+    it.each([
+      ReservationStatus.COMPLETED,
+      ReservationStatus.CANCELLED,
+      ReservationStatus.NO_SHOW,
+      ReservationStatus.EXPIRED,
+    ])('ignore une réservation %s', async (status) => {
+      await book(
+        `inactive-${status}`,
+        floorSeatIds[1],
+        paris('2030-03-12T20:00'),
+        status,
+      );
+
+      await expect(service.findForFloor(casinoId, DAY)).resolves.toEqual([]);
+    });
+
+    it('ignore les réservations d’un autre casino', async () => {
+      await book('other-casino', otherCasinoSeatId, paris('2030-03-12T20:00'));
+
+      await expect(service.findForFloor(casinoId, DAY)).resolves.toEqual([]);
+    });
+
+    it('sans day, prend la journée casino en cours', async () => {
+      // D'autres tests de ce fichier peuvent laisser des réservations du jour
+      // dans ce casino : on vérifie l'appartenance, pas la liste exacte.
+      const now = await book('now', floorSeatIds[1], new Date());
+      const future = await book(
+        'future',
+        floorSeatIds[2],
+        paris('2030-03-12T20:00'),
+      );
+
+      const ids = (await service.findForFloor(casinoId)).map((r) => r.id);
+
+      expect(ids).toContain(now.id);
+      expect(ids).not.toContain(future.id);
+    });
+  });
 });
