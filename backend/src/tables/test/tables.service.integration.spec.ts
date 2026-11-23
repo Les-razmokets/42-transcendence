@@ -1,7 +1,16 @@
-import { BadRequestException, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ConflictException,
+  NotFoundException,
+} from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { AppModule } from '../../app.module';
-import { PokerVariant, TableStatus } from '../../generated/prisma/enums';
+import {
+  PokerVariant,
+  ReservationStatus,
+  SeatStatus,
+  TableStatus,
+} from '../../generated/prisma/enums';
 import { PrismaService } from '../../prisma/prisma.service';
 import { CreateTableDto } from '../dto/create-table.dto';
 import { TablesService } from '../tables.service';
@@ -12,6 +21,8 @@ describe('TablesService (intégration)', () => {
   let service: TablesService;
   let prisma: PrismaService;
   let casinoId: string;
+  let userId: string;
+  const DAY_MS = 24 * 60 * 60 * 1000;
 
   // Préfixe unique par exécution, pour ne nettoyer que nos propres données
   const prefix = `t-${Date.now().toString(36)}`;
@@ -40,15 +51,58 @@ describe('TablesService (intégration)', () => {
       data: { name: `${prefix}-casino`, city: 'Test', address: 'Test' },
     });
     casinoId = casino.id;
+
+    const user = await prisma.user.create({
+      data: {
+        email: `${prefix}-player@test.local`,
+        pseudo: `${prefix}-player`,
+        firstName: 'Test',
+        lastName: 'Player',
+        birthDate: new Date('1990-01-01'),
+      },
+    });
+    userId = user.id;
   });
 
   afterAll(async () => {
-    // onDelete: Restrict → sièges, puis tables, puis casino
+    // onDelete: Restrict → réservations, sièges, tables, casino, puis joueur
+    await prisma.reservation.deleteMany({
+      where: { seat: { table: { casinoId } } },
+    });
     await prisma.seat.deleteMany({ where: { table: { casinoId } } });
     await prisma.pokerTable.deleteMany({ where: { casinoId } });
     await prisma.casino.delete({ where: { id: casinoId } });
+    await prisma.user.delete({ where: { id: userId } });
     await moduleRef.close();
   });
+
+  // Chaque réservation reçoit sa propre journée casino : l'index unique
+  // « une réservation active par place / par joueur et par journée » ne
+  // peut pas faire échouer un test à cause d'un autre.
+  let dayOffset = 2;
+  const nextFutureDay = () => new Date(Date.now() + dayOffset++ * DAY_MS);
+  const pastDay = () => new Date(Date.now() - dayOffset++ * DAY_MS);
+
+  async function reserve(
+    tableId: string,
+    seatNumber: number,
+    status: ReservationStatus,
+    arrivalAt: Date,
+  ) {
+    const seat = await prisma.seat.findFirstOrThrow({
+      where: { tableId, seatNumber },
+    });
+    return prisma.reservation.create({
+      data: { userId, seatId: seat.id, status, arrivalAt },
+    });
+  }
+
+  // Toutes les lignes en base, places supprimées comprises
+  const allSeats = (tableId: string) =>
+    prisma.seat.findMany({
+      where: { tableId },
+      orderBy: { seatNumber: 'asc' },
+    });
 
   it('crée une table avec maxSeats sièges libres numérotés de 1 à N', async () => {
     const created = await service.create(
@@ -157,24 +211,214 @@ describe('TablesService (intégration)', () => {
     expect(updated.seats.map((seat) => seat.seatNumber)).toEqual([1, 2, 3]);
   });
 
-  // TODO étape 4 : remplacer par l'ajout / retrait réel des places
-  it('updateTable refuse un changement de maxSeats et ne touche pas la table', async () => {
-    const created = await service.create(
-      casinoId,
-      makeDto('update-seats', { maxSeats: 3 }),
-    );
+  describe('updateTable : changement de maxSeats', () => {
+    it('en hausse, crée les places manquantes, libres', async () => {
+      const created = await service.create(
+        casinoId,
+        makeDto('seats-up', { maxSeats: 3 }),
+      );
 
-    await expect(
-      service.updateTable(
+      const updated = await service.updateTable(
         casinoId,
         created.id,
-        makeDto('update-seats', { maxSeats: 6 }),
-      ),
-    ).rejects.toBeInstanceOf(BadRequestException);
+        makeDto('seats-up', { maxSeats: 5 }),
+      );
 
-    const after = await service.findById(casinoId, created.id);
-    expect(after.maxSeats).toBe(3);
-    expect(after.seats).toHaveLength(3);
+      expect(updated.maxSeats).toBe(5);
+      expect(updated.seats.map((s) => s.seatNumber)).toEqual([1, 2, 3, 4, 5]);
+      expect(updated.seats.every((s) => s.status === SeatStatus.FREE)).toBe(
+        true,
+      );
+    });
+
+    it('en baisse, supprime logiquement les dernières places', async () => {
+      const created = await service.create(
+        casinoId,
+        makeDto('seats-down', { maxSeats: 5 }),
+      );
+
+      const updated = await service.updateTable(
+        casinoId,
+        created.id,
+        makeDto('seats-down', { maxSeats: 3 }),
+      );
+
+      expect(updated.maxSeats).toBe(3);
+      expect(updated.seats.map((s) => s.seatNumber)).toEqual([1, 2, 3]);
+      const rows = await allSeats(created.id);
+      expect(rows).toHaveLength(5);
+      expect(
+        rows.filter((s) => s.deletedAt !== null).map((s) => s.seatNumber),
+      ).toEqual([4, 5]);
+    });
+
+    it('en hausse après une baisse, fait revivre les places au lieu de les recréer', async () => {
+      const created = await service.create(
+        casinoId,
+        makeDto('seats-revive', { maxSeats: 5 }),
+      );
+      const before = await allSeats(created.id);
+      await service.updateTable(
+        casinoId,
+        created.id,
+        makeDto('seats-revive', { maxSeats: 3 }),
+      );
+
+      const updated = await service.updateTable(
+        casinoId,
+        created.id,
+        makeDto('seats-revive', { maxSeats: 6 }),
+      );
+
+      expect(updated.seats.map((s) => s.seatNumber)).toEqual([
+        1, 2, 3, 4, 5, 6,
+      ]);
+      expect(updated.seats.every((s) => s.status === SeatStatus.FREE)).toBe(
+        true,
+      );
+      const rows = await allSeats(created.id);
+      // 6 lignes, pas 8 : les places 4 et 5 sont les mêmes qu'avant
+      expect(rows).toHaveLength(6);
+      expect(rows.every((s) => s.deletedAt === null)).toBe(true);
+      expect(rows.slice(3, 5).map((s) => s.id)).toEqual(
+        before.slice(3, 5).map((s) => s.id),
+      );
+    });
+
+    it('en baisse, 409 si une place retirée est OCCUPIED, sans rien modifier', async () => {
+      const created = await service.create(
+        casinoId,
+        makeDto('seats-occupied', { maxSeats: 5 }),
+      );
+      await prisma.seat.updateMany({
+        where: { tableId: created.id, seatNumber: 5 },
+        data: { status: SeatStatus.OCCUPIED },
+      });
+
+      await expect(
+        service.updateTable(
+          casinoId,
+          created.id,
+          makeDto('seats-occupied-renamed', { maxSeats: 3 }),
+        ),
+      ).rejects.toBeInstanceOf(ConflictException);
+
+      const after = await service.findById(casinoId, created.id);
+      expect(after.maxSeats).toBe(5);
+      expect(after.name).toBe(`${prefix}-seats-occupied`);
+      expect(after.seats).toHaveLength(5);
+    });
+
+    it.each([
+      ReservationStatus.PENDING_PAYMENT,
+      ReservationStatus.CONFIRMED,
+      ReservationStatus.SEATED,
+    ])(
+      'en baisse, 409 si une place retirée a une réservation %s à venir',
+      async (status) => {
+        const created = await service.create(
+          casinoId,
+          makeDto(`seats-resa-${status}`, { maxSeats: 5 }),
+        );
+        await reserve(created.id, 4, status, nextFutureDay());
+
+        await expect(
+          service.updateTable(
+            casinoId,
+            created.id,
+            makeDto(`seats-resa-${status}`, { maxSeats: 3 }),
+          ),
+        ).rejects.toBeInstanceOf(ConflictException);
+
+        const rows = await allSeats(created.id);
+        expect(rows.every((s) => s.deletedAt === null)).toBe(true);
+      },
+    );
+
+    it('en baisse, ignore les réservations passées ou inactives', async () => {
+      const created = await service.create(
+        casinoId,
+        makeDto('seats-old-resa', { maxSeats: 5 }),
+      );
+      // CONFIRMED d'un jour passé : jamais passée en NO_SHOW (pas encore de cron)
+      await reserve(created.id, 4, ReservationStatus.CONFIRMED, pastDay());
+      await reserve(
+        created.id,
+        5,
+        ReservationStatus.CANCELLED,
+        nextFutureDay(),
+      );
+      await reserve(created.id, 5, ReservationStatus.COMPLETED, pastDay());
+
+      const updated = await service.updateTable(
+        casinoId,
+        created.id,
+        makeDto('seats-old-resa', { maxSeats: 3 }),
+      );
+
+      expect(updated.seats.map((s) => s.seatNumber)).toEqual([1, 2, 3]);
+    });
+
+    it('en baisse, une réservation active sur une place gardée ne bloque pas', async () => {
+      const created = await service.create(
+        casinoId,
+        makeDto('seats-kept-resa', { maxSeats: 5 }),
+      );
+      await reserve(
+        created.id,
+        2,
+        ReservationStatus.CONFIRMED,
+        nextFutureDay(),
+      );
+
+      const updated = await service.updateTable(
+        casinoId,
+        created.id,
+        makeDto('seats-kept-resa', { maxSeats: 3 }),
+      );
+
+      expect(updated.seats.map((s) => s.seatNumber)).toEqual([1, 2, 3]);
+    });
+  });
+
+  describe('deleteTable : réservations actives', () => {
+    it('409 si une place a une réservation active à venir, la table reste', async () => {
+      const created = await service.create(casinoId, makeDto('delete-resa'));
+      await reserve(
+        created.id,
+        1,
+        ReservationStatus.PENDING_PAYMENT,
+        nextFutureDay(),
+      );
+
+      await expect(
+        service.deleteTable(casinoId, created.id),
+      ).rejects.toBeInstanceOf(ConflictException);
+
+      await expect(
+        service.findById(casinoId, created.id),
+      ).resolves.toMatchObject({ id: created.id });
+    });
+
+    it('supprime la table si ses réservations sont passées ou inactives', async () => {
+      const created = await service.create(
+        casinoId,
+        makeDto('delete-old-resa'),
+      );
+      await reserve(created.id, 1, ReservationStatus.CONFIRMED, pastDay());
+      await reserve(
+        created.id,
+        2,
+        ReservationStatus.CANCELLED,
+        nextFutureDay(),
+      );
+
+      await service.deleteTable(casinoId, created.id);
+
+      await expect(
+        service.findById(casinoId, created.id),
+      ).rejects.toBeInstanceOf(NotFoundException);
+    });
   });
 
   it('updateTable lève NotFoundException pour une table supprimée', async () => {
