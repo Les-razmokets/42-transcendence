@@ -196,16 +196,28 @@ describe('/api/casinos/:casinoId/tables (e2e)', () => {
       expect((await readTable(tableId)).bigBlind).toBe(2);
     });
 
-    // TODO étape 4: adding / removing seats replaces this refusal
-    it('maxSeats changed -> 400, the table keeps its 3 seats', async () => {
-      await owner
+    it('maxSeats raised -> 200, the missing seats are created', async () => {
+      const res = await owner
         .put(`${tablesUrl(casinoId)}/${tableId}`)
         .send(putBody({ maxSeats: 6 }))
-        .expect(400);
+        .expect(200);
 
-      const row = await readTable(tableId);
-      expect(row.maxSeats).toBe(3);
-      expect(row.name).not.toBe(`${prefix}-renamed`);
+      expect(res.body.maxSeats).toBe(6);
+      expect(
+        res.body.seats.map((s: { seatNumber: number }) => s.seatNumber),
+      ).toEqual([1, 2, 3, 4, 5, 6]);
+    });
+
+    it('maxSeats lowered -> 200, the last seats are removed', async () => {
+      const res = await owner
+        .put(`${tablesUrl(casinoId)}/${tableId}`)
+        .send(putBody({ maxSeats: 2 }))
+        .expect(200);
+
+      expect(res.body.maxSeats).toBe(2);
+      expect(
+        res.body.seats.map((s: { seatNumber: number }) => s.seatNumber),
+      ).toEqual([1, 2]);
     });
 
     it('FLOOR -> 403, nothing changed', async () => {
