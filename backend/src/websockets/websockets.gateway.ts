@@ -19,7 +19,7 @@ import { COOKIE_NAME } from '../auth/utils/cookie';
 @WebSocketGateway()
 export class WebsocketsGateway
   implements OnGatewayInit, OnGatewayConnection, OnGatewayDisconnect
-  {
+{
   @WebSocketServer() server: Server;
   private readonly logger: Logger = new Logger(WebsocketsGateway.name);
   private readonly frontendUrl: string;
@@ -35,13 +35,18 @@ export class WebsocketsGateway
   @SubscribeMessage('ping')
   handleMessage(
     @MessageBody() _message: string,
-    @ConnectedSocket() client: Socket
+    @ConnectedSocket() client: Socket,
   ): void {
     client.emit('pong', { message: 'pong' });
   }
 
-  private reject(socket: Socket, reason: 'bad origin' | 'missing cookie' | 'invalid session'): Error {
-    this.logger.warn(`WS refused (${reason}) socket=${socket.id} origin=${socket.handshake.headers.origin} ip=${socket.handshake.headers['x-forwarded-for']}`);
+  private reject(
+    socket: Socket,
+    reason: 'bad origin' | 'missing cookie' | 'invalid session',
+  ): Error {
+    this.logger.warn(
+      `WS refused (${reason}) socket=${socket.id} origin=${socket.handshake.headers.origin} ip=${socket.handshake.headers['x-forwarded-for']}`,
+    );
     return new Error('unauthorized');
   }
 
@@ -61,7 +66,7 @@ export class WebsocketsGateway
         return next();
       } catch (error) {
         if (error instanceof UnauthorizedException) {
-            return next(this.reject(socket, 'invalid session'));
+          return next(this.reject(socket, 'invalid session'));
         } else {
           this.logger.error(
             `WS session verification failed socket=${socket.id}`,
@@ -70,7 +75,7 @@ export class WebsocketsGateway
           return next(new Error('unauthorized'));
         }
       }
-    })
+    });
   }
 
   handleConnection(client: Socket) {
