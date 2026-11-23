@@ -44,6 +44,15 @@
     "erreurServeur": "Une erreur est survenue, réessaie plus tard.",
     "erreurPseudoUtilise": "Ce pseudo est déjà utilisé"
   },
+  "inscription42": {
+    "titre": "Finaliser ton inscription",
+    "sousTitre": "Dernière étape : indique ta date de naissance pour créer ton compte avec 42.",
+    "erreurDate": "Date de naissance invalide",
+    "sessionExpiree": "Ta connexion avec 42 a expiré. Recommence pour continuer.",
+    "recommencer": "Recommencer avec 42",
+    "erreurConflit": "Impossible de créer le compte. Si tu as déjà un compte, connecte-toi avec ton mot de passe.",
+    "retourConnexion": "Retour à la connexion"
+  },
   "motDePasseOublie": {
     "titre": "Mot de passe oublié",
     "bientot": "Cette fonctionnalité arrive bientôt. En attendant, contacte le support.",

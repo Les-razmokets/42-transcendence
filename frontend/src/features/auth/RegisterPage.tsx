@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next";
 import { Logo, Bandes, ChampSaisie, Bouton, Notification } from "@/design-system";
 import { ApiError } from "@/lib/api";
 import { inscription, type DonneeInscription } from "./api";
+import { estMajeur } from "./validation";
 import styles from "./LoginPage.module.css";
 
 type Erreurs = Partial<Record<keyof DonneeInscription, string>>;
@@ -12,12 +13,6 @@ const REGEX_PSEUDO = /^[a-z0-9_-]{1,20}$/i;
 const REGEX_MOT_DE_PASSE = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[-#!$@£%^&*()_+|~=`{}[\]:";'<>?,./\\ ]).{8,128}$/;
 
 
-
-function estMajeur(date: string) {
-    const limite = new Date();
-    limite.setFullYear(limite.getFullYear() - 18);
-    return date <= limite.toISOString().slice(0, 10);
-}
 
 export function RegisterPage() {
     const { t } = useTranslation();

@@ -11,6 +11,7 @@ import { ForgotPasswordPage } from './features/auth/ForgotPasswordPage';
 import { SafeRoute } from './SafeRoute';
 import { AdminLayout } from './features/admin/AdminLayout';
 import { CasinoLayout } from './features/admin/CasinoLayout';
+import { SignupFortyTwoPage } from './features/auth/SignupFortyTwoPage';
 import {
   AdminHomePage,
   CasinosPage,
@@ -29,6 +30,8 @@ export const router = createBrowserRouter([
       { path: 'login', element: <LoginPage /> },
       { path: 'register', element: <RegisterPage /> },
       { path: 'forgot-password', element: <ForgotPasswordPage /> },
+	  { path: 'forgot-password', element: <ForgotPasswordPage /> },
+	  { path: 'signup/42', element: <SignupFortyTwoPage /> },
 
       // safe
       {
