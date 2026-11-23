@@ -16,7 +16,8 @@
     "erreurIdentifiants": "E-mail ou mot de passe incorrect",
     "erreurTropDeTentatives": "Trop de tentatives, réessaie dans une minute.",
     "erreurGenerique": "Une erreur est survenue, réessaie plus tard.",
-    "compteCree": "Compte créé, tu peux te connecter."
+    "compteCree": "Compte créé, tu peux te connecter.",
+	"erreur42": "Connexion avec 42 impossible. Si tu as déjàun compte, connecte-toi avec ton mot de passe."
   },
   "inscription": {
     "titre": "Créer un compte",
