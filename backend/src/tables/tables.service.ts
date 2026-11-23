@@ -21,6 +21,9 @@ const tableWithSeats = {
   seats: { where: { deletedAt: null }, orderBy: { seatNumber: 'asc' } },
 } satisfies Prisma.PokerTableInclude;
 
+const WALK_IN_GUARD_MS = 2 * 60 * 60 * 1000;
+const WALK_IN_LATE_MS = 30 * 60 * 1000;
+
 @Injectable()
 export class TablesService {
   constructor(private readonly prismaService: PrismaService) {}
@@ -197,8 +200,35 @@ export class TablesService {
       const seat = await tx.seat.findUnique({
         where: { tableId_seatNumber: { tableId, seatNumber } },
       });
+      const now = Date.now();
       if (!seat || seat.deletedAt !== null)
         throw new NotFoundException(`Seat ${seatNumber} not found`);
+      if (dto.status === SeatStatus.FREE) {
+		const reservationCount = await tx.reservation.count({ where: {seatId: seat.id, status: ReservationStatus.SEATED}})
+		if (reservationCount > 0)
+			throw new ConflictException('Seat already seatedm leave before mark as occupied')
+      } else if (dto.status === SeatStatus.OCCUPIED) {
+        const reservationCount = await tx.reservation.count({
+          where: {
+            seatId: seat.id,
+            status: {
+              in: [
+                ReservationStatus.CONFIRMED,
+                ReservationStatus.PENDING_PAYMENT,
+              ],
+            },
+            arrivalAt: {
+              gte: new Date(now - WALK_IN_LATE_MS),
+              lt: new Date(now + WALK_IN_GUARD_MS),
+            },
+          },
+        });
+        if (reservationCount > 0) {
+          throw new ConflictException(
+            'Seat is reserved within the next 2 hours',
+          );
+        }
+      }
       await tx.seat.update({
         where: { id: seat.id },
         data: { status: dto.status },
