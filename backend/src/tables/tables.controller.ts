@@ -2,6 +2,7 @@ import {
   Body,
   Controller,
   ParseUUIDPipe,
+  ParseIntPipe,
   Post,
   Get,
   Param,
@@ -15,6 +16,7 @@ import { TablesService } from './tables.service';
 import { CreateTableDto } from './dto/create-table.dto';
 import { TableStateDto } from './dto/table-state.dto';
 import { PutTableDto } from './dto/put-table.dto';
+import { SeatStatusDto } from './dto/seat-status.dto';
 import { tableSchema, type Table } from '@transcendence/shared';
 import { RequireCasinoRole } from '../casinos/utils/casinos-role.decorator';
 
@@ -75,5 +77,21 @@ export class TablesController {
     @Body() dto: TableStateDto,
   ): Promise<Table> {
     return await this.tablesService.updateState(casinoId, id, dto);
+  }
+
+  @RequireCasinoRole('FLOOR')
+  @Patch(':id/seats/:seatNumber')
+  async updateSeat(
+    @Param('casinoId', new ParseUUIDPipe()) casinoId: string,
+    @Param('id', new ParseUUIDPipe()) tableId: string,
+    @Param('seatNumber', new ParseIntPipe()) seatNumber: number,
+    @Body() dto: SeatStatusDto,
+  ): Promise<Table> {
+    return await this.tablesService.updateSeat(
+      casinoId,
+      tableId,
+      seatNumber,
+      dto,
+    );
   }
 }

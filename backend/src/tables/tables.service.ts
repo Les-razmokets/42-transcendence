@@ -9,6 +9,7 @@ import { Prisma } from '../generated/prisma/client';
 import { CreateTableDto } from './dto/create-table.dto';
 import { TableStateDto } from './dto/table-state.dto';
 import { PutTableDto } from './dto/put-table.dto';
+import { SeatStatusDto } from './dto/seat-status.dto';
 import {
   PokerVariant,
   SeatStatus,
@@ -182,6 +183,30 @@ export class TablesService {
         ...(dto.moneyOnTable !== undefined && { moneyUpdatedAt: new Date() }),
       },
       include: tableWithSeats,
+    });
+  }
+
+  async updateSeat(
+    casinoId: string,
+    tableId: string,
+    seatNumber: number,
+    dto: SeatStatusDto,
+  ) {
+    await this.findById(casinoId, tableId);
+    return this.prismaService.$transaction(async (tx) => {
+      const seat = await tx.seat.findUnique({
+        where: { tableId_seatNumber: { tableId, seatNumber } },
+      });
+      if (!seat || seat.deletedAt !== null)
+        throw new NotFoundException(`Seat ${seatNumber} not found`);
+      await tx.seat.update({
+        where: { id: seat.id },
+        data: { status: dto.status },
+      });
+      return tx.pokerTable.findUniqueOrThrow({
+        where: { id: tableId },
+        include: tableWithSeats,
+      });
     });
   }
 
