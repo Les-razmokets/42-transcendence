@@ -5,11 +5,11 @@ import { Logo, Bandes, ChampSaisie, Bouton, Notification } from "@/design-system
 import { ApiError } from "@/lib/api";
 import { inscription, type DonneeInscription } from "./api";
 import { estMajeur } from "./validation";
+import { OAUTH_PSEUDO_PREFIX, PSEUDO_MAX_LEN, PSEUDO_PATTERN } from "@transcendence/shared";
 import styles from "./LoginPage.module.css";
 
 type Erreurs = Partial<Record<keyof DonneeInscription, string>>;
 
-const REGEX_PSEUDO = /^[a-z0-9_-]{1,20}$/i;
 const REGEX_MOT_DE_PASSE = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[-#!$@£%^&*()_+|~=`{}[\]:";'<>?,./\\ ]).{8,128}$/;
 
 
@@ -35,8 +35,11 @@ export function RegisterPage() {
             e.prenom = t('inscription.erreurObligatoire');
         if (!champs.nom.trim())
             e.nom = t('inscription.erreurObligatoire');
-        if (!REGEX_PSEUDO.test(champs.pseudo.trim()))
+		const pseudo = champs.pseudo.trim().toLowerCase();
+        if (pseudo.length > PSEUDO_MAX_LEN || !PSEUDO_PATTERN.test(pseudo))
             e.pseudo = t('inscription.erreurPseudo');
+        else if (pseudo.startsWith(OAUTH_PSEUDO_PREFIX))
+            e.pseudo = t('inscription.erreurPseudo42');
         if (!champs.email.includes('@'))
             e.email = t('inscription.erreurEmail');
         if (!REGEX_MOT_DE_PASSE.test(champs.motDePasse))

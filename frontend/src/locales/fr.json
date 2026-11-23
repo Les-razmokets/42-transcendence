@@ -43,7 +43,8 @@
     "erreurEmailUtilise": "Cette adresse e-mail est déjà utilisée",
     "erreurTropDeTentatives": "Trop de tentatives, réessaie dans une minute.",
     "erreurServeur": "Une erreur est survenue, réessaie plus tard.",
-    "erreurPseudoUtilise": "Ce pseudo est déjà utilisé"
+    "erreurPseudoUtilise": "Ce pseudo est déjà utilisé",
+	"erreurPseudo42": "Les pseudos qui commencent par « 42 » sont réservés aux comptes 42."
   },
   "inscription42": {
     "titre": "Finaliser ton inscription",
