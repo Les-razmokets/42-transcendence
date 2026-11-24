@@ -18,6 +18,9 @@ export class AuthGuard implements CanActivate {
   ) {}
   async canActivate(context: ExecutionContext): Promise<boolean> {
     // WS security lives in the handshake middleware in the gateway (../websockets/websockets.gateway.ts)
+    // APP_GUARD guards also run on every WebSocket message. Outside HTTP there is no
+    // request and no cookie to read (switchToHttp() would return the Socket), and
+    // the socket was already authenticated once at the handshake: nothing to do here.
     if (context.getType() !== 'http') return true;
     // Check if the route or controller is marked as public using the Reflector and custom public key
     const isPublic = this.reflector.getAllAndOverride<boolean>(IS_PUBLIC_KEY, [
