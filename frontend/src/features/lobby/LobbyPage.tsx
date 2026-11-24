@@ -54,6 +54,7 @@ export function LobbyPage() {
 						details={details(table, t)}
 						places={toPlaces(table)}
 						link={`/tables/${table.id}`}
+						nomTransition={`table-${table.id}`}
 					/>
 				</li>
 			))}

@@ -77,7 +77,7 @@ src/
 │   ├── icons/
 │   ├── primitives/    petits composants de base (Bouton, Badge, Avatar…)
 │   └── composites/    composants faits de primitives (CarteTable, EnTete…)
-├── features/          les écrans par domaine (auth, booking, lobby, table, account)
+├── features/          les écrans par domaine (auth, lobby, table, account, admin)
 ├── lib/               outils partagés (i18n, appels API…)
 └── three/             tout ce qui concerne la 3D
 public/

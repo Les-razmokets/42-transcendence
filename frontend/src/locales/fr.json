@@ -84,6 +84,20 @@
   },
   "entete": {
     "monCompte": "Mon compte"
+  },
+    "table": {
+    "erreurChargement": "Impossible de charger cette table, réessaie plus tard.",
+    "retour": "Retour au lobby",
+    "choisisTaPlace_one": "Choisis ta place · {{count}} libre",
+    "choisisTaPlace_other": "Choisis ta place · {{count}} libres",
+    "legende": {
+      "libre": "Libre",
+      "occupee": "Occupée",
+      "taPlace": "Ta place"
+    },
+    "seLever": "Changer de place",
+    "confirmer": "Confirmer la place {{place}}",
+    "titrePlace": "Place {{place}} · {{table}}"
   }
 }
 

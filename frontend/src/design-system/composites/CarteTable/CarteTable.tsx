@@ -8,16 +8,17 @@ type CarteTableProps = {
     details: string;
     places: EtatChaise[];
     link: string;
+    nomTransition?: string;
 };
 
 export function CarteTable(props: CarteTableProps) {
-    const { casino, details, link} = props;
+    const { casino, details, link, nomTransition} = props;
     const places = normalisePlaces(props.places);
     const complete = places.every((p) => p === 'occupee');
 
     const contenu = (
         <>
-            <div className={styles.cadreTable}>
+            <div className={styles.cadreTable} style={{ viewTransitionName: nomTransition}}>
                 <VueTable places={places}/>
             </div>
             <span className="typo-titre-3">{casino}</span>
@@ -30,7 +31,7 @@ export function CarteTable(props: CarteTableProps) {
     }
 
     return (
-        <Link to={link} className={styles.carte}>
+        <Link to={link} viewTransition className={styles.carte}>
             {contenu}
         </Link>
     );

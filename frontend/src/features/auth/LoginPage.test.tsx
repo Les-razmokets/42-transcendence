@@ -38,7 +38,7 @@ function renderLogin(state?: unknown) {
       <Routes>
         <Route path="/login" element={<LoginPage />} />
         <Route path="/" element={<p>Page lobby</p>} />
-        <Route path="/reservations" element={<p>Page réservations</p>} />
+        <Route path="/account" element={<p>Page compte</p>} />
       </Routes>
     </MemoryRouter>,
   );
@@ -138,11 +138,11 @@ describe('LoginPage', () => {
   describe('retour vers la page demandée (from)', () => {
     it("après le login, renvoie vers la page que SafeRoute avait bloquée", async () => {
       vi.mocked(login).mockResolvedValue(joueur);
-      renderLogin({ from: '/reservations' });
+      renderLogin({ from: '/account' });
 
       await remplirEtEnvoyer('joueur@exemple.ch', 'MotDePasse1!');
 
-      expect(await screen.findByText('Page réservations')).toBeInTheDocument();
+      expect(await screen.findByText('Page compte')).toBeInTheDocument();
       expect(screen.queryByText('Page lobby')).not.toBeInTheDocument();
     });
 
@@ -177,9 +177,9 @@ describe('LoginPage', () => {
 
     it('redirige vers from si on est déjà connecté', () => {
       session = { user: joueurConnecte, load: false };
-      renderLogin({ from: '/reservations' });
+      renderLogin({ from: '/account' });
 
-      expect(screen.getByText('Page réservations')).toBeInTheDocument();
+      expect(screen.getByText('Page compte')).toBeInTheDocument();
     });
   });
 
