@@ -103,4 +103,29 @@ describe('RegisterPage', () => {
 
     expect(await screen.findByText('Ce pseudo est déjà utilisé')).toBeInTheDocument();
   });
+  it('refuse un pseudo qui commence par 42 (réservé aux comptes 42)', async () => {
+    renderRegister();
+
+    await remplir();
+    const user = userEvent.setup();
+    await user.clear(screen.getByLabelText('Pseudo'));
+    await user.type(screen.getByLabelText('Pseudo'), '42test');
+    await envoyer();
+
+    expect(screen.getByText('Les pseudos qui commencent par « 42 » sont réservés aux comptes 42.')).toBeInTheDocument();
+    expect(inscription).not.toHaveBeenCalled();
+  });
+
+  it('refuse un pseudo de plus de 20 caractères', async () => {
+    renderRegister();
+
+    await remplir();
+    const user = userEvent.setup();
+    await user.clear(screen.getByLabelText('Pseudo'));
+    await user.type(screen.getByLabelText('Pseudo'), 'a'.repeat(21));
+    await envoyer();
+
+    expect(screen.getByText('Pseudo invalide')).toBeInTheDocument();
+    expect(inscription).not.toHaveBeenCalled();
+  });
 });

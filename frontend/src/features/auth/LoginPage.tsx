@@ -1,5 +1,5 @@
 import { useEffect, useState, type SubmitEvent } from "react";
-import { Link, useNavigate, useLocation, Navigate} from "react-router";
+import { Link, useNavigate, useLocation, Navigate, useSearchParams } from "react-router";
 import { useTranslation } from "react-i18next";
 import { Bandes, Bouton, ChampSaisie, Logo, Notification } from "../../design-system";
 import { ApiError } from "../../lib/api";
@@ -15,6 +15,8 @@ export function LoginPage() {
 	const location = useLocation();
 	const [afficherSucces] = useState(location.state?.inscrit === true)
 	const [destination] = useState<string>(location.state?.from ?? '/');
+	const [searchParams] = useSearchParams();
+	const erreurOAuth = searchParams.get('error') === 'oauth';
 
 	useEffect(() => {
 		if (location.state?.inscrit)
@@ -68,6 +70,7 @@ export function LoginPage() {
 				</div>
 
 				{afficherSucces && !error && <Notification>{t('connexion.compteCree')}</Notification>}
+				{erreurOAuth && !error && <Notification variante="erreur">{t('connexion.erreur42')}</Notification>}
 
 				<ChampSaisie
 					libelle={t('connexion.email')}
