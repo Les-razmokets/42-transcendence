@@ -188,4 +188,21 @@ describe('LoginPage', () => {
 
     expect(screen.getByText('Compte créé, tu peux te connecter.')).toBeInTheDocument();
   });
+  it('affiche un message si la connexion avec 42 a échoué (?error=oauth)', () => {
+    render(
+      <MemoryRouter initialEntries={['/login?error=oauth']}>
+        <Routes>
+          <Route path="/login" element={<LoginPage />} />
+        </Routes>
+      </MemoryRouter>,
+    );
+
+    expect(screen.getByText(/Connexion avec 42 impossible/)).toBeInTheDocument();
+  });
+
+  it("n'affiche pas le message 42 sans le paramètre error", () => {
+    renderLogin();
+
+    expect(screen.queryByText(/Connexion avec 42 impossible/)).not.toBeInTheDocument();
+  });
 });
