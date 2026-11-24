@@ -1,6 +1,11 @@
 import { ArgumentsHost, Catch, Logger } from '@nestjs/common';
-import { BaseWsExceptionFilter, WsException } from '@nestjs/websockets';
+import {
+  BaseWsExceptionFilter,
+  ErrorPayload,
+  WsException,
+} from '@nestjs/websockets';
 import type { AppSocket } from './websockets.types';
+import { MESSAGES } from '@nestjs/core/constants';
 
 @Catch()
 export class WsLoggingExceptionFilter extends BaseWsExceptionFilter {
@@ -23,5 +28,14 @@ export class WsLoggingExceptionFilter extends BaseWsExceptionFilter {
       );
     }
     super.catch(exception, host);
+  }
+
+  override handleUnknownError<
+    TClient extends { emit?: Function; send?: Function },
+  >(_exception: unknown, client: TClient, _data: ErrorPayload['cause']): void {
+    this.emitMessage(client, 'exception', {
+      status: 'error',
+      message: MESSAGES.UNKNOWN_EXCEPTION_MESSAGE,
+    });
   }
 }
