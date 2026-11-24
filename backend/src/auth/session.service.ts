@@ -7,7 +7,7 @@ import { JwtService } from '@nestjs/jwt';
 import { UsersService } from '../users/users.service';
 import { User } from '../generated/prisma/client';
 import { JwtPayload } from './utils/jwt.payload';
-import { AuthenticatedUser } from './utils/auth-request';
+import { VerifiedSession } from './utils/verified.session';
 
 @Injectable()
 export class SessionService {
@@ -16,7 +16,7 @@ export class SessionService {
     private readonly users: UsersService,
   ) {}
 
-  async verify(token: string): Promise<AuthenticatedUser & { exp: number }> {
+  async verify(token: string): Promise<VerifiedSession> {
     let payload: JwtPayload;
     try {
       payload = await this.jwt.verifyAsync<JwtPayload>(token, {

@@ -9,18 +9,18 @@ import {
   WebSocketGateway,
   WebSocketServer,
 } from '@nestjs/websockets';
-import { Server, Socket } from 'socket.io';
 import { Public } from '../auth/utils/public.decorator';
 import { ConfigService } from '@nestjs/config';
 import { SessionService } from '../auth/session.service';
 import { parse } from 'cookie';
 import { COOKIE_NAME } from '../auth/utils/cookie';
+import type { AppServer, AppSocket } from './websockets.types';
 
 @WebSocketGateway()
 export class WebsocketsGateway
   implements OnGatewayInit, OnGatewayConnection, OnGatewayDisconnect
 {
-  @WebSocketServer() server: Server;
+  @WebSocketServer() server: AppServer;
   private readonly logger: Logger = new Logger(WebsocketsGateway.name);
   private readonly frontendUrl: string;
 
@@ -35,22 +35,31 @@ export class WebsocketsGateway
   @SubscribeMessage('ping')
   handleMessage(
     @MessageBody() _message: string,
-    @ConnectedSocket() client: Socket,
+    @ConnectedSocket() client: AppSocket,
   ): void {
     client.emit('pong', { message: 'pong' });
   }
 
+  private getClientIp(socket: AppSocket): string {
+    const xff = socket.handshake.headers['x-forwarded-for'];
+
+    const rawIp = Array.isArray(xff) ? xff[0] : xff?.split(',')[0];
+
+    const cleaned = rawIp?.trim();
+    return cleaned || socket.handshake.address;
+  }
+
   private reject(
-    socket: Socket,
+    socket: AppSocket,
     reason: 'bad origin' | 'missing cookie' | 'invalid session',
   ): Error {
     this.logger.warn(
-      `WS refused (${reason}) socket=${socket.id} origin=${socket.handshake.headers.origin} ip=${socket.handshake.headers['x-forwarded-for']}`,
+      `WS refused (${reason}) socket=${socket.id} origin=${socket.handshake.headers.origin} ip=${this.getClientIp(socket)}`,
     );
     return new Error('unauthorized');
   }
 
-  afterInit(_server: Server) {
+  afterInit(_server: AppServer) {
     this.logger.log('init');
     this.server.use(async (socket, next) => {
       if (socket.handshake.headers.origin !== this.frontendUrl) {
@@ -69,7 +78,7 @@ export class WebsocketsGateway
           return next(this.reject(socket, 'invalid session'));
         } else {
           this.logger.error(
-            `WS session verification failed socket=${socket.id}`,
+            `WS session verification failed socket=${socket.id} ip=${this.getClientIp(socket)}`,
             error instanceof Error ? error.stack : String(error),
           );
           return next(new Error('unauthorized'));
@@ -78,11 +87,11 @@ export class WebsocketsGateway
     });
   }
 
-  handleConnection(client: Socket) {
+  handleConnection(client: AppSocket) {
     this.logger.log(`Client connected: ${client.id}`);
   }
 
-  handleDisconnect(client: Socket, reason?: string) {
+  handleDisconnect(client: AppSocket, reason?: string) {
     this.logger.log(`Client disconnected: ${client.id}. Reason: ${reason}`);
   }
 }
