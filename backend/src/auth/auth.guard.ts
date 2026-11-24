@@ -17,6 +17,8 @@ export class AuthGuard implements CanActivate {
     private readonly reflector: Reflector,
   ) {}
   async canActivate(context: ExecutionContext): Promise<boolean> {
+    // WS security lives in the handshake middleware in the gateway (../websockets/websockets.gateway.ts)
+    if (context.getType() !== 'http') return true;
     // Check if the route or controller is marked as public using the Reflector and custom public key
     const isPublic = this.reflector.getAllAndOverride<boolean>(IS_PUBLIC_KEY, [
       context.getHandler(),

@@ -32,7 +32,6 @@ export class WebsocketsGateway
     this.frontendUrl = this.config.getOrThrow<string>('FRONTEND_URL');
   }
 
-  @Public()
   @SubscribeMessage('ping')
   handleMessage(
     @MessageBody() _message: string,

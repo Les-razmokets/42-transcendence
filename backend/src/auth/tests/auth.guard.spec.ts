@@ -48,10 +48,16 @@ describe('AuthGuard', () => {
     req: AuthenticatedRequest,
     handler: (...args: any[]) => any = FakeController.prototype.closed,
     cls: new () => unknown = FakeController,
+    type: 'http' | 'ws' = 'http',
   ) =>
     ({
-      getType: () => 'http',
-      switchToHttp: () => ({ getRequest: () => req }),
+      getType: () => type,
+      // outside HTTP there is no request: reading it would be the bug from issue 1
+      switchToHttp: () => {
+        if (type !== 'http')
+          throw new Error('switchToHttp() called on a non-HTTP context');
+        return { getRequest: () => req };
+      },
       getHandler: () => handler,
       getClass: () => cls,
     }) as unknown as ExecutionContext;
@@ -94,6 +100,20 @@ describe('AuthGuard', () => {
 
     it('protects a route that is not marked public', async () => {
       await expect(run().promise).rejects.toBeInstanceOf(UnauthorizedException);
+    });
+  });
+
+  describe('WebSocket context: authentication is done at the handshake, not here', () => {
+    it('lets a WS message through on a non-public handler, without reading any request or verifying anything', async () => {
+      const ctx = makeContext(
+        makeReq(),
+        FakeController.prototype.closed,
+        FakeController,
+        'ws',
+      );
+
+      await expect(guard.canActivate(ctx)).resolves.toBe(true);
+      expect(session.verify).not.toHaveBeenCalled();
     });
   });
 

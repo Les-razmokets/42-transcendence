@@ -60,6 +60,7 @@ const contextFor = (
   cls: Ctor,
   method: string,
   user?: AuthenticatedRequest['user'],
+  type: 'http' | 'ws' = 'http',
 ) => {
   const req = { user } as unknown as AuthenticatedRequest;
   const handler = (
@@ -69,7 +70,13 @@ const contextFor = (
   return {
     req,
     ctx: {
-      switchToHttp: () => ({ getRequest: () => req }),
+      getType: () => type,
+      // outside HTTP there is no request: reading it would be the bug from issue 1
+      switchToHttp: () => {
+        if (type !== 'http')
+          throw new Error('switchToHttp() called on a non-HTTP context');
+        return { getRequest: () => req };
+      },
       getHandler: () => handler,
       getClass: () => cls,
     } as unknown as ExecutionContext,
@@ -262,6 +269,54 @@ describe('RolesGuard', () => {
       expect((error as UnauthorizedException).getResponse()).toEqual(
         new UnauthorizedException().getResponse(),
       );
+    });
+  });
+
+  describe('WebSocket context: @Roles() is HTTP-only', () => {
+    it('lets a WS handler without @Roles() through, without reading any request', async () => {
+      const { ctx } = contextFor(
+        NoRolesController,
+        'anything',
+        undefined,
+        'ws',
+      );
+      await expect(run(ctx)).resolves.toBe(true);
+    });
+
+    it('throws a programming error (not a 401/403) on a WS handler with @Roles()', async () => {
+      const { ctx } = contextFor(
+        AdminOnlyController,
+        'admin',
+        asUser(Role.ADMIN),
+        'ws',
+      );
+
+      const error = await run(ctx).catch((e: unknown) => e);
+
+      expect(error).toBeInstanceOf(Error);
+      expect(error).not.toBeInstanceOf(ForbiddenException);
+      expect(error).not.toBeInstanceOf(UnauthorizedException);
+      expect((error as Error).message).toContain('HTTP-only');
+    });
+
+    it('throws for a class-level @Roles() too', async () => {
+      const { ctx } = contextFor(
+        ClassLevelAdminController,
+        'inherited',
+        undefined,
+        'ws',
+      );
+      await expect(run(ctx)).rejects.toThrow('HTTP-only');
+    });
+
+    it('throws even with @Public(): @Roles() on WS is always a mistake', async () => {
+      const { ctx } = contextFor(
+        PublicAndRolesController,
+        'both',
+        undefined,
+        'ws',
+      );
+      await expect(run(ctx)).rejects.toThrow('HTTP-only');
     });
   });
 
