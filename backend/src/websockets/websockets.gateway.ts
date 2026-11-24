@@ -1,4 +1,4 @@
-import { Logger, UnauthorizedException } from '@nestjs/common';
+import { Logger, UnauthorizedException, UseFilters } from '@nestjs/common';
 import {
   ConnectedSocket,
   MessageBody,
@@ -9,14 +9,15 @@ import {
   WebSocketGateway,
   WebSocketServer,
 } from '@nestjs/websockets';
-import { Public } from '../auth/utils/public.decorator';
 import { ConfigService } from '@nestjs/config';
 import { SessionService } from '../auth/session.service';
 import { parse } from 'cookie';
 import { COOKIE_NAME } from '../auth/utils/cookie';
 import type { AppServer, AppSocket } from './websockets.types';
 import { userRoom } from './rooms';
+import { WsLoggingExceptionFilter } from './websockets.logging-exception-filter';
 
+@UseFilters(WsLoggingExceptionFilter)
 @WebSocketGateway()
 export class WebsocketsGateway
   implements OnGatewayInit, OnGatewayConnection, OnGatewayDisconnect
