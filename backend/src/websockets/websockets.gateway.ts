@@ -15,6 +15,7 @@ import { SessionService } from '../auth/session.service';
 import { parse } from 'cookie';
 import { COOKIE_NAME } from '../auth/utils/cookie';
 import type { AppServer, AppSocket } from './websockets.types';
+import { userRoom } from './rooms';
 
 @WebSocketGateway()
 export class WebsocketsGateway
@@ -59,6 +60,17 @@ export class WebsocketsGateway
     return new Error('unauthorized');
   }
 
+  private expire(
+    socket: AppSocket,
+    reason: 'already expired' | 'expired',
+  ): void {
+    const level = reason === 'already expired' ? 'warn' : 'log';
+    this.logger[level](
+      `Session ${reason} socket=${socket.id} user=${socket.data.user.id}`,
+    );
+    socket.disconnect(true);
+  }
+
   afterInit(_server: AppServer) {
     this.logger.log('init');
     this.server.use(async (socket, next) => {
@@ -87,11 +99,32 @@ export class WebsocketsGateway
     });
   }
 
-  handleConnection(client: AppSocket) {
+  // await is correct with any adapter so try/catch so it doesnt fail silently
+  async handleConnection(client: AppSocket) {
     this.logger.log(`Client connected: ${client.id}`);
+    try {
+      await client.join(userRoom(client.data.user.id));
+    } catch (error) {
+      this.logger.error(
+        `WS join failed socket=${client.id} user=${client.data.user.id}`,
+        error instanceof Error ? error.stack : String(error),
+      );
+      client.disconnect(true);
+      return;
+    }
+    if (!client.connected) return;
+    const delay = client.data.user.exp * 1000 - Date.now();
+    if (delay <= 0) {
+      this.expire(client, 'already expired');
+    } else {
+      client.data.expiryTimer = setTimeout(() => {
+        this.expire(client, 'expired');
+      }, delay);
+    }
   }
 
   handleDisconnect(client: AppSocket, reason?: string) {
     this.logger.log(`Client disconnected: ${client.id}. Reason: ${reason}`);
+    clearTimeout(client.data.expiryTimer);
   }
 }
