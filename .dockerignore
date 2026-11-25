@@ -6,3 +6,4 @@ perso/
 infra/
 backend/src/generated
 *.tsbuildinfo
+backups/
