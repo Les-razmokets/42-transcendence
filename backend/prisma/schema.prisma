@@ -166,6 +166,15 @@ model Seat {
   @@unique([tableId, seatNumber])
 }
 
+// Index uniques partiels hors schéma Prisma, écrits en SQL brut dans
+// migrations/20261028130102_reservation_active_per_casino_day/migration.sql :
+//   - Reservation_active_seat_key : une seule réservation active
+//     (PENDING_PAYMENT, CONFIRMED, SEATED) par place et par journée casino ;
+//   - Reservation_active_user_key : idem par joueur.
+// Prisma ne sait pas décrire un index partiel sur une expression : une
+// migration générée par `prisma migrate dev` peut contenir un DROP INDEX sur
+// ces deux index. Retirer ces lignes du migration.sql avant de le commiter.
+// Le service lit leur nom dans l'erreur P2002 (ReservationsService.create).
 model Reservation {
   id            String            @id @default(uuid())
   userId        String
