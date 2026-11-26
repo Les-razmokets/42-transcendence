@@ -3,6 +3,7 @@
 Ce document liste les routes du backend NestJS et explique comment le frontend doit les appeler : URL, authentification par cookie, format des erreurs, limites de requêtes. Rédigé avec l'aide d'une IA (Claude), à relire et valider par l'équipe.
 
 > [!NOTE]
+> Pour la liste de toutes les routes sur une page (conditions et rôle de chaque route), voir [`docs/routes.md`](routes.md).
 > Pour le partage des types et des schémas entre back et front, voir [`docs/shared.md`](shared.md).
 > Pour le routage `/api` dans nginx, voir [`docs/nginx.md`](nginx.md).
 
