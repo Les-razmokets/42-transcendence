@@ -189,7 +189,7 @@ describe('/api/casinos/:casinoId/reservations (e2e)', () => {
     expect(Array.isArray(res.body)).toBe(true);
   });
 
-  it.each(['abc', '2030-13-01', '2030-03-32', '12-03-2030'])(
+  it.each(['abc', '2030-13-01', '2030-03-32', '12-03-2030', '2030-02-30'])(
     'invalid day %s -> 400',
     async (day) => {
       await floor.get(floorUrl(casinoId)).query({ day }).expect(400);

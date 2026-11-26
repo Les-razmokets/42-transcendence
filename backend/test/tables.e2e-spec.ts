@@ -229,6 +229,30 @@ describe('/api/casinos/:casinoId/tables (e2e)', () => {
       ).toEqual([1, 2]);
     });
 
+    it('two concurrent PUTs on maxSeats -> the seats always match maxSeats', async () => {
+      const [a, b] = await Promise.all([
+        owner
+          .put(`${tablesUrl(casinoId)}/${tableId}`)
+          .send(putBody({ maxSeats: 6 })),
+        owner
+          .put(`${tablesUrl(casinoId)}/${tableId}`)
+          .send(putBody({ maxSeats: 2 })),
+      ]);
+
+      // serialized: both 200; interleaved: the loser gets 409
+      expect([a.status, b.status]).toContain(200);
+      for (const status of [a.status, b.status])
+        expect([200, 409]).toContain(status);
+      const table = await readTable(tableId);
+      const activeSeats = await prisma.seat.findMany({
+        where: { tableId, deletedAt: null },
+        orderBy: { seatNumber: 'asc' },
+      });
+      expect(activeSeats.map((s) => s.seatNumber)).toEqual(
+        Array.from({ length: table.maxSeats }, (_, i) => i + 1),
+      );
+    });
+
     it('FLOOR -> 403, nothing changed', async () => {
       await floor
         .put(`${tablesUrl(casinoId)}/${tableId}`)
@@ -474,6 +498,34 @@ describe('/api/casinos/:casinoId/tables (e2e)', () => {
       await plain.get(`${tablesUrl(casinoId)}/not-a-uuid`).expect(400);
     });
 
+    it('soft-deleted casino -> its tables are hidden (empty list, 404)', async () => {
+      const deletedCasino = await prisma.casino.create({
+        data: {
+          name: `${prefix}-deleted-casino`,
+          city: 'Test',
+          address: `${prefix}-deleted-address`,
+          deletedAt: new Date(),
+        },
+      });
+      try {
+        const deletedTableId = await newTable(deletedCasino.id, 'in-deleted');
+
+        const list = await plain.get(tablesUrl(deletedCasino.id)).expect(200);
+        expect(list.body).toEqual([]);
+        await plain
+          .get(`${tablesUrl(deletedCasino.id)}/${deletedTableId}`)
+          .expect(404);
+      } finally {
+        await prisma.seat.deleteMany({
+          where: { table: { casinoId: deletedCasino.id } },
+        });
+        await prisma.pokerTable.deleteMany({
+          where: { casinoId: deletedCasino.id },
+        });
+        await prisma.casino.delete({ where: { id: deletedCasino.id } });
+      }
+    });
+
     it.each(['list', 'one'])('%s: not logged in -> 401', async (what) => {
       const url =
         what === 'list'
@@ -596,6 +648,17 @@ describe('/api/casinos/:casinoId/tables (e2e)', () => {
 
     it('active reservation in the coming days -> 409, table kept', async () => {
       await book(1, new Date(Date.now() + 2 * 24 * 60 * 60 * 1000));
+
+      await owner.delete(`${tablesUrl(casinoId)}/${tableId}`).expect(409);
+
+      expect((await readTable(tableId)).deletedAt).toBeNull();
+    });
+
+    it('a walk-in sits at the table (seat OCCUPIED, no reservation) -> 409, table kept', async () => {
+      await floor
+        .patch(`${tablesUrl(casinoId)}/${tableId}/seats/2`)
+        .send({ status: SeatStatus.OCCUPIED })
+        .expect(200);
 
       await owner.delete(`${tablesUrl(casinoId)}/${tableId}`).expect(409);
 
