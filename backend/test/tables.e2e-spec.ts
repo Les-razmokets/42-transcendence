@@ -15,11 +15,12 @@ import { PrismaService } from '../src/prisma/prisma.service';
 import {
   CasinoRole,
   PokerVariant,
+  ReservationStatus,
   SeatStatus,
   TableStatus,
 } from '../src/generated/prisma/enums';
 
-// /api/casinos/:casinoId/tables through HTTP: routing (PUT, PATCH /state),
+// /api/casinos/:casinoId/tables through HTTP: routing (GET, POST, PUT, DELETE, PATCH /state and /seats),
 // the global ValidationPipe (whitelist + forbidNonWhitelisted), the casino
 // roles (OWNER for the config, FLOOR and above for the state) and the
 // response serialization (tableSchema), which the service tests do not cover.
@@ -86,6 +87,10 @@ describe('/api/casinos/:casinoId/tables (e2e)', () => {
 
   const readTable = (id: string) =>
     prisma.pokerTable.findUniqueOrThrow({ where: { id } });
+  const readSeat = (table: string, seatNumber: number) =>
+    prisma.seat.findUniqueOrThrow({
+      where: { tableId_seatNumber: { tableId: table, seatNumber } },
+    });
 
   // full PUT body, same maxSeats as newTable
   const putBody = (overrides: Record<string, unknown> = {}) => ({
@@ -152,6 +157,9 @@ describe('/api/casinos/:casinoId/tables (e2e)', () => {
 
   afterAll(async () => {
     const casinoIds = [casinoId, otherCasinoId];
+    await prisma.reservation.deleteMany({
+      where: { seat: { table: { casinoId: { in: casinoIds } } } },
+    });
     await prisma.seat.deleteMany({
       where: { table: { casinoId: { in: casinoIds } } },
     });
@@ -353,10 +361,6 @@ describe('/api/casinos/:casinoId/tables (e2e)', () => {
       table: string,
       seatNumber: number | string,
     ) => `${tablesUrl(casino)}/${table}/seats/${seatNumber}`;
-    const readSeat = (table: string, seatNumber: number) =>
-      prisma.seat.findUniqueOrThrow({
-        where: { tableId_seatNumber: { tableId: table, seatNumber } },
-      });
 
     it('FLOOR seats a walk-in -> 200, returns the whole table', async () => {
       const res = await floor
@@ -437,6 +441,193 @@ describe('/api/casinos/:casinoId/tables (e2e)', () => {
         .expect(404);
 
       expect((await readSeat(otherTableId, 1)).status).toBe(SeatStatus.FREE);
+    });
+  });
+
+  describe('GET / and GET /:id (logged in, no casino role)', () => {
+    it('list -> 200, only the tables of this casino, with their seats', async () => {
+      const res = await plain.get(tablesUrl(casinoId)).expect(200);
+
+      const ids = res.body.map((table: { id: string }) => table.id);
+      expect(ids).toContain(tableId);
+      expect(ids).not.toContain(otherTableId);
+      const table = res.body.find((t: { id: string }) => t.id === tableId);
+      expect(table.casinoId).toBe(casinoId);
+      expect(table.seats).toHaveLength(3);
+    });
+
+    it('one table -> 200, serialized by tableSchema (no dates)', async () => {
+      const res = await plain
+        .get(`${tablesUrl(casinoId)}/${tableId}`)
+        .expect(200);
+
+      expect(res.body).toMatchObject({ id: tableId, casinoId, maxSeats: 3 });
+      expect(res.body).not.toHaveProperty('createdAt');
+      expect(res.body).not.toHaveProperty('deletedAt');
+    });
+
+    it('table of another casino -> 404', async () => {
+      await plain.get(`${tablesUrl(casinoId)}/${otherTableId}`).expect(404);
+    });
+
+    it('id is not a uuid -> 400', async () => {
+      await plain.get(`${tablesUrl(casinoId)}/not-a-uuid`).expect(400);
+    });
+
+    it.each(['list', 'one'])('%s: not logged in -> 401', async (what) => {
+      const url =
+        what === 'list'
+          ? tablesUrl(casinoId)
+          : `${tablesUrl(casinoId)}/${tableId}`;
+      await request(server()).get(url).expect(401);
+    });
+  });
+
+  describe('POST / (OWNER): creates the table and its seats', () => {
+    const createBody = (overrides: Record<string, unknown> = {}) => ({
+      name: `${prefix}-created-${Date.now()}`,
+      variant: PokerVariant.TEXAS_HOLDEM,
+      smallBlind: 1,
+      bigBlind: 2,
+      maxSeats: 4,
+      ...overrides,
+    });
+    const countTables = () =>
+      prisma.pokerTable.count({ where: { casinoId, deletedAt: null } });
+
+    it('OWNER -> 201, casinoId from the URL, seats 1..maxSeats FREE', async () => {
+      const res = await owner
+        .post(tablesUrl(casinoId))
+        .send(createBody())
+        .expect(201);
+
+      expect(res.body.casinoId).toBe(casinoId);
+      expect(
+        res.body.seats.map((s: { seatNumber: number }) => s.seatNumber).sort(),
+      ).toEqual([1, 2, 3, 4]);
+      expect(
+        res.body.seats.every(
+          (s: { status: string }) => s.status === SeatStatus.FREE,
+        ),
+      ).toBe(true);
+    });
+
+    it('casinoId in the body -> 400 (forbidNonWhitelisted), nothing created', async () => {
+      const before = await countTables();
+
+      await owner
+        .post(tablesUrl(casinoId))
+        .send(createBody({ casinoId: otherCasinoId }))
+        .expect(400);
+
+      expect(await countTables()).toBe(before);
+    });
+
+    it.each([
+      ['bigBlind < smallBlind', { smallBlind: 10, bigBlind: 5 }],
+      ['OMAHA with 9 seats', { variant: PokerVariant.OMAHA, maxSeats: 9 }],
+      ['11 seats', { maxSeats: 11 }],
+      ['1 seat', { maxSeats: 1 }],
+    ])('%s -> 400', async (_label, overrides) => {
+      await owner
+        .post(tablesUrl(casinoId))
+        .send(createBody(overrides))
+        .expect(400);
+    });
+
+    it('FLOOR -> 403, nothing created', async () => {
+      const before = await countTables();
+
+      await floor.post(tablesUrl(casinoId)).send(createBody()).expect(403);
+
+      expect(await countTables()).toBe(before);
+    });
+
+    it('no membership -> 404', async () => {
+      await plain.post(tablesUrl(casinoId)).send(createBody()).expect(404);
+    });
+
+    it('not logged in -> 401', async () => {
+      await request(server())
+        .post(tablesUrl(casinoId))
+        .send(createBody())
+        .expect(401);
+    });
+  });
+
+  describe('DELETE /:id (OWNER): soft delete', () => {
+    let n = 0;
+    // a new player per reservation: a player has at most one active reservation
+    const book = async (seatNumber: number, arrivalAt: Date) => {
+      n += 1;
+      const user = await prisma.user.create({
+        data: {
+          email: email(`del${n}`),
+          pseudo: `${prefix}-del${n}`,
+          firstName: 'Test',
+          lastName: `del${n}`,
+          birthDate: new Date('1990-01-01'),
+        },
+      });
+      const seat = await readSeat(tableId, seatNumber);
+      await prisma.reservation.create({
+        data: {
+          userId: user.id,
+          seatId: seat.id,
+          status: ReservationStatus.CONFIRMED,
+          arrivalAt,
+        },
+      });
+    };
+
+    it('OWNER -> 204, then the table is gone from GET', async () => {
+      await owner.delete(`${tablesUrl(casinoId)}/${tableId}`).expect(204);
+
+      expect((await readTable(tableId)).deletedAt).not.toBeNull();
+      await owner.get(`${tablesUrl(casinoId)}/${tableId}`).expect(404);
+      const list = await owner.get(tablesUrl(casinoId)).expect(200);
+      expect(list.body.map((t: { id: string }) => t.id)).not.toContain(tableId);
+    });
+
+    it('deleting twice -> second call 404', async () => {
+      await owner.delete(`${tablesUrl(casinoId)}/${tableId}`).expect(204);
+      await owner.delete(`${tablesUrl(casinoId)}/${tableId}`).expect(404);
+    });
+
+    it('active reservation in the coming days -> 409, table kept', async () => {
+      await book(1, new Date(Date.now() + 2 * 24 * 60 * 60 * 1000));
+
+      await owner.delete(`${tablesUrl(casinoId)}/${tableId}`).expect(409);
+
+      expect((await readTable(tableId)).deletedAt).toBeNull();
+    });
+
+    it('active reservation of a past casino day only -> 204', async () => {
+      await book(1, new Date(Date.now() - 3 * 24 * 60 * 60 * 1000));
+
+      await owner.delete(`${tablesUrl(casinoId)}/${tableId}`).expect(204);
+    });
+
+    it('FLOOR -> 403, table kept', async () => {
+      await floor.delete(`${tablesUrl(casinoId)}/${tableId}`).expect(403);
+
+      expect((await readTable(tableId)).deletedAt).toBeNull();
+    });
+
+    it('no membership -> 404', async () => {
+      await plain.delete(`${tablesUrl(casinoId)}/${tableId}`).expect(404);
+    });
+
+    it('not logged in -> 401', async () => {
+      await request(server())
+        .delete(`${tablesUrl(casinoId)}/${tableId}`)
+        .expect(401);
+    });
+
+    it('table of another casino -> 404, that table is kept', async () => {
+      await owner.delete(`${tablesUrl(casinoId)}/${otherTableId}`).expect(404);
+
+      expect((await readTable(otherTableId)).deletedAt).toBeNull();
     });
   });
 });

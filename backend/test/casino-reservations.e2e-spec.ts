@@ -11,6 +11,7 @@ import {
   ReservationStatus,
   SeatStatus,
 } from '../src/generated/prisma/enums';
+import { casinoDay } from '../src/reservations/casino-day';
 
 // GET /api/casinos/:casinoId/reservations?day= through HTTP: casino roles
 // (FLOOR and above), query validation (FloorDayQueryDto) and response
@@ -362,5 +363,168 @@ describe('/api/casinos/:casinoId/reservations (e2e)', () => {
         await request(server()).post(url(id, action)).expect(401);
       },
     );
+
+    describe('reservation of another casino', () => {
+      let otherCasinoId: string;
+      let otherSeatId: string;
+
+      beforeAll(async () => {
+        const otherCasino = await prisma.casino.create({
+          data: {
+            name: `${prefix}-other-casino`,
+            city: 'Test',
+            address: `${prefix}-other-address`,
+            tables: {
+              create: {
+                name: `${prefix}-other-table`,
+                variant: PokerVariant.TEXAS_HOLDEM,
+                smallBlind: 1,
+                bigBlind: 2,
+                maxSeats: 2,
+                seats: { create: [{ seatNumber: 1 }] },
+              },
+            },
+          },
+          include: { tables: { include: { seats: true } } },
+        });
+        otherCasinoId = otherCasino.id;
+        otherSeatId = otherCasino.tables[0].seats[0].id;
+      });
+
+      afterAll(async () => {
+        await prisma.reservation.deleteMany({ where: { seatId: otherSeatId } });
+        await prisma.seat.deleteMany({
+          where: { table: { casinoId: otherCasinoId } },
+        });
+        await prisma.pokerTable.deleteMany({
+          where: { casinoId: otherCasinoId },
+        });
+        await prisma.casino.delete({ where: { id: otherCasinoId } });
+      });
+
+      it.each(['seat', 'leave', 'no-show'])(
+        '%s through our casino URL -> 404, nothing changes',
+        async (action) => {
+          const id = await book(otherSeatId, new Date(Date.now() - 1000));
+
+          await floor.post(url(id, action)).expect(404);
+          const reservation = await prisma.reservation.findUniqueOrThrow({
+            where: { id },
+          });
+          expect(reservation.status).toBe(ReservationStatus.CONFIRMED);
+          await prisma.reservation.delete({ where: { id } });
+        },
+      );
+
+      it('the floor list of our casino does not show it', async () => {
+        const id = await book(otherSeatId, new Date());
+
+        const res = await floor
+          .get(floorUrl(casinoId))
+          .query({ day: casinoDay(new Date()) })
+          .expect(200);
+
+        expect(res.body.map((r: { id: string }) => r.id)).not.toContain(id);
+        await prisma.reservation.delete({ where: { id } });
+      });
+    });
+  });
+
+  // The whole life of a reservation through HTTP, player then floor.
+  // PENDING_PAYMENT -> CONFIRMED is the Stripe ticket: simulated in the DB.
+  describe('full cycle: book, pay, seat, leave', () => {
+    let seat3Id: string;
+
+    beforeAll(async () => {
+      await register('cycle');
+      seat3Id = (
+        await prisma.seat.findFirstOrThrow({
+          where: { tableId, seatNumber: 3 },
+        })
+      ).id;
+    });
+
+    afterAll(async () => {
+      await prisma.reservation.deleteMany({ where: { seatId: seat3Id } });
+      await prisma.seat.update({
+        where: { id: seat3Id },
+        data: { status: SeatStatus.FREE },
+      });
+    });
+
+    it('goes PENDING_PAYMENT -> CONFIRMED -> SEATED -> COMPLETED', async () => {
+      const player = await loggedInAgent('cycle');
+      const tomorrowEvening = new Date(Date.now() + 24 * 60 * 60 * 1000);
+      tomorrowEvening.setUTCHours(18, 0, 0, 0);
+
+      // 1. the player books
+      const booked = await player
+        .post('/api/reservations')
+        .send({ seatId: seat3Id, arrivalAt: tomorrowEvening.toISOString() })
+        .expect(201);
+      expect(booked.body.status).toBe(ReservationStatus.PENDING_PAYMENT);
+      const id = booked.body.id as string;
+
+      // 2. not paid yet: the floor cannot seat them
+      await floor.post(`${floorUrl(casinoId)}/${id}/seat`).expect(409);
+
+      // 3. paid (Stripe ticket), and the arrival day has come
+      await prisma.reservation.update({
+        where: { id },
+        data: { status: ReservationStatus.CONFIRMED, arrivalAt: new Date() },
+      });
+
+      // 4. the floor sees them in today's list
+      const list = await floor
+        .get(floorUrl(casinoId))
+        .query({ day: casinoDay(new Date()) })
+        .expect(200);
+      expect(list.body).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            id,
+            status: ReservationStatus.CONFIRMED,
+            user: { pseudo: `${prefix}-cycle` },
+          }),
+        ]),
+      );
+
+      // 5. check-in: the seat is taken
+      await floor.post(`${floorUrl(casinoId)}/${id}/seat`).expect(200);
+      expect(
+        (await prisma.seat.findUniqueOrThrow({ where: { id: seat3Id } }))
+          .status,
+      ).toBe(SeatStatus.OCCUPIED);
+
+      // 6. a walk-in FREE is refused while they sit: leave must be used
+      await floor
+        .patch(`/api/casinos/${casinoId}/tables/${tableId}/seats/3`)
+        .send({ status: SeatStatus.FREE })
+        .expect(409);
+
+      // 7. the player sees SEATED in their own list
+      const mine = await player.get('/api/reservations').expect(200);
+      expect(mine.body).toEqual([
+        expect.objectContaining({ id, status: ReservationStatus.SEATED }),
+      ]);
+
+      // 8. departure: the seat is free again
+      const left = await floor
+        .post(`${floorUrl(casinoId)}/${id}/leave`)
+        .expect(200);
+      expect(left.body.status).toBe(ReservationStatus.COMPLETED);
+      expect(typeof left.body.leftAt).toBe('string');
+      expect(
+        (await prisma.seat.findUniqueOrThrow({ where: { id: seat3Id } }))
+          .status,
+      ).toBe(SeatStatus.FREE);
+
+      // 9. the floor list only shows active reservations: it is gone
+      const after = await floor
+        .get(floorUrl(casinoId))
+        .query({ day: casinoDay(new Date()) })
+        .expect(200);
+      expect(after.body.map((r: { id: string }) => r.id)).not.toContain(id);
+    });
   });
 });
