@@ -24,3 +24,9 @@ export function inscription(donnees: DonneeInscription) {
         birthDate: donnees.dateNaissance,
     });
 }
+
+export function completerInscription42(dateNaissance: string) {
+    return request<MyProfileUser>('POST', '/auth/42/complete', {
+        birthDate: dateNaissance,
+    });
+}

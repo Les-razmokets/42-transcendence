@@ -16,7 +16,8 @@
     "erreurIdentifiants": "E-mail ou mot de passe incorrect",
     "erreurTropDeTentatives": "Trop de tentatives, réessaie dans une minute.",
     "erreurGenerique": "Une erreur est survenue, réessaie plus tard.",
-    "compteCree": "Compte créé, tu peux te connecter."
+    "compteCree": "Compte créé, tu peux te connecter.",
+    "erreur42": "Connexion avec 42 impossible. Si tu as déjà un compte, connecte-toi avec ton mot de passe."
   },
   "inscription": {
     "titre": "Créer un compte",
@@ -42,12 +43,36 @@
     "erreurEmailUtilise": "Cette adresse e-mail est déjà utilisée",
     "erreurTropDeTentatives": "Trop de tentatives, réessaie dans une minute.",
     "erreurServeur": "Une erreur est survenue, réessaie plus tard.",
-    "erreurPseudoUtilise": "Ce pseudo est déjà utilisé"
+    "erreurPseudoUtilise": "Ce pseudo est déjà utilisé",
+    "erreurPseudo42": "Les pseudos qui commencent par « 42 » sont réservés aux comptes 42."
+  },
+  "inscription42": {
+    "titre": "Finaliser ton inscription",
+    "sousTitre": "Dernière étape : indique ta date de naissance pour créer ton compte avec 42.",
+    "erreurDate": "Date de naissance invalide",
+    "sessionExpiree": "Ta connexion avec 42 a expiré. Recommence pour continuer.",
+    "recommencer": "Recommencer avec 42",
+    "erreurConflit": "Impossible de créer le compte. Si tu as déjà un compte, connecte-toi avec ton mot de passe.",
+    "retourConnexion": "Retour à la connexion"
   },
   "motDePasseOublie": {
     "titre": "Mot de passe oublié",
     "bientot": "Cette fonctionnalité arrive bientôt. En attendant, contacte le support.",
     "retour": "Retour à la connexion"
+  },
+  "admin": {
+    "titre": "Administration",
+    "mesCasinos": "Mes casinos",
+    "casinos": "Casinos",
+    "menuCasino": "Menu du casino",
+    "tables": "Tables",
+    "table": "Table {{id}}",
+    "reservations": "Réservations",
+    "personnel": "Personnel",
+    "reglages": "Réglages",
+    "accesRefuse": "Tu n'as pas accès à cette page.",
+    "aucunCasino": "Tu ne gères aucun casino.",
+    "retourSite": "Retour au site"
   },
   "lobby": {
     "complete": "Complète",
@@ -59,5 +84,20 @@
   },
   "entete": {
     "monCompte": "Mon compte"
+  },
+    "table": {
+    "erreurChargement": "Impossible de charger cette table, réessaie plus tard.",
+    "retour": "Retour au lobby",
+    "choisisTaPlace_one": "Choisis ta place · {{count}} libre",
+    "choisisTaPlace_other": "Choisis ta place · {{count}} libres",
+    "legende": {
+      "libre": "Libre",
+      "occupee": "Occupée",
+      "taPlace": "Ta place"
+    },
+    "seLever": "Changer de place",
+    "confirmer": "Confirmer la place {{place}}",
+    "titrePlace": "Place {{place}} · {{table}}"
   }
 }
+

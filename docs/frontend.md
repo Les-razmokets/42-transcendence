@@ -79,10 +79,9 @@ frontend/
 │   │   └── composites/      # assemblages de primitives : CarteTable, EnTete…
 │   ├── features/            # 🧭 les écrans, un dossier par domaine
 │   │   ├── auth/            # connexion, inscription
-│   │   ├── account/         # profil, réglages
-│   │   ├── booking/         # réservation, paiement
+│   │   ├── account/         # profil, réglages, mes réservations
 │   │   ├── lobby/           # choix du casino et de la table
-│   │   └── table/           # vue d'une table
+│   │   └── table/           # table 3D, choix de la place, buy-in, paiement
 │   ├── lib/                 # 🔧 outils techniques partagés, sans JSX
 │   └── three/               # 🎲 scène 3D (Three.js / R3F)
 ├── index.html
@@ -159,7 +158,7 @@ flowchart TD
 - ❌ Le design system n'importe **jamais** `features/` ni `lib/` : il doit rester utilisable sans le métier.
 - ❌ Une feature n'importe pas une autre feature. Si deux features partagent quelque chose, ce quelque chose monte dans `lib/` ou dans le design system.
 
-**Pourquoi ?** Si `Bouton` importait du code de `booking`, toucher à la réservation pourrait casser tous les boutons de l'app. Les dépendances à sens unique empêchent ces effets de bord.
+**Pourquoi ?** Si `Bouton` importait du code de `table`, toucher à la réservation pourrait casser tous les boutons de l'app. Les dépendances à sens unique empêchent ces effets de bord.
 
 ---
 
@@ -499,10 +498,4 @@ flowchart TD
 
 ### Points connus à traiter
 
-- **L'app n'utilise pas encore le design system.** `main.tsx` importe `index.css`, et `App.tsx` et `App.css` sont encore le **template de démarrage de Vite**. `tokens.css` et les polices `@fontsource` ne sont chargés **que dans Storybook** (`.storybook/preview.tsx`). Quand on branchera les vrais écrans, il faudra importer ces fichiers dans `main.tsx` et retirer le template.
-- **`src/stories/`** contient les exemples générés par Storybook à l'installation (`Button`, `Header`, `Page`). Ils ne font pas partie du projet et peuvent être supprimés.
-- **`features/`, `lib/` et `three/` sont vides** (`.gitkeep`) : ils seront remplis avec les écrans, le client API et la scène 3D.
-- **Pas encore de variable `VITE_API_URL`** pour l'URL du backend : à ajouter avec le client API dans `lib/`.
-- **i18n** : `public/locales/` est prévu dans [`architecture.md`](architecture.md) mais pas encore créé.
-- **`tokens.css`** cite un fichier `tokens3d.ts` (couleurs de la table pour les matériaux Three.js) qui n'existe pas encore.
 - **Autocomplétion des tokens dans VS Code** : par défaut, VS Code ne propose les `var(--…)` que s'ils sont déclarés dans le fichier ouvert. Installe une extension comme *CSS Var Complete* pour qu'il indexe `tokens.css`.

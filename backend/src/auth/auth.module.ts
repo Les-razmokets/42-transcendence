@@ -11,6 +11,7 @@ import { AuthGuard } from './auth.guard';
 import { fortyTwoConfig } from './oauth/forty-two/forty-two.config';
 import { FortyTwoClientService } from './oauth/forty-two/forty-two.service';
 import { RolesGuard } from './roles.guard';
+import { SessionService } from './session.service';
 
 @Module({
   imports: [
@@ -43,9 +44,10 @@ import { RolesGuard } from './roles.guard';
     Argon2Hasher,
     AuthGuard,
     FortyTwoClientService,
+    SessionService,
     { provide: APP_GUARD, useClass: AuthGuard },
     { provide: APP_GUARD, useClass: RolesGuard },
   ],
-  exports: [JwtModule, UsersModule, AuthGuard],
+  exports: [JwtModule, UsersModule, AuthGuard, SessionService],
 })
 export class AuthModule {}

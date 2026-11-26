@@ -49,7 +49,7 @@ function renderSafeRoute(session: Partial<Session>, url = '/') {
           <Route path="/login" element={<FauxLogin />} />
           <Route element={<SafeRoute />}>
             <Route path="/" element={<p>Page lobby</p>} />
-            <Route path="/reservations" element={<p>Page réservations</p>} />
+            <Route path="/account" element={<p>Page compte</p>} />
           </Route>
         </Routes>
       </MemoryRouter>
@@ -66,23 +66,23 @@ describe('SafeRoute', () => {
   });
 
   it("affiche la bonne page enfant selon l'URL", () => {
-    renderSafeRoute({ user: joueur }, '/reservations');
+    renderSafeRoute({ user: joueur }, '/account');
 
-    expect(screen.getByText('Page réservations')).toBeInTheDocument();
+    expect(screen.getByText('Page compte')).toBeInTheDocument();
     expect(screen.queryByText('Page lobby')).not.toBeInTheDocument();
   });
 
   it("redirige vers /login si personne n'est connecté", () => {
-    renderSafeRoute({ user: null }, '/reservations');
+    renderSafeRoute({ user: null }, '/account');
 
     expect(screen.getByText('Page login')).toBeInTheDocument();
-    expect(screen.queryByText('Page réservations')).not.toBeInTheDocument();
+    expect(screen.queryByText('Page compte')).not.toBeInTheDocument();
   });
 
   it('transmet la page demandée (from) à /login', () => {
-    renderSafeRoute({ user: null }, '/reservations');
+    renderSafeRoute({ user: null }, '/account');
 
-    expect(screen.getByText('from : /reservations')).toBeInTheDocument();
+    expect(screen.getByText('from : /account')).toBeInTheDocument();
   });
 
   it('transmet aussi from quand la page demandée est le lobby', () => {

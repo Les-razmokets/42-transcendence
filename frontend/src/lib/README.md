@@ -13,9 +13,9 @@ Vue d'ensemble du frontend : [`docs/frontend.md`](../../../docs/frontend.md).
 | Fichier / dossier | Rôle | Utilisé par |
 |---|---|---|
 | `api.ts` | Client HTTP : un wrapper autour de `fetch` qui connaît l'URL du backend, ajoute le token d'authentification et convertit les erreurs HTTP en erreurs JS | Toutes les features |
-| `socket.ts` | Client WebSocket : connexion, reconnexion, messages typés (mises à jour des places et des réservations en temps réel) | `lobby`, `table`, `booking` |
+| `socket.ts` | Client WebSocket : connexion, reconnexion, messages typés (mises à jour des places et des réservations en temps réel) | `lobby`, `table`, `account` |
 | `i18n.ts` | Initialisation d'i18next et choix de la langue | `main.tsx`, toutes les features |
-| `formatage.ts` | Fonctions pures : `formaterPrix(centimes)`, `formaterDate(date)`, durées… | `booking`, `account`… |
+| `format.ts` | Formateurs purs, montants de l'API en centimes : `formaterPrix(centimes)` → « 200 CHF », `formaterBlinde(centimes)` → « 0.5 », `formaterJeu(table)` → « NLH 1/2 » | `lobby`, `table` |
 | `validation.ts` | Vérifications de formulaires : e-mail, mot de passe… | `auth`, `account` |
 
 Les noms sont indicatifs : ils seront fixés au moment d'écrire le code.
@@ -24,8 +24,8 @@ Les noms sont indicatifs : ils seront fixés au moment d'écrire le code.
 
 ```mermaid
 sequenceDiagram
-    participant P as features/booking<br/>(écran)
-    participant A as features/booking/api.ts
+    participant P as features/table<br/>(écran)
+    participant A as features/table/api.ts
     participant L as lib/api.ts
     participant B as Backend NestJS
 
@@ -63,5 +63,5 @@ flowchart TD
 
 - **Aucune dépendance vers `features/`** : `lib/` est en dessous de `features/` dans les couches, il ne peut pas les importer.
 - **De préférence des fonctions pures** (même entrée → même sortie, aucun effet de bord). Elles se testent sans navigateur ni serveur.
-- **Un fichier de test à côté** : `formatage.ts` → `formatage.test.ts`.
+- **Un fichier de test à côté** : `format.ts` → `format.test.ts`.
 - **Configuration par variables d'environnement Vite** : l'URL du backend viendra d'une variable `VITE_API_URL` (lue avec `import.meta.env.VITE_API_URL`), pas d'une URL écrite en dur.
