@@ -159,7 +159,12 @@ describe('TablesService', () => {
       );
       expect(prismaMock.pokerTable.findUnique).toHaveBeenCalledWith(
         expect.objectContaining({
-          where: { id: 'table-1', deletedAt: null, casinoId },
+          where: {
+            id: 'table-1',
+            deletedAt: null,
+            casinoId,
+            casino: { deletedAt: null },
+          },
         }),
       );
     });
@@ -181,7 +186,7 @@ describe('TablesService', () => {
       await expect(service.findAll(casinoId)).resolves.toBe(fakeTables);
       expect(prismaMock.pokerTable.findMany).toHaveBeenCalledWith(
         expect.objectContaining({
-          where: { deletedAt: null, casinoId },
+          where: { deletedAt: null, casinoId, casino: { deletedAt: null } },
           orderBy: { name: 'asc' },
         }),
       );
@@ -200,6 +205,21 @@ describe('TablesService', () => {
 
     beforeEach(() => {
       prismaMock.pokerTable.findUnique.mockResolvedValue(existingTable);
+      prismaMock.pokerTable.updateMany.mockResolvedValue({ count: 1 });
+    });
+
+    it('lève ConflictException si un autre PUT a changé maxSeats entre-temps', async () => {
+      prismaMock.pokerTable.updateMany.mockResolvedValue({ count: 0 });
+
+      await expect(
+        service.updateTable(casinoId, 'table-1', makeDto({ maxSeats: 8 })),
+      ).rejects.toBeInstanceOf(ConflictException);
+      expect(prismaMock.pokerTable.updateMany).toHaveBeenCalledWith({
+        where: { id: 'table-1', deletedAt: null, maxSeats: 6 },
+        data: { maxSeats: 8 },
+      });
+      expect(prismaMock.seat.createMany).not.toHaveBeenCalled();
+      expect(prismaMock.pokerTable.update).not.toHaveBeenCalled();
     });
 
     it('lève NotFoundException sans appeler update si la table n’existe pas', async () => {
@@ -321,6 +341,19 @@ describe('TablesService', () => {
     beforeEach(() => {
       prismaMock.pokerTable.findUnique.mockResolvedValue({ id: 'table-1' });
       prismaMock.reservation.findMany.mockResolvedValue([]);
+      prismaMock.seat.count.mockResolvedValue(0);
+    });
+
+    it('lève ConflictException sans supprimer si un walk-in occupe une place', async () => {
+      prismaMock.seat.count.mockResolvedValue(1);
+
+      await expect(
+        service.deleteTable(casinoId, 'table-1'),
+      ).rejects.toBeInstanceOf(ConflictException);
+      expect(prismaMock.seat.count).toHaveBeenCalledWith({
+        where: { tableId: 'table-1', deletedAt: null, status: 'OCCUPIED' },
+      });
+      expect(prismaMock.pokerTable.updateMany).not.toHaveBeenCalled();
     });
 
     it('lève NotFoundException sans supprimer si la table n’est pas dans ce casino', async () => {

@@ -66,7 +66,7 @@ export class TablesService {
 
   async findById(casinoId: string, id: string) {
     const table = await this.prismaService.pokerTable.findUnique({
-      where: { id, deletedAt: null, casinoId },
+      where: { id, deletedAt: null, casinoId, casino: { deletedAt: null } },
       include: tableWithSeats,
     });
     if (!table) {
@@ -77,7 +77,7 @@ export class TablesService {
 
   async findAll(casinoId: string) {
     const tables = await this.prismaService.pokerTable.findMany({
-      where: { deletedAt: null, casinoId },
+      where: { deletedAt: null, casinoId, casino: { deletedAt: null } },
       orderBy: { name: 'asc' },
       include: tableWithSeats,
     });
@@ -90,6 +90,15 @@ export class TablesService {
     this.assertValidSeats(dto.variant, dto.maxSeats);
 
     return this.prismaService.$transaction(async (tx) => {
+      const { count } = await tx.pokerTable.updateMany({
+        where: { id, deletedAt: null, maxSeats: table.maxSeats },
+        data: { maxSeats: dto.maxSeats },
+      });
+      if (count === 0) {
+        throw new ConflictException(
+          'The table has been changed in the meantime',
+        );
+      }
       if (dto.maxSeats < table.maxSeats) {
         const removed = {
           tableId: id,
@@ -141,6 +150,12 @@ export class TablesService {
   async deleteTable(casinoId: string, id: string) {
     await this.findById(casinoId, id);
     await this.prismaService.$transaction(async (tx) => {
+      const occupied = await tx.seat.count({
+        where: { tableId: id, deletedAt: null, status: SeatStatus.OCCUPIED },
+      });
+      if (occupied > 0) {
+        throw new ConflictException('A seat of the table is occupied');
+      }
       await this.assertNoUpcomingReservations(
         tx,
         { tableId: id },
