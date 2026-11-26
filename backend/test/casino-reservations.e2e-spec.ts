@@ -9,6 +9,7 @@ import {
   CasinoRole,
   PokerVariant,
   ReservationStatus,
+  SeatStatus,
 } from '../src/generated/prisma/enums';
 
 // GET /api/casinos/:casinoId/reservations?day= through HTTP: casino roles
@@ -217,5 +218,149 @@ describe('/api/casinos/:casinoId/reservations (e2e)', () => {
     const res = await player.get('/api/reservations').expect(200);
 
     expect(res.body.map((r: { id: string }) => r.id)).toEqual([reservationId]);
+  });
+
+  // POST /:id/seat, /:id/leave, /:id/no-show : the business rules are tested
+  // in the service integration spec; here, HTTP only (roles, status codes,
+  // ParseUUIDPipe and serialization with the plain reservationSchema).
+  describe('transitions: seat, leave, no-show', () => {
+    const url = (id: string, action: string, casino = casinoId) =>
+      `${floorUrl(casino)}/${id}/${action}`;
+    let seat1Id: string;
+    let seat3Id: string;
+    let n = 0;
+
+    // a new player per reservation: a player has at most one active reservation
+    const book = async (
+      seatId: string,
+      arrivalAt: Date,
+      status: ReservationStatus = ReservationStatus.CONFIRMED,
+    ) => {
+      n += 1;
+      const user = await prisma.user.create({
+        data: {
+          email: email(`tr${n}`),
+          pseudo: `${prefix}-tr${n}`,
+          firstName: 'Test',
+          lastName: `tr${n}`,
+          birthDate: new Date('1990-01-01'),
+        },
+      });
+      return (
+        await prisma.reservation.create({
+          data: { userId: user.id, seatId, status, arrivalAt },
+        })
+      ).id;
+    };
+
+    beforeAll(async () => {
+      const seats = await prisma.seat.findMany({ where: { tableId } });
+      seat1Id = seats.find((seat) => seat.seatNumber === 1)!.id;
+      seat3Id = seats.find((seat) => seat.seatNumber === 3)!.id;
+    });
+
+    afterEach(async () => {
+      await prisma.reservation.deleteMany({
+        where: { seatId: { in: [seat1Id, seat3Id] } },
+      });
+      await prisma.seat.updateMany({
+        where: { id: { in: [seat1Id, seat3Id] } },
+        data: { status: SeatStatus.FREE },
+      });
+    });
+
+    it('FLOOR seat -> 200, plain reservation (no user, no seat), SEATED', async () => {
+      const id = await book(seat1Id, new Date());
+
+      const res = await floor.post(url(id, 'seat')).expect(200);
+
+      expect(res.body).toMatchObject({
+        id,
+        status: ReservationStatus.SEATED,
+        seatId: seat1Id,
+      });
+      expect(typeof res.body.seatedAt).toBe('string');
+      expect(res.body).not.toHaveProperty('user');
+      expect(res.body).not.toHaveProperty('seat');
+    });
+
+    it('seat twice -> second call 409', async () => {
+      const id = await book(seat1Id, new Date());
+
+      await floor.post(url(id, 'seat')).expect(200);
+      await floor.post(url(id, 'seat')).expect(409);
+    });
+
+    it('OWNER leave -> 200, COMPLETED with leftAt, seat FREE', async () => {
+      const id = await book(seat1Id, new Date(), ReservationStatus.SEATED);
+      await prisma.seat.update({
+        where: { id: seat1Id },
+        data: { status: SeatStatus.OCCUPIED },
+      });
+
+      const res = await owner.post(url(id, 'leave')).expect(200);
+
+      expect(res.body).toMatchObject({
+        id,
+        status: ReservationStatus.COMPLETED,
+      });
+      expect(typeof res.body.leftAt).toBe('string');
+      const seat = await prisma.seat.findUniqueOrThrow({
+        where: { id: seat1Id },
+      });
+      expect(seat.status).toBe(SeatStatus.FREE);
+    });
+
+    it('FLOOR no-show -> 200, NO_SHOW', async () => {
+      const id = await book(seat3Id, new Date(Date.now() - 60 * 60 * 1000));
+
+      const res = await floor.post(url(id, 'no-show')).expect(200);
+
+      expect(res.body).toMatchObject({ id, status: ReservationStatus.NO_SHOW });
+    });
+
+    it('no-show before arrivalAt -> 409', async () => {
+      const id = await book(seat3Id, new Date(Date.now() + 60 * 60 * 1000));
+
+      await floor.post(url(id, 'no-show')).expect(409);
+    });
+
+    it.each(['seat', 'leave', 'no-show'])(
+      '%s: id is not a uuid -> 400',
+      async (action) => {
+        await floor.post(url('not-a-uuid', action)).expect(400);
+      },
+    );
+
+    it.each(['seat', 'leave', 'no-show'])(
+      '%s: unknown reservation -> 404',
+      async (action) => {
+        await floor
+          .post(url('00000000-0000-4000-8000-000000000000', action))
+          .expect(404);
+      },
+    );
+
+    it.each(['seat', 'leave', 'no-show'])(
+      '%s: no membership -> 404, nothing changes',
+      async (action) => {
+        const id = await book(seat1Id, new Date());
+
+        await plain.post(url(id, action)).expect(404);
+        const reservation = await prisma.reservation.findUniqueOrThrow({
+          where: { id },
+        });
+        expect(reservation.status).toBe(ReservationStatus.CONFIRMED);
+      },
+    );
+
+    it.each(['seat', 'leave', 'no-show'])(
+      '%s: not logged in -> 401',
+      async (action) => {
+        const id = await book(seat1Id, new Date());
+
+        await request(server()).post(url(id, action)).expect(401);
+      },
+    );
   });
 });
