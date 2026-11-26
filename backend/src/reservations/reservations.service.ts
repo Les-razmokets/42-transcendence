@@ -196,8 +196,8 @@ export class ReservationsService {
       );
     if (casinoDay(reservation.arrivalAt) !== casinoDay(new Date()))
       throw new ConflictException('The reservation is not confirmed for today');
-	      if (reservation.seat.status !== SeatStatus.FREE)
-        throw new ConflictException('Seat already occupied');
+    if (reservation.seat.status !== SeatStatus.FREE)
+      throw new ConflictException('Seat already occupied');
     return await this.prismaService.$transaction(async (tx) => {
       const { count } = await tx.reservation.updateMany({
         where: { id, status: ReservationStatus.CONFIRMED },
@@ -208,10 +208,10 @@ export class ReservationsService {
           'The reservation has been changed in the meantime',
         );
       const { count: countSeat } = await tx.seat.updateMany({
-        where: { id: reservation.seatId, status: SeatStatus.FREE},
-        data: { status: SeatStatus.OCCUPIED},
+        where: { id: reservation.seatId, status: SeatStatus.FREE },
+        data: { status: SeatStatus.OCCUPIED },
       });
-	  if (countSeat === 0)
+      if (countSeat === 0)
         throw new ConflictException(
           'The seat status has been changed in the meantime',
         );
