@@ -660,4 +660,392 @@ describe('ReservationsService (intégration)', () => {
       expect(ids).not.toContain(future.id);
     });
   });
+
+  describe('transitions floor : seat, leave, no-show', () => {
+    let tTableId: string;
+    const tSeatIds: Record<number, string> = {};
+    let otherCasinoId: string;
+    let otherCasinoSeatId: string;
+    const UNKNOWN_ID = '00000000-0000-4000-8000-000000000000';
+
+    const book = async (
+      name: string,
+      seatId: string,
+      arrival: Date,
+      status: ReservationStatus = ReservationStatus.CONFIRMED,
+    ) => {
+      const user = await createUser(`tr-${name}`);
+      return prisma.reservation.create({
+        data: { userId: user.id, seatId, status, arrivalAt: arrival },
+      });
+    };
+    const seatStatus = async (seatId: string) =>
+      (await prisma.seat.findUniqueOrThrow({ where: { id: seatId } })).status;
+    const reservationOf = (id: string) =>
+      prisma.reservation.findUniqueOrThrow({ where: { id } });
+
+    beforeAll(async () => {
+      const table = await prisma.pokerTable.create({
+        data: {
+          casinoId,
+          name: `${prefix}-transitions-table`,
+          variant: PokerVariant.TEXAS_HOLDEM,
+          smallBlind: 1,
+          bigBlind: 2,
+          maxSeats: 10,
+          seats: {
+            createMany: {
+              data: Array.from({ length: 10 }, (_, i) => ({
+                seatNumber: i + 1,
+              })),
+            },
+          },
+        },
+        include: { seats: true },
+      });
+      tTableId = table.id;
+      for (const seat of table.seats) {
+        tSeatIds[seat.seatNumber] = seat.id;
+      }
+
+      const otherCasino = await prisma.casino.create({
+        data: {
+          name: `${prefix}-tr-other-casino`,
+          city: 'Test',
+          address: `${prefix}-tr-other-address`,
+        },
+      });
+      otherCasinoId = otherCasino.id;
+      const otherTable = await prisma.pokerTable.create({
+        data: {
+          casinoId: otherCasinoId,
+          name: `${prefix}-tr-other-table`,
+          variant: PokerVariant.TEXAS_HOLDEM,
+          smallBlind: 1,
+          bigBlind: 2,
+          maxSeats: 2,
+          seats: { create: { seatNumber: 1 } },
+        },
+        include: { seats: true },
+      });
+      otherCasinoSeatId = otherTable.seats[0].id;
+    });
+
+    afterAll(async () => {
+      await prisma.reservation.deleteMany({
+        where: { seat: { table: { casinoId: otherCasinoId } } },
+      });
+      await prisma.seat.deleteMany({
+        where: { table: { casinoId: otherCasinoId } },
+      });
+      await prisma.pokerTable.deleteMany({
+        where: { casinoId: otherCasinoId },
+      });
+      await prisma.casino.delete({ where: { id: otherCasinoId } });
+    });
+
+    afterEach(async () => {
+      await prisma.reservation.deleteMany({
+        where: { seat: { tableId: tTableId } },
+      });
+      await prisma.reservation.deleteMany({
+        where: { seatId: otherCasinoSeatId },
+      });
+      await prisma.seat.updateMany({
+        where: { tableId: tTableId },
+        data: { status: SeatStatus.FREE },
+      });
+    });
+
+    describe('seat (check-in)', () => {
+      it('CONFIRMED du jour -> SEATED, seatedAt posé, place OCCUPIED', async () => {
+        const booked = await book('seat-ok', tSeatIds[1], new Date());
+        const before = Date.now();
+
+        const result = await service.updateSeatedForFloor(casinoId, booked.id);
+
+        expect(result).toMatchObject({
+          id: booked.id,
+          status: ReservationStatus.SEATED,
+        });
+        expect(result.seatedAt).toBeInstanceOf(Date);
+        expect(result.seatedAt!.getTime()).toBeGreaterThanOrEqual(
+          before - 1000,
+        );
+        expect((await reservationOf(booked.id)).status).toBe(
+          ReservationStatus.SEATED,
+        );
+        expect(await seatStatus(tSeatIds[1])).toBe(SeatStatus.OCCUPIED);
+      });
+
+      it('hors de la journée casino de arrivalAt -> 409, rien ne change', async () => {
+        const booked = await book(
+          'seat-other-day',
+          tSeatIds[1],
+          new Date('2030-03-12T20:00+01:00'),
+        );
+
+        await expect(
+          service.updateSeatedForFloor(casinoId, booked.id),
+        ).rejects.toThrow(ConflictException);
+        expect((await reservationOf(booked.id)).status).toBe(
+          ReservationStatus.CONFIRMED,
+        );
+        expect(await seatStatus(tSeatIds[1])).toBe(SeatStatus.FREE);
+      });
+
+      it('place déjà OCCUPIED (walk-in) -> 409, la réservation reste CONFIRMED', async () => {
+        const booked = await book('seat-occupied', tSeatIds[1], new Date());
+        await prisma.seat.update({
+          where: { id: tSeatIds[1] },
+          data: { status: SeatStatus.OCCUPIED },
+        });
+
+        await expect(
+          service.updateSeatedForFloor(casinoId, booked.id),
+        ).rejects.toThrow(ConflictException);
+        expect((await reservationOf(booked.id)).status).toBe(
+          ReservationStatus.CONFIRMED,
+        );
+      });
+
+      it.each([
+        ReservationStatus.PENDING_PAYMENT,
+        ReservationStatus.SEATED,
+        ReservationStatus.COMPLETED,
+        ReservationStatus.CANCELLED,
+        ReservationStatus.NO_SHOW,
+        ReservationStatus.EXPIRED,
+      ])('réservation %s -> 409', async (status) => {
+        const booked = await book(
+          `seat-${status}`,
+          tSeatIds[1],
+          new Date(),
+          status,
+        );
+
+        await expect(
+          service.updateSeatedForFloor(casinoId, booked.id),
+        ).rejects.toThrow(ConflictException);
+        expect((await reservationOf(booked.id)).status).toBe(status);
+      });
+
+      it('deux check-in en parallèle : un seul passe, l’autre prend 409', async () => {
+        const booked = await book('seat-race', tSeatIds[1], new Date());
+
+        const results = await Promise.allSettled([
+          service.updateSeatedForFloor(casinoId, booked.id),
+          service.updateSeatedForFloor(casinoId, booked.id),
+        ]);
+
+        const fulfilled = results.filter((r) => r.status === 'fulfilled');
+        const rejected = results.filter(
+          (r): r is PromiseRejectedResult => r.status === 'rejected',
+        );
+        expect(fulfilled).toHaveLength(1);
+        expect(rejected).toHaveLength(1);
+        expect(rejected[0].reason).toBeInstanceOf(ConflictException);
+        expect(await seatStatus(tSeatIds[1])).toBe(SeatStatus.OCCUPIED);
+      });
+
+      it('réservation d’un autre casino -> 404', async () => {
+        const booked = await book(
+          'seat-other-casino',
+          otherCasinoSeatId,
+          new Date(),
+        );
+
+        await expect(
+          service.updateSeatedForFloor(casinoId, booked.id),
+        ).rejects.toThrow(NotFoundException);
+        expect((await reservationOf(booked.id)).status).toBe(
+          ReservationStatus.CONFIRMED,
+        );
+      });
+
+      it('réservation inconnue -> 404', async () => {
+        await expect(
+          service.updateSeatedForFloor(casinoId, UNKNOWN_ID),
+        ).rejects.toThrow(NotFoundException);
+      });
+    });
+
+    describe('leave (départ)', () => {
+      it('SEATED -> COMPLETED, leftAt posé, place FREE', async () => {
+        const booked = await book(
+          'leave-ok',
+          tSeatIds[1],
+          new Date(),
+          ReservationStatus.SEATED,
+        );
+        await prisma.seat.update({
+          where: { id: tSeatIds[1] },
+          data: { status: SeatStatus.OCCUPIED },
+        });
+
+        const result = await service.updateLeavedForFloor(casinoId, booked.id);
+
+        expect(result).toMatchObject({
+          id: booked.id,
+          status: ReservationStatus.COMPLETED,
+        });
+        expect(result.leftAt).toBeInstanceOf(Date);
+        expect(await seatStatus(tSeatIds[1])).toBe(SeatStatus.FREE);
+      });
+
+      it.each([
+        ReservationStatus.PENDING_PAYMENT,
+        ReservationStatus.CONFIRMED,
+        ReservationStatus.COMPLETED,
+        ReservationStatus.CANCELLED,
+        ReservationStatus.NO_SHOW,
+        ReservationStatus.EXPIRED,
+      ])('réservation %s -> 409', async (status) => {
+        const booked = await book(
+          `leave-${status}`,
+          tSeatIds[1],
+          new Date(),
+          status,
+        );
+
+        await expect(
+          service.updateLeavedForFloor(casinoId, booked.id),
+        ).rejects.toThrow(ConflictException);
+        expect((await reservationOf(booked.id)).status).toBe(status);
+      });
+
+      it('deux départs en parallèle : un seul passe, l’autre prend 409', async () => {
+        const booked = await book(
+          'leave-race',
+          tSeatIds[1],
+          new Date(),
+          ReservationStatus.SEATED,
+        );
+        await prisma.seat.update({
+          where: { id: tSeatIds[1] },
+          data: { status: SeatStatus.OCCUPIED },
+        });
+
+        const results = await Promise.allSettled([
+          service.updateLeavedForFloor(casinoId, booked.id),
+          service.updateLeavedForFloor(casinoId, booked.id),
+        ]);
+
+        expect(results.filter((r) => r.status === 'fulfilled')).toHaveLength(1);
+        const rejected = results.filter(
+          (r): r is PromiseRejectedResult => r.status === 'rejected',
+        );
+        expect(rejected).toHaveLength(1);
+        expect(rejected[0].reason).toBeInstanceOf(ConflictException);
+      });
+
+      it('réservation d’un autre casino -> 404', async () => {
+        const booked = await book(
+          'leave-other-casino',
+          otherCasinoSeatId,
+          new Date(),
+          ReservationStatus.SEATED,
+        );
+
+        await expect(
+          service.updateLeavedForFloor(casinoId, booked.id),
+        ).rejects.toThrow(NotFoundException);
+      });
+
+      it('réservation inconnue -> 404', async () => {
+        await expect(
+          service.updateLeavedForFloor(casinoId, UNKNOWN_ID),
+        ).rejects.toThrow(NotFoundException);
+      });
+    });
+
+    describe('noShow', () => {
+      it('CONFIRMED dont arrivalAt est passé -> NO_SHOW, place inchangée', async () => {
+        const booked = await book(
+          'noshow-ok',
+          tSeatIds[1],
+          addHours(new Date(), -1),
+        );
+
+        const result = await service.updateNotShowedForFloor(
+          casinoId,
+          booked.id,
+        );
+
+        expect(result).toMatchObject({
+          id: booked.id,
+          status: ReservationStatus.NO_SHOW,
+        });
+        expect(await seatStatus(tSeatIds[1])).toBe(SeatStatus.FREE);
+      });
+
+      it('CONFIRMED de la veille -> NO_SHOW aussi', async () => {
+        const booked = await book(
+          'noshow-yesterday',
+          tSeatIds[1],
+          addHours(new Date(), -30),
+        );
+
+        await expect(
+          service.updateNotShowedForFloor(casinoId, booked.id),
+        ).resolves.toMatchObject({
+          status: ReservationStatus.NO_SHOW,
+        });
+      });
+
+      it('arrivalAt pas encore atteint -> 409, reste CONFIRMED', async () => {
+        const booked = await book(
+          'noshow-future',
+          tSeatIds[1],
+          addHours(new Date(), 1),
+        );
+
+        await expect(
+          service.updateNotShowedForFloor(casinoId, booked.id),
+        ).rejects.toThrow(ConflictException);
+        expect((await reservationOf(booked.id)).status).toBe(
+          ReservationStatus.CONFIRMED,
+        );
+      });
+
+      it.each([
+        ReservationStatus.PENDING_PAYMENT,
+        ReservationStatus.SEATED,
+        ReservationStatus.COMPLETED,
+        ReservationStatus.CANCELLED,
+        ReservationStatus.NO_SHOW,
+        ReservationStatus.EXPIRED,
+      ])('réservation %s -> 409', async (status) => {
+        const booked = await book(
+          `noshow-${status}`,
+          tSeatIds[1],
+          addHours(new Date(), -1),
+          status,
+        );
+
+        await expect(
+          service.updateNotShowedForFloor(casinoId, booked.id),
+        ).rejects.toThrow(ConflictException);
+        expect((await reservationOf(booked.id)).status).toBe(status);
+      });
+
+      it('réservation d’un autre casino -> 404', async () => {
+        const booked = await book(
+          'noshow-other-casino',
+          otherCasinoSeatId,
+          addHours(new Date(), -1),
+        );
+
+        await expect(
+          service.updateNotShowedForFloor(casinoId, booked.id),
+        ).rejects.toThrow(NotFoundException);
+      });
+
+      it('réservation inconnue -> 404', async () => {
+        await expect(
+          service.updateNotShowedForFloor(casinoId, UNKNOWN_ID),
+        ).rejects.toThrow(NotFoundException);
+      });
+    });
+  });
 });
