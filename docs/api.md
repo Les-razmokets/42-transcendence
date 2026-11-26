@@ -322,6 +322,7 @@ Toutes les routes sont sous `/api/casinos/:casinoId/tables` (noté `…/tables` 
 
 Règles communes :
 - **Autre casino** : une table qui existe mais appartient à un autre casino renvoie **404**, comme une table inconnue ou supprimée.
+- **Casino supprimé** : ses tables ne sont plus visibles (`GET …/tables` renvoie `[]`, `GET …/tables/:id` renvoie 404).
 - **Champs en trop** : tout champ hors de la liste renvoie 400 (par exemple `casinoId` dans le corps, ou `name` sur `/state`).
 - `variant` vaut `TEXAS_HOLDEM` ou `OMAHA`.
 - `smallBlind` et `bigBlind` sont des entiers ≥ 1, et `bigBlind` doit être ≥ `smallBlind` (sinon 400).
@@ -331,8 +332,10 @@ Règles communes :
 Règles de `PUT …/tables/:id` (changement de `maxSeats`) :
 - **En hausse** : les places manquantes sont créées (ou réactivées si elles avaient été supprimées).
 - **En baisse** : les dernières places sont supprimées logiquement. **409** si l'une d'elles est `OCCUPIED` ou a une réservation active (`PENDING_PAYMENT`, `CONFIRMED`, `SEATED`) pour la journée casino en cours ou une suivante.
+- **Concurrence** : le changement de `maxSeats` est un update conditionnel sur l'ancienne valeur. Si un autre `PUT` l'a modifiée entre-temps, la requête reçoit **409** et rien n'est changé.
 
 Règles de `DELETE …/tables/:id` :
+- **409** si une place est `OCCUPIED` (un walk-in, sans réservation).
 - **409** s'il reste une réservation active sur la table pour la journée casino en cours ou une suivante. Les réservations d'une journée passée ne bloquent pas.
 
 Règles de `PATCH …/seats/:seatNumber` (walk-in, joueur sans réservation) :
