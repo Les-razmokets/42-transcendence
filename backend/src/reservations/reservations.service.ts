@@ -4,7 +4,6 @@ import {
   BadRequestException,
   NotFoundException,
   Logger,
-  NotImplementedException,
 } from '@nestjs/common';
 import { CreateReservationDto } from './dto/create-reservation.dto';
 import { PrismaService } from '../prisma/prisma.service';
@@ -17,6 +16,7 @@ import {
 } from '@transcendence/shared';
 
 const PAYMENT_DELAY_MS = 15 * 60 * 1000;
+const NO_SHOW_DELAY_MS = 30 * 60 * 1000;
 const ACTIVE_RESERVATION_STATUSES = [
   ReservationStatus.PENDING_PAYMENT,
   ReservationStatus.CONFIRMED,
@@ -129,6 +129,32 @@ export class ReservationsService {
       data: { status: ReservationStatus.EXPIRED },
     });
     return count;
+  }
+
+  async expireNoShows() {
+    const { count } = await this.prismaService.reservation.updateMany({
+      where: {
+        status: ReservationStatus.CONFIRMED,
+        arrivalAt: { lte: new Date(Date.now() - NO_SHOW_DELAY_MS) },
+      },
+      data: { status: ReservationStatus.NO_SHOW },
+    });
+    return count;
+  }
+
+  async closeCasinoDay(closedAt = new Date()) {
+    const [reservationsResult, seatsResult] =
+      await this.prismaService.$transaction([
+        this.prismaService.reservation.updateMany({
+          where: { status: ReservationStatus.SEATED },
+          data: { status: ReservationStatus.COMPLETED, leftAt: closedAt },
+        }),
+        this.prismaService.seat.updateMany({
+          where: { status: SeatStatus.OCCUPIED },
+          data: { status: SeatStatus.FREE },
+        }),
+      ]);
+    return { completed: reservationsResult.count, freed: seatsResult.count };
   }
 
   async findForFloor(casinoId: string, day?: string) {

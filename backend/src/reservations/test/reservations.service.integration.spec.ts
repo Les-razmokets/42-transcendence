@@ -1047,5 +1047,166 @@ describe('ReservationsService (intégration)', () => {
         ).rejects.toThrow(NotFoundException);
       });
     });
+
+    // Étape 8 : méthodes appelées par les crons (ReservationsScheduler).
+    // Elles sont globales (tous les casinos) : on ne vérifie que nos propres
+    // lignes, et les compteurs renvoyés avec « au moins ».
+    describe('expireNoShows (cron)', () => {
+      const minutesAgo = (minutes: number) =>
+        new Date(Date.now() - minutes * 60 * 1000);
+
+      it('CONFIRMED arrivé depuis plus de 30 min -> NO_SHOW, place inchangée', async () => {
+        const late = await book('cron-ns-late', tSeatIds[1], minutesAgo(31));
+
+        const count = await service.expireNoShows();
+
+        expect(count).toBeGreaterThanOrEqual(1);
+        expect((await reservationOf(late.id)).status).toBe(
+          ReservationStatus.NO_SHOW,
+        );
+        expect(await seatStatus(tSeatIds[1])).toBe(SeatStatus.FREE);
+      });
+
+      it('CONFIRMED de la veille -> NO_SHOW aussi', async () => {
+        const yesterday = await book(
+          'cron-ns-yesterday',
+          tSeatIds[2],
+          addHours(new Date(), -24),
+        );
+
+        await service.expireNoShows();
+
+        expect((await reservationOf(yesterday.id)).status).toBe(
+          ReservationStatus.NO_SHOW,
+        );
+      });
+
+      it('CONFIRMED en retard de moins de 30 min -> reste CONFIRMED', async () => {
+        const slightlyLate = await book(
+          'cron-ns-grace',
+          tSeatIds[3],
+          minutesAgo(20),
+        );
+        const upcoming = await book(
+          'cron-ns-upcoming',
+          tSeatIds[4],
+          addHours(new Date(), 2),
+        );
+
+        await service.expireNoShows();
+
+        expect((await reservationOf(slightlyLate.id)).status).toBe(
+          ReservationStatus.CONFIRMED,
+        );
+        expect((await reservationOf(upcoming.id)).status).toBe(
+          ReservationStatus.CONFIRMED,
+        );
+      });
+
+      it.each([
+        ReservationStatus.PENDING_PAYMENT,
+        ReservationStatus.SEATED,
+        ReservationStatus.COMPLETED,
+        ReservationStatus.CANCELLED,
+      ])('ne touche pas une réservation %s, même en retard', async (status) => {
+        const booked = await book(
+          `cron-ns-${status}`,
+          tSeatIds[5],
+          addHours(new Date(), -2),
+          status,
+        );
+
+        await service.expireNoShows();
+
+        expect((await reservationOf(booked.id)).status).toBe(status);
+      });
+    });
+
+    describe('closeCasinoDay (cron)', () => {
+      // Instant de fermeture passé explicitement : le cron l'appelle sans
+      // argument (maintenant, soit 5 h à Paris).
+      const closedAt = new Date('2026-11-26T04:00:00.000Z');
+
+      it('SEATED -> COMPLETED, leftAt = instant de fermeture, place FREE', async () => {
+        const seated = await book(
+          'cron-close-seated',
+          tSeatIds[1],
+          addHours(new Date(), -3),
+          ReservationStatus.SEATED,
+        );
+        await prisma.seat.update({
+          where: { id: tSeatIds[1] },
+          data: { status: SeatStatus.OCCUPIED },
+        });
+
+        const result = await service.closeCasinoDay(closedAt);
+
+        const after = await reservationOf(seated.id);
+        expect(after.status).toBe(ReservationStatus.COMPLETED);
+        expect(after.leftAt).toEqual(closedAt);
+        expect(await seatStatus(tSeatIds[1])).toBe(SeatStatus.FREE);
+        expect(result.completed).toBeGreaterThanOrEqual(1);
+        expect(result.freed).toBeGreaterThanOrEqual(1);
+      });
+
+      it('libère aussi les places walk-in (OCCUPIED sans réservation)', async () => {
+        await prisma.seat.updateMany({
+          where: { id: { in: [tSeatIds[6], tSeatIds[7]] } },
+          data: { status: SeatStatus.OCCUPIED },
+        });
+
+        const result = await service.closeCasinoDay(closedAt);
+
+        expect(await seatStatus(tSeatIds[6])).toBe(SeatStatus.FREE);
+        expect(await seatStatus(tSeatIds[7])).toBe(SeatStatus.FREE);
+        expect(result.freed).toBeGreaterThanOrEqual(2);
+      });
+
+      it('ne touche ni les CONFIRMED à venir ni les COMPLETED déjà partis', async () => {
+        const upcoming = await book(
+          'cron-close-upcoming',
+          tSeatIds[2],
+          addHours(new Date(), 4),
+        );
+        const earlierLeave = new Date('2026-11-25T22:00:00.000Z');
+        const user = await createUser('tr-cron-close-done');
+        const done = await prisma.reservation.create({
+          data: {
+            userId: user.id,
+            seatId: tSeatIds[3],
+            arrivalAt: addHours(new Date(), -5),
+            status: ReservationStatus.COMPLETED,
+            seatedAt: addHours(new Date(), -5),
+            leftAt: earlierLeave,
+          },
+        });
+
+        await service.closeCasinoDay(closedAt);
+
+        expect((await reservationOf(upcoming.id)).status).toBe(
+          ReservationStatus.CONFIRMED,
+        );
+        const doneAfter = await reservationOf(done.id);
+        expect(doneAfter.status).toBe(ReservationStatus.COMPLETED);
+        expect(doneAfter.leftAt).toEqual(earlierLeave);
+      });
+
+      it('sans argument, pose leftAt à maintenant', async () => {
+        const seated = await book(
+          'cron-close-now',
+          tSeatIds[4],
+          addHours(new Date(), -2),
+          ReservationStatus.SEATED,
+        );
+        const before = Date.now();
+
+        await service.closeCasinoDay();
+
+        const leftAt = (await reservationOf(seated.id)).leftAt;
+        expect(leftAt).toBeInstanceOf(Date);
+        expect(leftAt?.getTime()).toBeGreaterThanOrEqual(before);
+        expect(leftAt?.getTime()).toBeLessThanOrEqual(Date.now());
+      });
+    });
   });
 });
