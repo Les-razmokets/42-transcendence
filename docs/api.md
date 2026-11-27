@@ -333,14 +333,16 @@ Règles de `PUT …/tables/:id` (changement de `maxSeats`) :
 - **En hausse** : les places manquantes sont créées (ou réactivées si elles avaient été supprimées).
 - **En baisse** : les dernières places sont supprimées logiquement. **409** si l'une d'elles est `OCCUPIED` ou a une réservation active (`PENDING_PAYMENT`, `CONFIRMED`, `SEATED`) pour la journée casino en cours ou une suivante.
 - **Concurrence** : le changement de `maxSeats` est un update conditionnel sur l'ancienne valeur. Si un autre `PUT` l'a modifiée entre-temps, la requête reçoit **409** et rien n'est changé.
+- **Réservation en même temps** : les places retirées sont verrouillées (`SELECT … FOR UPDATE`), comme la place d'une réservation en cours de création. Le second arrivé attend le commit du premier, puis voit son résultat : 409 côté `PUT`, ou 400 côté réservation.
 
 Règles de `DELETE …/tables/:id` :
 - **409** si une place est `OCCUPIED` (un walk-in, sans réservation).
 - **409** s'il reste une réservation active sur la table pour la journée casino en cours ou une suivante. Les réservations d'une journée passée ne bloquent pas.
+- **Réservation en même temps** : même verrou sur toutes les places de la table. Une réservation créée pendant la suppression fait échouer le `DELETE` (409), ou échoue elle-même (400) si la suppression a commité avant.
 
 Règles de `PATCH …/seats/:seatNumber` (walk-in, joueur sans réservation) :
 - **Place inconnue ou supprimée** : 404. `seatNumber` non entier : 400.
-- **`FREE`** : 409 si une réservation `SEATED` occupe la place. Il faut passer par `leave`.
+- **`FREE`** : 409 si une réservation `SEATED` occupe la place. Il faut passer par `leave`. La place est écrite avant le contrôle : si un check-in est en cours, le walk-in attend son commit, le voit, et reçoit 409.
 - **`OCCUPIED`** : 409 si la table est `PAUSED`, ou si la place a une réservation `CONFIRMED` ou `PENDING_PAYMENT` qui arrive dans les 2 heures, ou dont l'arrivée est passée de moins de 30 minutes (`WALK_IN_GUARD_MS`, `WALK_IN_LATE_MS`).
 - Remettre le même statut n'est pas une erreur (idempotent).
 
