@@ -341,7 +341,7 @@ Règles de `DELETE …/tables/:id` :
 Règles de `PATCH …/seats/:seatNumber` (walk-in, joueur sans réservation) :
 - **Place inconnue ou supprimée** : 404. `seatNumber` non entier : 400.
 - **`FREE`** : 409 si une réservation `SEATED` occupe la place. Il faut passer par `leave`.
-- **`OCCUPIED`** : 409 si la place a une réservation `CONFIRMED` ou `PENDING_PAYMENT` qui arrive dans les 2 heures, ou dont l'arrivée est passée de moins de 30 minutes (`WALK_IN_GUARD_MS`, `WALK_IN_LATE_MS`).
+- **`OCCUPIED`** : 409 si la table est `PAUSED`, ou si la place a une réservation `CONFIRMED` ou `PENDING_PAYMENT` qui arrive dans les 2 heures, ou dont l'arrivée est passée de moins de 30 minutes (`WALK_IN_GUARD_MS`, `WALK_IN_LATE_MS`).
 - Remettre le même statut n'est pas une erreur (idempotent).
 
 Schéma de réponse `Table` (`shared/src/tables.ts`) : `id`, `casinoId`, `name`, `variant`, `smallBlind`, `bigBlind`, `maxSeats`, `status`, `moneyOnTable`, et `seats` (tableau de `{ id, seatNumber, status }`, où `status` vaut `FREE` ou `OCCUPIED`).
@@ -419,7 +419,7 @@ Règles des transitions (`seat`, `leave`, `no-show`) :
 
 | Route | Statut attendu | Autres conditions (sinon 409) | Effet sur la place |
 |---|---|---|---|
-| `seat` | `CONFIRMED` (un `PENDING_PAYMENT` non payé donne 409) | Journée casino de `arrivalAt` = journée en cours, place `FREE` | `OCCUPIED` |
+| `seat` | `CONFIRMED` (un `PENDING_PAYMENT` non payé donne 409) | Journée casino de `arrivalAt` = journée en cours, table `OPEN` (pas `PAUSED`), place `FREE` | `OCCUPIED` |
 | `leave` | `SEATED` | – | `FREE` |
 | `no-show` | `CONFIRMED` | `arrivalAt` atteint (pas de limite : une réservation de la veille peut encore être marquée) | inchangée |
 
