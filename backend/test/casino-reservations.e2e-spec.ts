@@ -10,6 +10,7 @@ import {
   PokerVariant,
   ReservationStatus,
   SeatStatus,
+  TableStatus,
 } from '../src/generated/prisma/enums';
 import { casinoDay } from '../src/reservations/casino-day';
 
@@ -290,6 +291,31 @@ describe('/api/casinos/:casinoId/reservations (e2e)', () => {
 
       await floor.post(url(id, 'seat')).expect(200);
       await floor.post(url(id, 'seat')).expect(409);
+    });
+
+    it('seat on a PAUSED table -> 409, reservation stays CONFIRMED', async () => {
+      const id = await book(seat1Id, new Date());
+      await prisma.pokerTable.update({
+        where: { id: tableId },
+        data: { status: TableStatus.PAUSED },
+      });
+
+      try {
+        await floor.post(url(id, 'seat')).expect(409);
+        const reservation = await prisma.reservation.findUniqueOrThrow({
+          where: { id },
+        });
+        expect(reservation.status).toBe(ReservationStatus.CONFIRMED);
+        const seat = await prisma.seat.findUniqueOrThrow({
+          where: { id: seat1Id },
+        });
+        expect(seat.status).toBe(SeatStatus.FREE);
+      } finally {
+        await prisma.pokerTable.update({
+          where: { id: tableId },
+          data: { status: TableStatus.OPEN },
+        });
+      }
     });
 
     it('OWNER leave -> 200, COMPLETED with leftAt, seat FREE', async () => {

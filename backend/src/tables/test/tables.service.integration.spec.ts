@@ -556,6 +556,39 @@ describe('TablesService (intégration)', () => {
       });
     });
 
+    describe('table en PAUSED', () => {
+      const pause = (tableId: string) =>
+        prisma.pokerTable.update({
+          where: { id: tableId },
+          data: { status: TableStatus.PAUSED },
+        });
+
+      it('409 pour un walk-in, la place reste FREE', async () => {
+        const created = await newWalkInTable('paused-occupy');
+        await pause(created.id);
+
+        await expect(
+          service.updateSeat(casinoId, created.id, 1, {
+            status: SeatStatus.OCCUPIED,
+          }),
+        ).rejects.toBeInstanceOf(ConflictException);
+        expect((await seatRow(created.id, 1)).status).toBe(SeatStatus.FREE);
+      });
+
+      it('libérer une place reste permis', async () => {
+        const created = await newWalkInTable('paused-release');
+        await setSeat(created.id, 1, SeatStatus.OCCUPIED);
+        await pause(created.id);
+
+        await expect(
+          service.updateSeat(casinoId, created.id, 1, {
+            status: SeatStatus.FREE,
+          }),
+        ).resolves.toMatchObject({ id: created.id });
+        expect((await seatRow(created.id, 1)).status).toBe(SeatStatus.FREE);
+      });
+    });
+
     describe('passage en FREE', () => {
       it('place OCCUPIED sans réservation SEATED -> FREE', async () => {
         const created = await newWalkInTable('release');

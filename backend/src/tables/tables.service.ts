@@ -14,6 +14,7 @@ import {
   PokerVariant,
   SeatStatus,
   ReservationStatus,
+  TableStatus,
 } from '../generated/prisma/enums';
 import { casinoDay } from '../reservations/casino-day';
 
@@ -189,7 +190,9 @@ export class TablesService {
     seatNumber: number,
     dto: SeatStatusDto,
   ) {
-    await this.findById(casinoId, tableId);
+    const table = await this.findById(casinoId, tableId);
+    if (dto.status === SeatStatus.OCCUPIED && table.status !== TableStatus.OPEN)
+      throw new ConflictException('This table is not open');
     return this.prismaService.$transaction(async (tx) => {
       const seat = await tx.seat.findUnique({
         where: { tableId_seatNumber: { tableId, seatNumber } },

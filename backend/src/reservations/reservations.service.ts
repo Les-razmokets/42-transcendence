@@ -213,7 +213,7 @@ export class ReservationsService {
   async updateSeatedForFloor(casinoId: string, id: string) {
     const reservation = await this.prismaService.reservation.findFirst({
       where: { seat: { table: { casinoId } }, id },
-      include: { seat: true },
+      include: { seat: { include: { table: { select: { status: true } } } } },
     });
     if (!reservation) throw new NotFoundException('No reservations found');
     if (reservation.status !== ReservationStatus.CONFIRMED)
@@ -222,6 +222,8 @@ export class ReservationsService {
       );
     if (casinoDay(reservation.arrivalAt) !== casinoDay(new Date()))
       throw new ConflictException('The reservation is not confirmed for today');
+    if (reservation.seat.table.status !== TableStatus.OPEN)
+      throw new ConflictException('This table is not open');
     if (reservation.seat.status !== SeatStatus.FREE)
       throw new ConflictException('Seat already occupied');
     return await this.prismaService.$transaction(async (tx) => {
@@ -234,7 +236,11 @@ export class ReservationsService {
           'The reservation has been changed in the meantime',
         );
       const { count: countSeat } = await tx.seat.updateMany({
-        where: { id: reservation.seatId, status: SeatStatus.FREE },
+        where: {
+          id: reservation.seatId,
+          status: SeatStatus.FREE,
+          table: { status: TableStatus.OPEN },
+        },
         data: { status: SeatStatus.OCCUPIED },
       });
       if (countSeat === 0)
