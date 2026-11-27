@@ -1,12 +1,25 @@
-export type WsErrorCode =
-  | 'NOT_FOUND'
-  | 'INVALID'
-  | 'INTERNAL'
-  | 'RATE_LIMITED';
+import { z } from 'zod';
 
-export type WsAck =
-  | { ok: true }
-  | { ok: false; code: WsErrorCode };
+export const wsErrorCodeSchema = z.enum([
+  'NOT_FOUND',
+  'INVALID',
+  'INTERNAL',
+  'RATE_LIMITED',
+]);
+
+export type WsErrorCode = z.infer<typeof wsErrorCodeSchema>;
+
+export const wsAckSchema = z.discriminatedUnion('ok', [
+  z.object({
+    ok: z.literal(true),
+  }),
+  z.object({
+    ok: z.literal(false),
+    code: wsErrorCodeSchema,
+  }),
+]);
+
+export type WsAck = z.infer<typeof wsAckSchema>;
 
 export const WS_EVENTS = {
   TABLE_JOIN: 'table:join',
