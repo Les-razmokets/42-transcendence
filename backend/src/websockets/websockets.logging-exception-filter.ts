@@ -1,11 +1,14 @@
-import { ArgumentsHost, Catch, Logger } from '@nestjs/common';
 import {
-  BaseWsExceptionFilter,
-  ErrorPayload,
-  WsException,
-} from '@nestjs/websockets';
+  ArgumentsHost,
+  BadRequestException,
+  Catch,
+  Logger,
+  ExceptionFilter,
+} from '@nestjs/common';
 import type { AppSocket } from './websockets.types';
-import { MESSAGES } from '@nestjs/core/constants';
+import { WebSocketsException } from './websockets.exception';
+import { WsAck, WsErrorCode } from '@transcendence/shared';
+import { extractLogReason } from './utils/websocket.filter-utils';
 
 /**
  * Catches every error thrown in a WebSocket handler (applied with @UseFilters on
@@ -17,61 +20,65 @@ import { MESSAGES } from '@nestjs/core/constants';
  * "Internal server error" to the client. Errors were invisible on the server.
  *
  * What it does:
+ *  - turns what was thrown into ONE error code (see WsErrorCode in @transcendence/shared):
+ *      WebSocketsException  -> its own code         (expected refusal, warn)
+ *      BadRequestException  -> INVALID              (ValidationPipe, warn)
+ *      anything else        -> INTERNAL             (bug, DB down..., error + stack)
  *  - logs every error exactly ONCE, with the event name, the socket and the user;
- *  - replies to the client with an 'exception' event, through the parent class.
+ *  - THEN replies through the client's ack callback with { ok: false, code }, and
+ *    nothing else: never a message or a reason (they could reveal whether a casino
+ *    exists). No ack callback (client emitted without one) -> logged, no reply.
+ *  - never emits an 'exception' event: the ack is the only channel for errors.
  *
- * In handlers, throw `new WsException('message')` for an expected refusal (the
- * client receives the message). Anything else is treated as a bug: the client
- * only receives "Internal server error".
+ * In handlers: succeed by RETURNING the ack, fail by THROWING. For an expected
+ * refusal throw `new WebSocketsException(code, reason)`: the code goes to the
+ * client, the reason only to the log. Never return { ok: false } yourself (this
+ * filter would not see it, so nothing would be logged), and never throw a plain
+ * WsException (it is treated as a bug: INTERNAL).
  */
 @Catch() // no argument: catches everything, not only WsException
-export class WsLoggingExceptionFilter extends BaseWsExceptionFilter {
+export class WsLoggingExceptionFilter implements ExceptionFilter {
   private readonly logger = new Logger(WsLoggingExceptionFilter.name);
-  constructor() {
-    // includeCause: false: by default Nest echoes the event name and the client's
-    // own data back in the error ("cause"). Useless to the client, so we drop it.
-    super({ includeCause: false });
-  }
 
-  override catch(exception: unknown, host: ArgumentsHost) {
+  catch(exception: unknown, host: ArgumentsHost) {
     const socket = host.switchToWs().getClient<AppSocket>();
     const eventName = host.switchToWs().getPattern();
+
+    let code: WsErrorCode;
     // socket.data.user is always set here: a handler only runs on a socket the
     // handshake middleware accepted. Never log host.switchToWs().getData(): it is
     // whatever the client sent.
-    //
-    // Known limit: a WsException wrapping an Error (new WsException(err)) is logged
-    // as a warning without the original stack. We never wrap errors this way:
-    // throw the Error itself, or a WsException with a message.
-    if (exception instanceof WsException) {
+    if (exception instanceof WebSocketsException) {
       // Expected refusal (bad input, no permission...): warning, no stack.
+      const reasonPart = exception.reason
+        ? ` exception_reason=${exception.reason}`
+        : '';
+      code = exception.code;
       this.logger.warn(
-        `EventName=${eventName} socket=${socket.id} user=${socket.data.user.id} exception=${exception.message}`,
+        `event_name=${eventName} socket=${socket.id} user=${socket.data.user.id} exception_code=${code}${reasonPart}`,
+      );
+    } else if (exception instanceof BadRequestException) {
+      code = 'INVALID';
+      const safeReason = extractLogReason(exception);
+      this.logger.warn(
+        `event_name=${eventName} socket=${socket.id} user=${socket.data.user.id} exception_code=${code} exception_message=${safeReason}`,
       );
     } else {
       // Unexpected (bug, DB down, HttpException in a WS handler, @Roles misuse...):
       // error WITH the stack trace.
+      code = 'INTERNAL';
       this.logger.error(
-        `EventName=${eventName} socket=${socket.id} user=${socket.data.user.id}`,
+        `event_name=${eventName} socket=${socket.id} user=${socket.data.user.id} exception_code=${code}`,
         exception instanceof Error ? exception.stack : String(exception),
       );
     }
-    // The parent builds and sends the reply: a WsException's message as is,
-    // anything else goes to handleUnknownError below.
-    super.catch(exception, host);
-  }
-
-  // Override of the parent's method (the parent calls this.handleUnknownError,
-  // so this version runs). The parent's version also logs the error, without
-  // any context: since catch() above already logged it, that would be a second
-  // log for the same incident. Same reply, no log.
-  override handleUnknownError<
-    TClient extends { emit?: Function; send?: Function },
-  >(_exception: unknown, client: TClient, _data: ErrorPayload['cause']): void {
-    this.emitMessage(client, 'exception', {
-      status: 'error',
-      // "Internal server error", the same text Nest uses everywhere
-      message: MESSAGES.UNKNOWN_EXCEPTION_MESSAGE,
-    });
+    // Reply AFTER logging: if the ack throws, the log line is already written.
+    // WS handler arguments are [client, data, ack, pattern]: the ack is index 2
+    // (undefined when the client did not pass a callback). Not the last one:
+    // that is the pattern (event name).
+    const arg = host.getArgByIndex<unknown>(2);
+    const ack =
+      typeof arg === 'function' ? (arg as (res: WsAck) => void) : undefined;
+    ack?.({ ok: false, code });
   }
 }

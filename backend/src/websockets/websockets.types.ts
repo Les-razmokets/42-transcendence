@@ -1,6 +1,9 @@
 import { Server, Socket, DefaultEventsMap } from 'socket.io';
 import { VerifiedSession } from '../auth/utils/verified.session';
-import { WsClientToServerEvents, WsServerToClientEvents } from '@transcendence/shared';
+import {
+  WsClientToServerEvents,
+  WsServerToClientEvents,
+} from '@transcendence/shared';
 
 /*
  * Typed versions of the Socket.IO Server and Socket. Use AppServer / AppSocket

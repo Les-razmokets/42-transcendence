@@ -14,17 +14,19 @@ import {
 } from '@nestjs/common';
 import { WsException } from '@nestjs/websockets';
 import { WsLoggingExceptionFilter } from '../websockets.logging-exception-filter';
+import { WebSocketsException } from '../websockets.exception';
 import { Role } from '../../generated/prisma/client'; // value import: we use Role.USER
 
 /*
- * Written against the issue 2 specification:
+ * Written against the issue 2 specification, updated for issue 3 (D2):
  *  - no WebSocket error is silent: every one is logged exactly once, with the event,
  *    the socket and the user;
- *  - expected errors (WsException) are warnings without a stack, everything else is an
- *    error WITH the stack;
- *  - the client always gets an 'exception' event, never internal details, never its own
- *    data echoed back (includeCause: false);
+ *  - expected refusals (WebSocketsException) are warnings without a stack, everything
+ *    else (including a plain WsException) is an error WITH the stack;
+ *  - the client gets { ok: false, code } through its ack callback, never an
+ *    'exception' event, never internal details, never its own data echoed back;
  *  - what the client sent is never written to the logs.
+ * See websockets.error-contract.spec.ts for the full issue 3 contract.
  */
 
 const SECRET_DATA = 'S3CRET-CLIENT-PAYLOAD';
@@ -36,6 +38,7 @@ describe('WsLoggingExceptionFilter', () => {
     data: { user: { id: string; role: Role; exp: number } };
     emit: jest.Mock<(event: string, payload: unknown) => boolean>;
   };
+  let ack: jest.Mock<(res: unknown) => void>;
   let host: ArgumentsHost;
   let warnSpy: jest.SpiedFunction<Logger['warn']>;
   let errorSpy: jest.SpiedFunction<Logger['error']>;
@@ -47,12 +50,11 @@ describe('WsLoggingExceptionFilter', () => {
       .map((arg) => (typeof arg === 'string' ? arg : JSON.stringify(arg)))
       .join('\n');
 
-  // the single payload sent to the client
+  // the single payload sent to the client: through the ack, never as an event
   const sentPayload = () => {
-    expect(client.emit).toHaveBeenCalledTimes(1);
-    const [event, payload] = client.emit.mock.calls[0];
-    expect(event).toBe('exception');
-    return payload as Record<string, unknown>;
+    expect(client.emit).not.toHaveBeenCalled();
+    expect(ack).toHaveBeenCalledTimes(1);
+    return ack.mock.calls[0][0] as Record<string, unknown>;
   };
 
   beforeEach(() => {
@@ -68,10 +70,13 @@ describe('WsLoggingExceptionFilter', () => {
       data: { user: { id: 'u1', role: Role.USER, exp: 0 } },
       emit: jest.fn<(event: string, payload: unknown) => boolean>(),
     };
+    ack = jest.fn<(res: unknown) => void>();
+    // Nest's WS handler arguments: [client, data, ack, pattern]
+    const args = () => [client, { secret: SECRET_DATA }, ack, 'join_table'];
     host = {
       getType: () => 'ws',
-      getArgs: () => [client, { secret: SECRET_DATA }],
-      getArgByIndex: (i: number) => [client, { secret: SECRET_DATA }][i],
+      getArgs: args,
+      getArgByIndex: (i: number) => args()[i],
       switchToWs: () => ({
         getClient: () => client,
         getData: () => ({ secret: SECRET_DATA }),
@@ -90,18 +95,15 @@ describe('WsLoggingExceptionFilter', () => {
     jest.restoreAllMocks();
   });
 
-  describe('expected error: WsException', () => {
-    it('sends its message to the client, without echoing the client data back', () => {
-      filter.catch(new WsException('table is full'), host);
+  describe('expected refusal: WebSocketsException', () => {
+    it('sends only its code to the client, never the reason nor the client data', () => {
+      filter.catch(new WebSocketsException('NOT_FOUND', 'table is full'), host);
 
-      expect(sentPayload()).toEqual({
-        status: 'error',
-        message: 'table is full',
-      });
+      expect(sentPayload()).toStrictEqual({ ok: false, code: 'NOT_FOUND' });
     });
 
-    it('is logged once as a warning with event, socket, user and message, and no stack', () => {
-      filter.catch(new WsException('table is full'), host);
+    it('is logged once as a warning with event, socket, user and reason, and no stack', () => {
+      filter.catch(new WebSocketsException('NOT_FOUND', 'table is full'), host);
 
       expect(warnSpy).toHaveBeenCalledTimes(1);
       expect(errorSpy).not.toHaveBeenCalled();
@@ -117,6 +119,11 @@ describe('WsLoggingExceptionFilter', () => {
   describe('unexpected errors', () => {
     const unexpected: [string, () => unknown, string][] = [
       ['a plain Error (bug)', () => new Error('kaboom'), 'kaboom'],
+      [
+        'a plain WsException (handler forgot the subclass)',
+        () => new WsException('table is full'),
+        'table is full',
+      ],
       [
         'the @Roles() misuse from RolesGuard',
         () =>
@@ -139,15 +146,12 @@ describe('WsLoggingExceptionFilter', () => {
     ];
 
     it.each(unexpected)(
-      '%s: the client gets a generic message, never the internal one',
+      '%s: the client gets INTERNAL, never the internal message',
       (_name, make, internal) => {
         filter.catch(make(), host);
 
         const payload = sentPayload();
-        expect(payload).toEqual({
-          status: 'error',
-          message: 'Internal server error',
-        });
+        expect(payload).toStrictEqual({ ok: false, code: 'INTERNAL' });
         expect(JSON.stringify(payload)).not.toContain(internal);
       },
     );
@@ -187,6 +191,7 @@ describe('WsLoggingExceptionFilter', () => {
 
   describe('client data', () => {
     it.each([
+      ['WebSocketsException', () => new WebSocketsException('NOT_FOUND')],
       ['WsException', () => new WsException('nope')],
       ['Error', () => new Error('kaboom')],
       ['HttpException', () => new ForbiddenException()],
@@ -196,9 +201,7 @@ describe('WsLoggingExceptionFilter', () => {
         filter.catch(make(), host);
 
         expect(allLogText()).not.toContain(SECRET_DATA);
-        expect(JSON.stringify(client.emit.mock.calls)).not.toContain(
-          SECRET_DATA,
-        );
+        expect(JSON.stringify(ack.mock.calls)).not.toContain(SECRET_DATA);
         expect(sentPayload()).not.toHaveProperty('cause');
       },
     );

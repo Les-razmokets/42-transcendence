@@ -34,7 +34,8 @@ export class RolesGuard implements CanActivate {
     // This guard is HTTP-only: on a WebSocket message it lets everything through.
     // That would make @Roles() on a WebSocket handler LOOK protected while doing
     // nothing, so we fail loudly instead (logged by WsLoggingExceptionFilter).
-    // For WebSocket permissions, check them in the handler and throw a WsException.
+    // For WebSocket permissions, check them in the handler and throw a
+    // WebSocketsException (../websockets/websockets.exception.ts).
     // Roles are read first because of this check, before @Public().
     if (context.getType() !== 'http') {
       if (roles) {
