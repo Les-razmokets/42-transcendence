@@ -1,5 +1,6 @@
 import { Server, Socket, DefaultEventsMap } from 'socket.io';
 import { VerifiedSession } from '../auth/utils/verified.session';
+import { WsClientToServerEvents, WsServerToClientEvents } from '@transcendence/shared';
 
 /*
  * Typed versions of the Socket.IO Server and Socket. Use AppServer / AppSocket
@@ -7,22 +8,22 @@ import { VerifiedSession } from '../auth/utils/verified.session';
  * `socket.data` is `any` and typos are not caught.
  *
  * Socket.IO takes 4 positional generics:
- *   1. ClientToServerEvents  events the client emits      (TODO issue 4: typed map in @transcendence/shared)
- *   2. ServerToClientEvents  events the server emits      (TODO issue 4: typed map in @transcendence/shared)
+ *   1. ClientToServerEvents  events the client emits
+ *   2. ServerToClientEvents  events the server emits
  *   3. InterServerEvents     messages between several backend instances (serverSideEmit);
  *                            unused: we run a single backend
  *   4. SocketData            the type of socket.data (below)
  * DefaultEventsMap means "not typed yet".
  */
 export type AppServer = Server<
-  DefaultEventsMap,
-  DefaultEventsMap,
+  WsClientToServerEvents,
+  WsServerToClientEvents,
   DefaultEventsMap,
   SocketData
 >;
 export type AppSocket = Socket<
-  DefaultEventsMap,
-  DefaultEventsMap,
+  WsClientToServerEvents,
+  WsServerToClientEvents,
   DefaultEventsMap,
   SocketData
 >;

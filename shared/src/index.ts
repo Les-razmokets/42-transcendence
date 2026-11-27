@@ -7,3 +7,4 @@ export * from './casinos-schema.js';
 export * from './health-schemas.js';
 export * from './users-schema.js';
 export * from './pseudo.js';
+export * from './websockets.types.js';

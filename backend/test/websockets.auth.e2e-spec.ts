@@ -12,6 +12,7 @@ import { JwtService } from '@nestjs/jwt';
 import type { AddressInfo } from 'node:net';
 import request from 'supertest';
 import { io, Socket as ClientSocket } from 'socket.io-client';
+import type { Server } from 'socket.io';
 import { AppModule } from '../src/app.module';
 import { configureApp } from '../src/app.config';
 import { PrismaService } from '../src/prisma/prisma.service';
@@ -44,6 +45,13 @@ type ConnectResult =
     };
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+// The gateway's server only allows events from the shared contract
+// (@transcendence/shared). Room isolation tests emit a fake 'probe' event that
+// must NOT be part of that contract (the front would see it), so they go through
+// this untyped view of the server. Use it for test-only emits, nothing else.
+const untypedServer = (gateway: WebsocketsGateway): Server =>
+  gateway.server as unknown as Server;
 
 describe('WebSocket handshake auth (e2e)', () => {
   let app: NestExpressApplication;
@@ -278,7 +286,7 @@ describe('WebSocket handshake auth (e2e)', () => {
       const got1 = collect(tab1, 'probe', 500);
       const got2 = collect(tab2, 'probe', 500);
       const gotBob = collect(bob, 'probe', 500);
-      gateway.server.to(userRoom(logged.alice.id)).emit('probe', 42);
+      untypedServer(gateway).to(userRoom(logged.alice.id)).emit('probe', 42);
 
       expect(await got1).toEqual([42]);
       expect(await got2).toEqual([42]);

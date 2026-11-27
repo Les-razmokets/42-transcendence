@@ -16,3 +16,11 @@
 export function userRoom(id: string): string {
   return `user:${id}`;
 }
+
+export function tableRoom(id: string): string {
+  return `table:${id}`;
+}
+
+export function casinoStaffRoom(id: string): string {
+  return `casino:${id}:staff`;
+}
