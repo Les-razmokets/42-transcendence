@@ -16,7 +16,7 @@
  * Errors thrown in a handler are logged and answered through the client's ack
  * by WsLoggingExceptionFilter.
  */
-import { Logger, UnauthorizedException, UseFilters } from '@nestjs/common';
+import { Logger, SerializeOptions, UnauthorizedException, UseFilters } from '@nestjs/common';
 import {
   ConnectedSocket,
   MessageBody,
@@ -34,7 +34,7 @@ import { COOKIE_NAME } from '../auth/utils/cookie';
 import type { AppServer, AppSocket } from './utils/websockets.types';
 import { tableRoom, userRoom } from './utils/rooms';
 import { WsLoggingExceptionFilter } from './websockets.logging-exception-filter';
-import { WS_EVENTS, WsAck } from '@transcendence/shared';
+import { WS_EVENTS, WsAck, wsAckSchema } from '@transcendence/shared';
 import { TableJoinDto } from './dto/websockets.dto';
 import { WsTableJoinService } from './websockets.join-table.service';
 
@@ -213,6 +213,7 @@ export class WebsocketsGateway
     clearTimeout(client.data.expiryTimer);
   }
 
+  @SerializeOptions({ schema: wsAckSchema })
   @SubscribeMessage(WS_EVENTS.TABLE_JOIN)
   async joinTable(
     @MessageBody() payload: TableJoinDto,
