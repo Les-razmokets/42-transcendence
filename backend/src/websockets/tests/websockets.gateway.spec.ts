@@ -20,8 +20,9 @@ import { COOKIE_NAME } from '../../auth/utils/cookie';
 import { IS_PUBLIC_KEY } from '../../auth/utils/public.decorator';
 import { ROLES_KEY } from '../../auth/utils/roles.decorator';
 import type { VerifiedSession } from '../../auth/utils/verified.session';
-import type { AppServer, AppSocket } from '../websockets.types';
-import { userRoom } from '../rooms';
+import type { AppServer, AppSocket } from '../utils/websockets.types';
+import { userRoom } from '../utils/rooms';
+import type { WsTableJoinService } from '../websockets.join-table.service';
 import { Role } from '../../generated/prisma/client'; // value import: we use Role.USER
 
 /*
@@ -88,6 +89,10 @@ describe('WebsocketsGateway', () => {
   let gateway: WebsocketsGateway;
   let config: { getOrThrow: jest.Mock<(key: string) => string> };
   let session: { verify: jest.Mock<SessionService['verify']> };
+  // issue 3: table:join access check (tested in websockets.table-join.spec.ts)
+  const tableJoin = {
+    assertCanJoin: jest.fn<WsTableJoinService['assertCanJoin']>(),
+  } as unknown as WsTableJoinService;
   let logSpy: jest.SpiedFunction<Logger['log']>;
   let warnSpy: jest.SpiedFunction<Logger['warn']>;
   let errorSpy: jest.SpiedFunction<Logger['error']>;
@@ -125,6 +130,7 @@ describe('WebsocketsGateway', () => {
     gateway = new WebsocketsGateway(
       config as unknown as ConfigService,
       session as unknown as SessionService,
+      tableJoin,
     );
   });
 
@@ -146,6 +152,7 @@ describe('WebsocketsGateway', () => {
           new WebsocketsGateway(
             broken as unknown as ConfigService,
             session as unknown as SessionService,
+            tableJoin,
           ),
       ).toThrow();
     });

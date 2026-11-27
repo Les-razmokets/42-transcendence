@@ -5,8 +5,8 @@ import {
   Logger,
   ExceptionFilter,
 } from '@nestjs/common';
-import type { AppSocket } from './websockets.types';
-import { WebSocketsException } from './websockets.exception';
+import type { AppSocket } from './utils/websockets.types';
+import { WebSocketsException } from './utils/websockets.exception';
 import { WsAck, WsErrorCode } from '@transcendence/shared';
 import { extractLogReason } from './utils/websocket.filter-utils';
 

@@ -35,9 +35,6 @@ function toReadableEntry(item: unknown): string {
 
 export function extractLogReason(exception: BadRequestException): string {
   const res = exception.getResponse();
-  if (typeof res === 'string') {
-    return formatLogReason(res);
-  }
   if (res && typeof res === 'object') {
     const { message } = res as { message?: unknown };
     if (Array.isArray(message)) {

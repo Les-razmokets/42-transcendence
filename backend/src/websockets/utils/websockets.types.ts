@@ -1,5 +1,5 @@
 import { Server, Socket, DefaultEventsMap } from 'socket.io';
-import { VerifiedSession } from '../auth/utils/verified.session';
+import { VerifiedSession } from '../../auth/utils/verified.session';
 import {
   WsClientToServerEvents,
   WsServerToClientEvents,

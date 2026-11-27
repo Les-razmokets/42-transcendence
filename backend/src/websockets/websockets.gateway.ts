@@ -11,9 +11,9 @@
  * Security model: authentication is done ONCE, at the handshake. The HTTP guards
  * (AuthGuard, RolesGuard) let WebSocket messages through on purpose, so every
  * handler that needs a permission (e.g. casino membership) must check it itself
- * and throw a WsException when refused.
+ * and throw a WebSocketsException with a code (and a reason for the log) when refused.
  *
- * Errors thrown in a handler are logged and turned into an 'exception' event
+ * Errors thrown in a handler are logged and answered through the client's ack
  * by WsLoggingExceptionFilter.
  */
 import { Logger, UnauthorizedException, UseFilters } from '@nestjs/common';
@@ -31,9 +31,12 @@ import { ConfigService } from '@nestjs/config';
 import { SessionService } from '../auth/session.service';
 import { parse } from 'cookie';
 import { COOKIE_NAME } from '../auth/utils/cookie';
-import type { AppServer, AppSocket } from './websockets.types';
-import { userRoom } from './rooms';
+import type { AppServer, AppSocket } from './utils/websockets.types';
+import { tableRoom, userRoom } from './utils/rooms';
 import { WsLoggingExceptionFilter } from './websockets.logging-exception-filter';
+import { WS_EVENTS, WsAck } from '@transcendence/shared';
+import { TableJoinDto } from './dto/websockets.dto';
+import { WsTableJoinService } from './websockets.join-table.service';
 
 // No options: default namespace "/" and default path "/socket.io/", which is what
 // nginx routes here and what socket.io-client uses by default.
@@ -52,6 +55,7 @@ export class WebsocketsGateway
   constructor(
     private readonly config: ConfigService,
     private readonly session: SessionService,
+    private readonly tableAccess: WsTableJoinService,
   ) {
     // Read once at startup: a missing FRONTEND_URL crashes the app at boot,
     // not at the first connection. Do not add computed values as constructor
@@ -207,5 +211,15 @@ export class WebsocketsGateway
     // (memory leak) that later disconnects a dead socket. clearTimeout(undefined)
     // is a no-op, so sockets without a timer are fine.
     clearTimeout(client.data.expiryTimer);
+  }
+
+  @SubscribeMessage(WS_EVENTS.TABLE_JOIN)
+  async joinTable(
+    @MessageBody() payload: TableJoinDto,
+    @ConnectedSocket() socket: AppSocket,
+  ): Promise<WsAck> {
+    await this.tableAccess.assertCanJoin(payload.casinoId, payload.tableId);
+    await socket.join(tableRoom(payload.tableId));
+    return { ok: true };
   }
 }

@@ -14,7 +14,7 @@ import {
 } from '@nestjs/common';
 import { WsException } from '@nestjs/websockets';
 import { WsLoggingExceptionFilter } from '../websockets.logging-exception-filter';
-import { WebSocketsException } from '../websockets.exception';
+import { WebSocketsException } from '../utils/websockets.exception';
 import { Role } from '../../generated/prisma/client'; // value import: we use Role.USER
 
 /*

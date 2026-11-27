@@ -18,7 +18,7 @@ import { configureApp } from '../src/app.config';
 import { PrismaService } from '../src/prisma/prisma.service';
 import { COOKIE_NAME } from '../src/auth/utils/cookie';
 import { WebsocketsGateway } from '../src/websockets/websockets.gateway';
-import { userRoom } from '../src/websockets/rooms';
+import { userRoom } from '../src/websockets/utils/rooms';
 import { Role } from '../src/generated/prisma/client';
 
 /*

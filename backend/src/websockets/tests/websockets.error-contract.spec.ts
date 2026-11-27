@@ -16,7 +16,7 @@ import { WsException } from '@nestjs/websockets';
 import { ExecutionContextHost } from '@nestjs/core/helpers/execution-context-host';
 import type { WsErrorCode } from '@transcendence/shared';
 import { WsLoggingExceptionFilter } from '../websockets.logging-exception-filter';
-import { WebSocketsException } from '../websockets.exception';
+import { WebSocketsException } from '../utils/websockets.exception';
 import {
   extractLogReason,
   formatLogReason,
