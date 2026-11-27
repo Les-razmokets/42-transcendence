@@ -97,6 +97,35 @@ describe('TablesService (intégration)', () => {
     });
   }
 
+  // Simule une réservation en cours de création : la transaction verrouille la
+  // place et insère la réservation, puis reste ouverte 300 ms pendant que
+  // `action` tourne. Renvoie le résultat de `action`, à attendre après le commit.
+  async function whileReserving(
+    tableId: string,
+    seatNumber: number,
+    action: () => Promise<unknown>,
+  ) {
+    const seat = await prisma.seat.findFirstOrThrow({
+      where: { tableId, seatNumber },
+    });
+    let pending!: Promise<unknown>;
+    await prisma.$transaction(async (tx) => {
+      await tx.$queryRaw`SELECT id FROM "Seat" WHERE id = ${seat.id} FOR UPDATE`;
+      await tx.reservation.create({
+        data: {
+          userId,
+          seatId: seat.id,
+          status: ReservationStatus.PENDING_PAYMENT,
+          arrivalAt: nextFutureDay(),
+        },
+      });
+      pending = action();
+      pending.catch(() => undefined);
+      await new Promise((resolve) => setTimeout(resolve, 300));
+    });
+    return pending;
+  }
+
   // Toutes les lignes en base, places supprimées comprises
   const allSeats = (tableId: string) =>
     prisma.seat.findMany({
@@ -379,9 +408,41 @@ describe('TablesService (intégration)', () => {
 
       expect(updated.seats.map((s) => s.seatNumber)).toEqual([1, 2, 3]);
     });
+
+    it('en baisse pendant une réservation non commitée sur une place retirée : 409', async () => {
+      const created = await service.create(
+        casinoId,
+        makeDto('seats-race-resa', { maxSeats: 5 }),
+      );
+
+      const result = whileReserving(created.id, 5, () =>
+        service.updateTable(
+          casinoId,
+          created.id,
+          makeDto('seats-race-resa', { maxSeats: 3 }),
+        ),
+      );
+
+      await expect(result).rejects.toBeInstanceOf(ConflictException);
+      const rows = await allSeats(created.id);
+      expect(rows.every((s) => s.deletedAt === null)).toBe(true);
+    });
   });
 
   describe('deleteTable : réservations actives', () => {
+    it('pendant une réservation non commitée : 409, la table reste', async () => {
+      const created = await service.create(casinoId, makeDto('delete-race'));
+
+      const result = whileReserving(created.id, 1, () =>
+        service.deleteTable(casinoId, created.id),
+      );
+
+      await expect(result).rejects.toBeInstanceOf(ConflictException);
+      await expect(
+        service.findById(casinoId, created.id),
+      ).resolves.toMatchObject({ id: created.id });
+    });
+
     it('409 si une place a une réservation active à venir, la table reste', async () => {
       const created = await service.create(casinoId, makeDto('delete-resa'));
       await reserve(
@@ -632,6 +693,39 @@ describe('TablesService (intégration)', () => {
             status: SeatStatus.FREE,
           }),
         ).resolves.toMatchObject({ id: created.id });
+      });
+
+      it('walk-in FREE pendant un check-in non commité : 409, la place reste OCCUPIED', async () => {
+        const created = await newWalkInTable('race-checkin');
+        const booked = await reserve(
+          created.id,
+          1,
+          ReservationStatus.CONFIRMED,
+          inMs(-HOUR_MS),
+        );
+
+        // Check-in simulé dans une transaction qu'on garde ouverte :
+        // il tient le verrou de la place sans être encore visible.
+        let walkIn!: Promise<unknown>;
+        await prisma.$transaction(async (tx) => {
+          await tx.reservation.update({
+            where: { id: booked.id },
+            data: { status: ReservationStatus.SEATED, seatedAt: new Date() },
+          });
+          await tx.seat.update({
+            where: { id: booked.seatId },
+            data: { status: SeatStatus.OCCUPIED },
+          });
+          walkIn = service.updateSeat(casinoId, created.id, 1, {
+            status: SeatStatus.FREE,
+          });
+          walkIn.catch(() => undefined);
+          // Laisse le walk-in arriver jusqu'au verrou avant de commiter
+          await new Promise((resolve) => setTimeout(resolve, 300));
+        });
+
+        await expect(walkIn).rejects.toBeInstanceOf(ConflictException);
+        expect((await seatRow(created.id, 1)).status).toBe(SeatStatus.OCCUPIED);
       });
     });
 

@@ -106,6 +106,7 @@ export class TablesService {
           deletedAt: null,
           seatNumber: { gt: dto.maxSeats },
         };
+        await this.lockSeats(tx, id, dto.maxSeats);
         const occupied = await tx.seat.count({
           where: { ...removed, status: SeatStatus.OCCUPIED },
         });
@@ -151,6 +152,7 @@ export class TablesService {
   async deleteTable(casinoId: string, id: string) {
     await this.findById(casinoId, id);
     await this.prismaService.$transaction(async (tx) => {
+      await this.lockSeats(tx, id);
       const occupied = await tx.seat.count({
         where: { tableId: id, deletedAt: null, status: SeatStatus.OCCUPIED },
       });
@@ -201,6 +203,10 @@ export class TablesService {
       if (!seat || seat.deletedAt !== null)
         throw new NotFoundException(`Seat ${seatNumber} not found`);
       if (dto.status === SeatStatus.FREE) {
+        await tx.seat.update({
+          where: { id: seat.id },
+          data: { status: SeatStatus.FREE },
+        });
         const reservationCount = await tx.reservation.count({
           where: { seatId: seat.id, status: ReservationStatus.SEATED },
         });
@@ -229,16 +235,27 @@ export class TablesService {
             'Seat is reserved within the next 2 hours',
           );
         }
+        await tx.seat.update({
+          where: { id: seat.id },
+          data: { status: SeatStatus.OCCUPIED },
+        });
       }
-      await tx.seat.update({
-        where: { id: seat.id },
-        data: { status: dto.status },
-      });
       return tx.pokerTable.findUniqueOrThrow({
         where: { id: tableId },
         include: tableWithSeats,
       });
     });
+  }
+
+  // Verrouille les places de la table (numéro > afterSeatNumber) jusqu'au
+  // commit. ReservationsService.create verrouille aussi sa place : une
+  // réservation et un retrait de place ne peuvent pas se croiser.
+  private async lockSeats(
+    tx: Prisma.TransactionClient,
+    tableId: string,
+    afterSeatNumber = 0,
+  ) {
+    await tx.$queryRaw`SELECT id FROM "Seat" WHERE "tableId" = ${tableId} AND "seatNumber" > ${afterSeatNumber} FOR UPDATE`;
   }
 
   // 409 si une des places visées a une réservation active pour la journée

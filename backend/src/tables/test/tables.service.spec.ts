@@ -29,6 +29,7 @@ describe('TablesService', () => {
     reservation: {
       findMany: jest.fn(),
     },
+    $queryRaw: jest.fn(),
     // Transaction interactive : le callback reçoit le mock lui-même comme `tx`.
     $transaction: jest.fn(
       (callback: (tx: unknown) => Promise<unknown>): Promise<unknown> =>
