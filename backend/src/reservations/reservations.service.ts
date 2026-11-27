@@ -39,15 +39,18 @@ export class ReservationsService {
     const now = new Date();
     const isToday =
       !isCasinoClosed(now) && casinoDay(dto.arrivalAt) === casinoDay(now);
-    await this.assertSeatAvailable(dto.seatId, isToday);
     try {
-      return await this.prismaService.reservation.create({
-        data: {
-          userId: userId,
-          seatId: dto.seatId,
-          arrivalAt: dto.arrivalAt,
-          status: ReservationStatus.PENDING_PAYMENT,
-        },
+      return await this.prismaService.$transaction(async (tx) => {
+        await tx.$queryRaw`SELECT id FROM "Seat" WHERE id = ${dto.seatId} FOR UPDATE`;
+        await this.assertSeatAvailable(tx, dto.seatId, isToday);
+        return tx.reservation.create({
+          data: {
+            userId: userId,
+            seatId: dto.seatId,
+            arrivalAt: dto.arrivalAt,
+            status: ReservationStatus.PENDING_PAYMENT,
+          },
+        });
       });
     } catch (error) {
       if (error instanceof Prisma.PrismaClientKnownRequestError) {
@@ -275,8 +278,12 @@ export class ReservationsService {
     });
   }
 
-  private async assertSeatAvailable(seatId: string, isToday: boolean) {
-    const seat = await this.prismaService.seat.findFirst({
+  private async assertSeatAvailable(
+    client: Prisma.TransactionClient,
+    seatId: string,
+    isToday: boolean,
+  ) {
+    const seat = await client.seat.findFirst({
       where: {
         id: seatId,
         deletedAt: null,

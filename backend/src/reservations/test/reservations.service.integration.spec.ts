@@ -254,6 +254,42 @@ describe('ReservationsService (intégration)', () => {
     ).rejects.toBeInstanceOf(BadRequestException);
   });
 
+  it('pendant une suppression de table non commitée : 400, aucune réservation', async () => {
+    const user = await createUser('race-delete');
+    const table = await prisma.pokerTable.create({
+      data: {
+        casinoId,
+        name: `${prefix}-race-delete-table`,
+        variant: PokerVariant.TEXAS_HOLDEM,
+        smallBlind: 1,
+        bigBlind: 2,
+        maxSeats: 2,
+        seats: { create: { seatNumber: 1 } },
+      },
+      include: { seats: true },
+    });
+    const seatId = table.seats[0].id;
+
+    // Suppression simulée : verrou des places, puis table supprimée, commit
+    // retardé de 300 ms pendant que la réservation arrive.
+    let pending!: Promise<unknown>;
+    await prisma.$transaction(async (tx) => {
+      await tx.$queryRaw`SELECT id FROM "Seat" WHERE "tableId" = ${table.id} FOR UPDATE`;
+      await tx.pokerTable.update({
+        where: { id: table.id },
+        data: { deletedAt: new Date() },
+      });
+      pending = service.create(user.id, { seatId, arrivalAt });
+      pending.catch(() => undefined);
+      await new Promise((resolve) => setTimeout(resolve, 300));
+    });
+
+    await expect(pending).rejects.toBeInstanceOf(BadRequestException);
+    await expect(prisma.reservation.count({ where: { seatId } })).resolves.toBe(
+      0,
+    );
+  });
+
   it('lève BadRequestException pour un seatId inconnu', async () => {
     const user = await createUser('seat-unknown');
 

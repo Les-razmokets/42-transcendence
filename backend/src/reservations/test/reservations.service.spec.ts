@@ -28,6 +28,12 @@ describe('ReservationsService', () => {
       update: jest.fn(),
       updateMany: jest.fn(),
     },
+    $queryRaw: jest.fn(),
+    // Transaction interactive : le callback reçoit le mock lui-même comme `tx`.
+    $transaction: jest.fn(
+      (callback: (tx: unknown) => Promise<unknown>): Promise<unknown> =>
+        callback(prismaMock),
+    ),
   };
 
   const USER_ID = 'b0000000-0000-4000-8000-000000000001';
