@@ -1,0 +1,10 @@
+.page {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	/* position horizontale */
+	justify-content: flex-start;
+	/* position verticale */
+	padding: var(--espace-40);
+	font-family: var(--police-interface);
+}
