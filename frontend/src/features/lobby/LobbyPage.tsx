@@ -19,7 +19,9 @@ export function LobbyPage() {
 
     async function charger() {
         try {
-            const [listeTables, listeCasinos] = await Promise.all([getTables(), getCasinos()]);
+            // Les tables sont rangées par casino : il faut d'abord la liste des casinos
+            const listeCasinos = await getCasinos();
+            const listeTables = (await Promise.all(listeCasinos.map((c) => getTables(c.id)))).flat();
             if (annule) 
 				return;
             setTables(listeTables.filter((table) => table.status === 'OPEN'));

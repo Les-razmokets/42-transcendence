@@ -42,7 +42,9 @@ describe('42 OAuth (e2e)', () => {
   let pendingSecret: string;
   let sessionSecret: string;
 
-  let exchange: jest.SpiedFunction<FortyTwoClientService['exchangeCodeForToken']>;
+  let exchange: jest.SpiedFunction<
+    FortyTwoClientService['exchangeCodeForToken']
+  >;
   let readProfile: jest.SpiedFunction<FortyTwoClientService['readProfile']>;
 
   const STATE = 'a'.repeat(64);
@@ -202,8 +204,9 @@ describe('42 OAuth (e2e)', () => {
 
     it('the state is 32 random bytes in hex, new on every call', async () => {
       const stateOf = async () =>
-        new URL((await http().get('/api/auth/42').expect(302)).headers.location)
-          .searchParams.get('state');
+        new URL(
+          (await http().get('/api/auth/42').expect(302)).headers.location,
+        ).searchParams.get('state');
       const [a, b] = [await stateOf(), await stateOf()];
 
       expect(a).toMatch(/^[0-9a-f]{64}$/);
@@ -221,22 +224,34 @@ describe('42 OAuth (e2e)', () => {
 
     const cases: [string, () => request.Test][] = [
       ['no state cookie', () => callback(undefined, null)],
-      ['a state that does not match the cookie', () => callback(undefined, 'b'.repeat(64))],
+      [
+        'a state that does not match the cookie',
+        () => callback(undefined, 'b'.repeat(64)),
+      ],
       ['a state of a different length', () => callback(undefined, 'short')],
       ['no state in the query', () => callback('code=the-code')],
       ['no code in the query', () => callback(`state=${STATE}`)],
-      ['state sent twice (array)', () => callback(`code=c&state=${STATE}&state=${STATE}`)],
-      ['code sent twice (array)', () => callback(`code=c&code=c&state=${STATE}`)],
+      [
+        'state sent twice (array)',
+        () => callback(`code=c&state=${STATE}&state=${STATE}`),
+      ],
+      [
+        'code sent twice (array)',
+        () => callback(`code=c&code=c&state=${STATE}`),
+      ],
     ];
 
-    it.each(cases)('%s: generic error redirect, 42 never called', async (_name, run) => {
-      const res = await run().expect(302);
+    it.each(cases)(
+      '%s: generic error redirect, 42 never called',
+      async (_name, run) => {
+        const res = await run().expect(302);
 
-      expect(res.headers.location).toBe(errorUrl());
-      expect(exchange).not.toHaveBeenCalled();
-      expect(findCookie(res, COOKIE_NAME)).toBeUndefined();
-      expect(findCookie(res, OAUTH_PENDING_COOKIE)).toBeUndefined();
-    });
+        expect(res.headers.location).toBe(errorUrl());
+        expect(exchange).not.toHaveBeenCalled();
+        expect(findCookie(res, COOKIE_NAME)).toBeUndefined();
+        expect(findCookie(res, OAUTH_PENDING_COOKIE)).toBeUndefined();
+      },
+    );
 
     it('never answers with JSON, even on failure (the browser is navigating)', async () => {
       const res = await callback(undefined, null).expect(302);
@@ -264,17 +279,26 @@ describe('42 OAuth (e2e)', () => {
   // ===========================================================================
   describe('GET /api/auth/42/callback: 42 failures', () => {
     it.each([
-      ['the code exchange', () => exchange.mockRejectedValue(new FortyTwoAuthException())],
-      ['the profile read', () => readProfile.mockRejectedValue(new FortyTwoAuthException())],
-    ])('%s fails: generic error redirect, no cookie, nothing written', async (_name, arrange) => {
-      arrange();
-      const res = await callback().expect(302);
+      [
+        'the code exchange',
+        () => exchange.mockRejectedValue(new FortyTwoAuthException()),
+      ],
+      [
+        'the profile read',
+        () => readProfile.mockRejectedValue(new FortyTwoAuthException()),
+      ],
+    ])(
+      '%s fails: generic error redirect, no cookie, nothing written',
+      async (_name, arrange) => {
+        arrange();
+        const res = await callback().expect(302);
 
-      expect(res.headers.location).toBe(`${frontUrl}/login?error=oauth`);
-      expect(findCookie(res, COOKIE_NAME)).toBeUndefined();
-      expect(findCookie(res, OAUTH_PENDING_COOKIE)).toBeUndefined();
-      expect(await prisma.user.count()).toBe(0);
-    });
+        expect(res.headers.location).toBe(`${frontUrl}/login?error=oauth`);
+        expect(findCookie(res, COOKIE_NAME)).toBeUndefined();
+        expect(findCookie(res, OAUTH_PENDING_COOKIE)).toBeUndefined();
+        expect(await prisma.user.count()).toBe(0);
+      },
+    );
 
     it('passes the code from the query to the exchange', async () => {
       await callback(`code=xyz&state=${STATE}`).expect(302);
@@ -302,7 +326,10 @@ describe('42 OAuth (e2e)', () => {
     });
 
     it('sets the pending cookie: HttpOnly, SameSite=Lax, scoped to /api/auth/42, 10 minutes', async () => {
-      const cookie = findCookie(await callback().expect(302), OAUTH_PENDING_COOKIE);
+      const cookie = findCookie(
+        await callback().expect(302),
+        OAUTH_PENDING_COOKIE,
+      );
 
       expect(cookie).toBeDefined();
       expect(cookie).toMatch(/;\s*HttpOnly/i);
@@ -452,15 +479,21 @@ describe('42 OAuth (e2e)', () => {
       const cases: [string, () => Promise<string | undefined>][] = [
         ['no pending cookie', async () => undefined],
         ['garbage', async () => 'not.a.token'],
-        ['signed with the session secret', () => signPending({}, sessionSecret)],
+        [
+          'signed with the session secret',
+          () => signPending({}, sessionSecret),
+        ],
         ['expired', () => signPending({}, undefined, -10)],
         ['wrong typ', () => signPending({ typ: 'access' })],
-        ['a real session token', async () => {
-          await createLinkedUser();
-          const res = await callback().expect(302);
-          await prisma.user.deleteMany({});
-          return cookieValue(findCookie(res, COOKIE_NAME)!);
-        }],
+        [
+          'a real session token',
+          async () => {
+            await createLinkedUser();
+            const res = await callback().expect(302);
+            await prisma.user.deleteMany({});
+            return cookieValue(findCookie(res, COOKIE_NAME)!);
+          },
+        ],
       ];
 
       it.each(cases)('%s', async (_name, build) => {
@@ -506,7 +539,9 @@ describe('42 OAuth (e2e)', () => {
           complete(ADULT, token),
         ]);
 
-        expect(results.map((r) => r.status).sort((a, b) => a - b)).toEqual([201, 409]);
+        expect(results.map((r) => r.status).sort((a, b) => a - b)).toEqual([
+          201, 409,
+        ]);
         expect(await prisma.user.count()).toBe(1);
       });
 
@@ -533,7 +568,10 @@ describe('42 OAuth (e2e)', () => {
   // ===========================================================================
   describe('password login for a 42-only account', () => {
     it('is refused with the usual generic 401', async () => {
-      await complete({ birthDate: '1990-01-01' }, await getPendingToken()).expect(201);
+      await complete(
+        { birthDate: '1990-01-01' },
+        await getPendingToken(),
+      ).expect(201);
 
       const res = await http()
         .post('/api/auth/login')

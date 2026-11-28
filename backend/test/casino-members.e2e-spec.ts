@@ -13,7 +13,7 @@ import request from 'supertest';
 import { AppModule } from '../src/app.module';
 import { configureApp } from '../src/app.config';
 import { PrismaService } from '../src/prisma/prisma.service';
-import { CasinoRole, Role } from '../src/generated/prisma/client'; 
+import { CasinoRole, Role } from '../src/generated/prisma/client';
 import { NestExpressApplication } from '@nestjs/platform-express';
 
 /*
@@ -167,8 +167,12 @@ describe('Casino members (e2e)', () => {
 
     casinoIds.A = (await newCasino('Casino A', 'adrgsrynrgrtgvev')).id;
     casinoIds.B = (await newCasino('Casino B', 'ldriruhfaifhu')).id;
-    casinoIds.EMPTY = (await newCasino('Casino Empty', 'alruhfapiuhpiahrrrrrr')).id; // no member at all
-    casinoIds.DELETED = (await newCasino('Casino Deleted', 'LIUDHFAOIRHF', true)).id;
+    casinoIds.EMPTY = (
+      await newCasino('Casino Empty', 'alruhfapiuhpiahrrrrrr')
+    ).id; // no member at all
+    casinoIds.DELETED = (
+      await newCasino('Casino Deleted', 'LIUDHFAOIRHF', true)
+    ).id;
     casinoIds.UNKNOWN = randomUUID();
     casinoIds.MALFORMED = 'not-a-uuid';
 

@@ -3,9 +3,9 @@ import type { Role } from '../../generated/prisma/client';
 
 /**
  * Custom NestJS decorator that assigns required roles to a route or controller.
- * It uses NestJS's `SetMetadata` under the hood to attach the roles array to the 
+ * It uses NestJS's `SetMetadata` under the hood to attach the roles array to the
  * execution context, which can then be read by a guard (e.g., RolesGuard) to enforce RBAC.
- * 
+ *
  * @param roles - One or more Prisma `Role` enums required to access the route.
  * @throws {Error} If called with zero roles.
  */

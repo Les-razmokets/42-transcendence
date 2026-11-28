@@ -13,9 +13,9 @@ import type { AuthenticatedRequest } from '../auth/utils/auth-request';
 
 /**
  * NestJS guard that enforces casino-specific Role-Based Access Control (RBAC).
- * It ensures that the current user has the minimum required role for a specific 
+ * It ensures that the current user has the minimum required role for a specific
  * casino identified by the route parameter (`casinoId`).
- * 
+ *
  * Flow:
  * 1. Reads the minimum required casino role (`CASINO_ROLE_KEY`) from the handler or class metadata. Throws if missing.
  * 2. Extracts the authenticated user from the request (`UnauthorizedException` if missing).

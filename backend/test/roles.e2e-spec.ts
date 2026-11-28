@@ -6,11 +6,7 @@ import {
   beforeEach,
   afterAll,
 } from '@jest/globals';
-import {
-  Controller,
-  Get,
-  SerializeOptions,
-} from '@nestjs/common';
+import { Controller, Get, SerializeOptions } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { Test } from '@nestjs/testing';
 import request from 'supertest';

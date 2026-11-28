@@ -3,6 +3,7 @@
 Ce document liste les routes du backend NestJS et explique comment le frontend doit les appeler : URL, authentification par cookie, format des erreurs, limites de requêtes. Rédigé avec l'aide d'une IA (Claude), à relire et valider par l'équipe.
 
 > [!NOTE]
+> Pour la liste de toutes les routes sur une page (conditions et rôle de chaque route), voir [`docs/routes.md`](routes.md).
 > Pour le partage des types et des schémas entre back et front, voir [`docs/shared.md`](shared.md).
 > Pour le routage `/api` dans nginx, voir [`docs/nginx.md`](nginx.md).
 
@@ -99,8 +100,19 @@ sequenceDiagram
 - **Gérer le 401** : sur n'importe quelle route, il veut dire « session absente ou expirée ». Le front redirige alors vers la page de connexion.
 - **Ne pas envoyer d'id utilisateur** : le backend prend l'identité dans le JWT, pas dans le corps de la requête. Le front ne peut pas agir au nom d'un autre joueur.
 
-> [!WARNING]
-> **Connecté ne veut pas dire autorisé.** Le rôle (`USER` ou `ADMIN`) est bien dans `req.user`, mais aucune route ne le vérifie pour l'instant. Tout utilisateur connecté peut donc créer, modifier ou supprimer une table. Les rôles de casino (`OWNER`, `FLOOR`) arrivent avec TSK-43.
+### Rôles de casino
+
+Les routes sous `/api/casinos/:casinoId/...` qui modifient un casino exigent un **rôle dans ce casino** (table `Membership`), vérifié par `CasinoRoleGuard` (`@RequireCasinoRole(...)`, `backend/src/casinos/`).
+
+| Rôle | Peut faire |
+|---|---|
+| `OWNER` | Tout ce que fait `FLOOR`, plus la configuration des tables (création, `PUT`, suppression) |
+| `FLOOR` | État des tables et des places, liste floor des réservations, check-in, départ, no-show |
+
+- **Hiérarchie** : `OWNER` passe partout où `FLOOR` est demandé.
+- **Admin** : un compte `ADMIN` (rôle global) passe toutes les vérifications de rôle de casino.
+- **Pas membre du casino** (ou casino inconnu ou supprimé) : **404**, comme si le casino n'existait pas. On ne révèle pas son existence.
+- **Membre avec un rôle trop faible** (`FLOOR` sur une route `OWNER`) : **403**.
 
 ## 3. Erreurs
 
@@ -120,8 +132,9 @@ Pour une erreur de validation (400), `message` est un **tableau**, avec un élé
 |---|---|
 | 400 | Corps ou paramètre invalide, champ en trop, règle métier non respectée (casino fermé, blinds incohérentes…) |
 | 401 | Pas connecté, session expirée, ou identifiants incorrects au login |
-| 404 | Ressource introuvable ou supprimée |
-| 409 | Conflit : email ou pseudo déjà pris, place déjà réservée… |
+| 403 | Connecté, mais rôle insuffisant (rôle global ou rôle de casino, voir [Rôles de casino](#rôles-de-casino)) |
+| 404 | Ressource introuvable ou supprimée, ressource d'un autre casino, ou casino dont on n'est pas membre |
+| 409 | Conflit : email ou pseudo déjà pris, place déjà réservée, transition de statut impossible… |
 | 429 | Trop de requêtes (voir la section suivante) |
 | 503 | Base de données injoignable (`/api/health`) |
 
@@ -141,7 +154,7 @@ L'IP du client est celle transmise par nginx (`X-Forwarded-For`, avec `trust pro
 
 ## 5. Routes
 
-**Privé** : il faut être connecté. **Public** : accessible sans connexion.
+**Privé** : il faut être connecté. **Public** : accessible sans connexion. **`OWNER`** / **`FLOOR`** : il faut ce rôle (ou plus) dans le casino de l'URL, voir [Rôles de casino](#rôles-de-casino).
 
 ### Santé
 
@@ -280,24 +293,58 @@ Profil complet (`myProfileUserSchema`) : `id`, `email`, `pseudo`, `firstName`, `
 
 ### Casinos
 
-Aucune route pour l'instant. Les casinos, les adhésions et les rôles de casino arrivent avec TSK-43.
+Liste des routes seulement (casinos et membres, TSK-43). Leurs règles détaillées ne sont pas encore décrites ici.
+
+| Méthode | Route | Accès | Réponse |
+|---|---|---|---|
+| POST | `/api/casinos` | `ADMIN` (rôle global) | 201 + casino créé |
+| GET | `/api/casinos?page=&limit=` | Privé | Casinos actifs, paginés |
+| GET | `/api/casinos/:casinoId` | Privé | Un casino actif |
+| PATCH | `/api/casinos/:casinoId` | `OWNER` | Casino modifié |
+| GET | `/api/casinos/:casinoId/members?page=&limit=` | `FLOOR` | Membres du casino, paginés |
+| POST | `/api/casinos/:casinoId/members` | `OWNER` | 201 + membre ajouté |
+| PATCH | `/api/casinos/:casinoId/members/:pseudo` | `ADMIN` (rôle global) | Rôle du membre modifié |
+| DELETE | `/api/casinos/:casinoId/members/:pseudo` | `OWNER` | 204 |
 
 ### Tables
 
+Toutes les routes sont sous `/api/casinos/:casinoId/tables` (noté `…/tables` ci-dessous). Le casino vient **toujours de l'URL**, jamais du corps.
+
 | Méthode | Route | Accès | Corps | Réponse |
 |---|---|---|---|---|
-| GET | `/api/tables` | Privé | – | `Table[]` |
-| GET | `/api/tables/:id` | Privé | – | `Table`, 404 si la table est introuvable ou supprimée |
-| POST | `/api/tables` | Privé | `casinoId`, `name`, `variant`, `smallBlind`, `bigBlind`, `maxSeats` | 201 + `Table` |
-| PATCH | `/api/tables/:id` | Privé | Tous les champs optionnels : `variant`, `smallBlind`, `bigBlind`, `moneyOnTable`, `status` | `Table` |
-| DELETE | `/api/tables/:id` | Privé | – | 204 (suppression logique : la table reçoit un `deletedAt`) |
+| GET | `…/tables` | Privé | – | `Table[]` du casino, triées par nom |
+| GET | `…/tables/:id` | Privé | – | `Table` |
+| POST | `…/tables` | `OWNER` | `name`, `variant`, `smallBlind`, `bigBlind`, `maxSeats` | 201 + `Table`, avec ses places `1..maxSeats` en `FREE` |
+| PUT | `…/tables/:id` | `OWNER` | Les mêmes 5 champs, **tous obligatoires** | `Table` (configuration remplacée) |
+| DELETE | `…/tables/:id` | `OWNER` | – | 204 (suppression logique : la table reçoit un `deletedAt`) |
+| PATCH | `…/tables/:id/state` | `FLOOR` | `status?` (`OPEN` / `PAUSED`), `moneyOnTable?`, au moins un des deux | `Table` |
+| PATCH | `…/tables/:id/seats/:seatNumber` | `FLOOR` | `status` (`FREE` / `OCCUPIED`) | `Table` entière (walk-in) |
 
-Règles :
-- `variant` vaut `TEXAS_HOLDEM` ou `OMAHA`, et `status` vaut `OPEN` ou `PAUSED`.
+Règles communes :
+- **Autre casino** : une table qui existe mais appartient à un autre casino renvoie **404**, comme une table inconnue ou supprimée.
+- **Casino supprimé** : ses tables ne sont plus visibles (`GET …/tables` renvoie `[]`, `GET …/tables/:id` renvoie 404).
+- **Champs en trop** : tout champ hors de la liste renvoie 400 (par exemple `casinoId` dans le corps, ou `name` sur `/state`).
+- `variant` vaut `TEXAS_HOLDEM` ou `OMAHA`.
 - `smallBlind` et `bigBlind` sont des entiers ≥ 1, et `bigBlind` doit être ≥ `smallBlind` (sinon 400).
 - `maxSeats` va de 2 à 10, et 8 au maximum en `OMAHA` (sinon 400).
-- `moneyOnTable` est un entier ≥ 0.
-- Un `casinoId` inconnu renvoie 400.
+- `moneyOnTable` est un entier ≥ 0. Le modifier met à jour `moneyUpdatedAt`.
+
+Règles de `PUT …/tables/:id` (changement de `maxSeats`) :
+- **En hausse** : les places manquantes sont créées (ou réactivées si elles avaient été supprimées).
+- **En baisse** : les dernières places sont supprimées logiquement. **409** si l'une d'elles est `OCCUPIED` ou a une réservation active (`PENDING_PAYMENT`, `CONFIRMED`, `SEATED`) pour la journée casino en cours ou une suivante.
+- **Concurrence** : le changement de `maxSeats` est un update conditionnel sur l'ancienne valeur. Si un autre `PUT` l'a modifiée entre-temps, la requête reçoit **409** et rien n'est changé.
+- **Réservation en même temps** : les places retirées sont verrouillées (`SELECT … FOR UPDATE`), comme la place d'une réservation en cours de création. Le second arrivé attend le commit du premier, puis voit son résultat : 409 côté `PUT`, ou 400 côté réservation.
+
+Règles de `DELETE …/tables/:id` :
+- **409** si une place est `OCCUPIED` (un walk-in, sans réservation).
+- **409** s'il reste une réservation active sur la table pour la journée casino en cours ou une suivante. Les réservations d'une journée passée ne bloquent pas.
+- **Réservation en même temps** : même verrou sur toutes les places de la table. Une réservation créée pendant la suppression fait échouer le `DELETE` (409), ou échoue elle-même (400) si la suppression a commité avant.
+
+Règles de `PATCH …/seats/:seatNumber` (walk-in, joueur sans réservation) :
+- **Place inconnue ou supprimée** : 404. `seatNumber` non entier : 400.
+- **`FREE`** : 409 si une réservation `SEATED` occupe la place. Il faut passer par `leave`. La place est écrite avant le contrôle : si un check-in est en cours, le walk-in attend son commit, le voit, et reçoit 409.
+- **`OCCUPIED`** : 409 si la table est `PAUSED`, ou si la place a une réservation `CONFIRMED` ou `PENDING_PAYMENT` qui arrive dans les 2 heures, ou dont l'arrivée est passée de moins de 30 minutes (`WALK_IN_GUARD_MS`, `WALK_IN_LATE_MS`).
+- Remettre le même statut n'est pas une erreur (idempotent).
 
 Schéma de réponse `Table` (`shared/src/tables.ts`) : `id`, `casinoId`, `name`, `variant`, `smallBlind`, `bigBlind`, `maxSeats`, `status`, `moneyOnTable`, et `seats` (tableau de `{ id, seatNumber, status }`, où `status` vaut `FREE` ou `OCCUPIED`).
 
@@ -353,6 +400,65 @@ Expiration des réservations non payées (aucune route, tâche planifiée) :
 Schéma de réponse `Reservation` (`shared/src/reservations.ts`) : `id`, `userId`, `seatId`, `status`, `arrivalAt`, `createdAt`, `updatedAt`, `seatedAt`, `leftAt`, `cancelledAt` (les trois derniers peuvent valoir `null`).
 
 Statuts possibles : `PENDING_PAYMENT`, `CONFIRMED`, `SEATED`, `COMPLETED`, `CANCELLED`, `NO_SHOW`, `EXPIRED`.
+
+### Réservations côté casino (floor)
+
+Routes du personnel du casino, sous `/api/casinos/:casinoId/reservations` (noté `…/reservations`).
+
+| Méthode | Route | Accès | Corps | Réponse |
+|---|---|---|---|---|
+| GET | `…/reservations?day=YYYY-MM-DD` | `FLOOR` | – | `FloorReservation[]` de la journée casino |
+| POST | `…/reservations/:id/seat` | `FLOOR` | – | 200 + `Reservation` (`SEATED`, `seatedAt` rempli) |
+| POST | `…/reservations/:id/leave` | `FLOOR` | – | 200 + `Reservation` (`COMPLETED`, `leftAt` rempli) |
+| POST | `…/reservations/:id/no-show` | `FLOOR` | – | 200 + `Reservation` (`NO_SHOW`) |
+
+Règles de la liste floor (`GET`) :
+- **Journée** : `day` est une journée casino (8h à 5h le lendemain, heure de Paris). Sans `day`, la journée casino en cours. Un format invalide (`2030-13-01`, `12-03-2030`…) ou un autre paramètre renvoie 400.
+- **Actives seulement** : `PENDING_PAYMENT`, `CONFIRMED` et `SEATED`, triées par `arrivalAt` croissant. Seulement celles des tables de ce casino.
+- **Réponse** (`floorReservationSchema`, `shared/src/reservations.ts`) : les champs de `Reservation`, plus `seat: { seatNumber, table: { id, name } }` et `user: { pseudo }`. Ni email ni nom du joueur.
+
+Règles des transitions (`seat`, `leave`, `no-show`) :
+
+| Route | Statut attendu | Autres conditions (sinon 409) | Effet sur la place |
+|---|---|---|---|
+| `seat` | `CONFIRMED` (un `PENDING_PAYMENT` non payé donne 409) | Journée casino de `arrivalAt` = journée en cours, table `OPEN` (pas `PAUSED`), place `FREE` | `OCCUPIED` |
+| `leave` | `SEATED` | – | `FREE` |
+| `no-show` | `CONFIRMED` | `arrivalAt` atteint (pas de limite : une réservation de la veille peut encore être marquée) | inchangée |
+
+- **Réservation d'un autre casino** ou inconnue : 404. `:id` qui n'est pas un UUID : 400.
+- **Concurrence** : chaque transition fait un `update` conditionnel sur le statut attendu, dans la même transaction que la place. Si une autre requête est passée avant (deux check-in en même temps, par exemple), la seconde reçoit 409 et rien n'est modifié.
+- **Réponse** : le `reservationSchema` simple, sans `seat` ni `user`.
+
+Tâches planifiées (`ReservationsScheduler`, `backend/src/reservations/utils/reservations.scheduler.ts`) :
+
+| Tâche | Quand | Effet |
+|---|---|---|
+| Paiement expiré | Toutes les minutes | `PENDING_PAYMENT` créée il y a plus de 15 min → `EXPIRED` (voir plus haut) |
+| No-show automatique | Toutes les minutes | `CONFIRMED` dont `arrivalAt` est dépassé de plus de 30 min (`NO_SHOW_DELAY_MS`) → `NO_SHOW`. La place ne change pas |
+| Fermeture du casino | Chaque jour à 5h, heure de Paris | Toutes les `SEATED` → `COMPLETED` (`leftAt` = heure de fermeture), et **toutes** les places `OCCUPIED` → `FREE`, walk-ins compris, dans tous les casinos |
+
+Les trois tâches sont coupées en test par `SCHEDULER_DISABLED=true`.
+
+### Cycle de vie d'une réservation
+
+```mermaid
+stateDiagram-v2
+    [*] --> PENDING_PAYMENT: POST /api/reservations (joueur)
+    PENDING_PAYMENT --> CONFIRMED: paiement Stripe (ticket à venir)
+    PENDING_PAYMENT --> EXPIRED: cron, 15 min sans paiement
+    CONFIRMED --> CANCELLED: DELETE /api/reservations/:id (joueur, avant arrivalAt)
+    CONFIRMED --> SEATED: POST …/seat (floor, le jour même)
+    CONFIRMED --> NO_SHOW: POST …/no-show (floor, après arrivalAt)<br/>ou cron, arrivalAt + 30 min
+    SEATED --> COMPLETED: POST …/leave (floor)<br/>ou cron de fermeture à 5h
+    EXPIRED --> [*]
+    CANCELLED --> [*]
+    NO_SHOW --> [*]
+    COMPLETED --> [*]
+```
+
+Seuls `PENDING_PAYMENT`, `CONFIRMED` et `SEATED` sont **actifs** : ils bloquent la place et le joueur pour la journée casino. Les autres statuts sont définitifs et restent dans l'historique du joueur.
+
+État d'une place (`SeatStatus`) : `FREE` ↔ `OCCUPIED`, changé par `seat` / `leave`, par le walk-in (`PATCH …/seats/:seatNumber`) et par le cron de fermeture.
 
 ## 6. Ajouter une route
 

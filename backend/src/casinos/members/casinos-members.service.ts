@@ -13,9 +13,9 @@ import { Prisma } from '../../generated/prisma/client';
 
 /**
  * Service managing member associations and roles for specific casinos.
- * Communicates with the database via Prisma to handle listing, adding, modifying, 
+ * Communicates with the database via Prisma to handle listing, adding, modifying,
  * and removing casino memberships with permission checks.
- * 
+ *
  * Methods:
  * - listMembers: Retrieves up to 50 active memberships for a casino, ordered by user pseudo.
  * - addMember: Adds a user to a casino with a specified role, ensuring proper authorization for OWNER roles and handling unique conflicts.
@@ -29,7 +29,11 @@ export class CasinosMembersService {
     private readonly casinos: CasinosService,
   ) {}
 
-  async listMembers(casinoId: string, page: number = 1, limit: number = 20): Promise<MemberInfo[]> {
+  async listMembers(
+    casinoId: string,
+    page: number = 1,
+    limit: number = 20,
+  ): Promise<MemberInfo[]> {
     const validLimit = Math.min(Math.max(limit, 1), 100);
     const validPage = Math.max(page, 1);
     const skip = (validPage - 1) * validLimit;

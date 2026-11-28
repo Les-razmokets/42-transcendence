@@ -1,8 +1,8 @@
 import { describe, it, expect } from '@jest/globals';
 import {
   myProfileUserSchema,
-  myProfileWithMembershipsSchema }
-from '@transcendence/shared';
+  myProfileWithMembershipsSchema,
+} from '@transcendence/shared';
 import { CasinoRole } from '../../generated/prisma/client';
 
 /*

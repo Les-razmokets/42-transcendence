@@ -1,22 +1,41 @@
 import {
   BadRequestException,
+  ConflictException,
   NotFoundException,
   Injectable,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { Prisma } from '../generated/prisma/client';
 import { CreateTableDto } from './dto/create-table.dto';
-import { UpdateTableDto } from './dto/update-table.dto';
-import { PokerVariant } from '../generated/prisma/enums';
+import { TableStateDto } from './dto/table-state.dto';
+import { PutTableDto } from './dto/put-table.dto';
+import { SeatStatusDto } from './dto/seat-status.dto';
+import {
+  PokerVariant,
+  SeatStatus,
+  ReservationStatus,
+  TableStatus,
+} from '../generated/prisma/enums';
+import { casinoDay } from '../reservations/casino-day';
 
 const tableWithSeats = {
   seats: { where: { deletedAt: null }, orderBy: { seatNumber: 'asc' } },
 } satisfies Prisma.PokerTableInclude;
 
+const WALK_IN_GUARD_MS = 2 * 60 * 60 * 1000;
+const WALK_IN_LATE_MS = 30 * 60 * 1000;
+
+// Une réservation dans un de ces statuts tient encore sa place.
+const ACTIVE_RESERVATION_STATUSES = [
+  ReservationStatus.PENDING_PAYMENT,
+  ReservationStatus.CONFIRMED,
+  ReservationStatus.SEATED,
+];
+
 @Injectable()
 export class TablesService {
   constructor(private readonly prismaService: PrismaService) {}
-  async create(dto: CreateTableDto) {
+  async create(casinoId: string, dto: CreateTableDto) {
     this.assertValidBlinds(dto.smallBlind, dto.bigBlind);
     this.assertValidSeats(dto.variant, dto.maxSeats);
 
@@ -31,6 +50,7 @@ export class TablesService {
               })),
             },
           },
+          casinoId,
         },
         include: tableWithSeats,
       });
@@ -45,9 +65,9 @@ export class TablesService {
     }
   }
 
-  async findById(id: string) {
+  async findById(casinoId: string, id: string) {
     const table = await this.prismaService.pokerTable.findUnique({
-      where: { id, deletedAt: null },
+      where: { id, deletedAt: null, casinoId, casino: { deletedAt: null } },
       include: tableWithSeats,
     });
     if (!table) {
@@ -56,23 +76,106 @@ export class TablesService {
     return table;
   }
 
-  async findAll() {
+  async findAll(casinoId: string) {
     const tables = await this.prismaService.pokerTable.findMany({
-      where: { deletedAt: null },
+      where: { deletedAt: null, casinoId, casino: { deletedAt: null } },
       orderBy: { name: 'asc' },
       include: tableWithSeats,
     });
     return tables;
   }
 
-  async updateTable(id: string, dto: UpdateTableDto) {
-    const table = await this.findById(id);
-    const smallBlind = dto.smallBlind ?? table.smallBlind;
-    const bigBlind = dto.bigBlind ?? table.bigBlind;
-    const variant = dto.variant ?? table.variant;
-    this.assertValidBlinds(smallBlind, bigBlind);
-    this.assertValidSeats(variant, table.maxSeats);
+  async updateTable(casinoId: string, id: string, dto: PutTableDto) {
+    const table = await this.findById(casinoId, id);
+    this.assertValidBlinds(dto.smallBlind, dto.bigBlind);
+    this.assertValidSeats(dto.variant, dto.maxSeats);
 
+    return this.prismaService.$transaction(async (tx) => {
+      const { count } = await tx.pokerTable.updateMany({
+        where: { id, deletedAt: null, maxSeats: table.maxSeats },
+        data: { maxSeats: dto.maxSeats },
+      });
+      if (count === 0) {
+        throw new ConflictException(
+          'The table has been changed in the meantime',
+        );
+      }
+      if (dto.maxSeats < table.maxSeats) {
+        const removed = {
+          tableId: id,
+          deletedAt: null,
+          seatNumber: { gt: dto.maxSeats },
+        };
+        await this.lockSeats(tx, id, dto.maxSeats);
+        const occupied = await tx.seat.count({
+          where: { ...removed, status: SeatStatus.OCCUPIED },
+        });
+        if (occupied > 0) {
+          throw new ConflictException('A removed seat is occupied');
+        }
+        await this.assertNoUpcomingReservations(
+          tx,
+          { tableId: id, seatNumber: { gt: dto.maxSeats } },
+          'A removed seat has an upcoming reservation',
+        );
+        await tx.seat.updateMany({
+          where: removed,
+          data: { deletedAt: new Date() },
+        });
+      } else if (dto.maxSeats > table.maxSeats) {
+        await tx.seat.updateMany({
+          where: {
+            tableId: id,
+            seatNumber: { gt: table.maxSeats, lte: dto.maxSeats },
+          },
+          data: { deletedAt: null, status: SeatStatus.FREE },
+        });
+        await tx.seat.createMany({
+          data: Array.from(
+            { length: dto.maxSeats - table.maxSeats },
+            (_, i) => ({
+              tableId: id,
+              seatNumber: table.maxSeats + 1 + i,
+            }),
+          ),
+          skipDuplicates: true,
+        });
+      }
+      return tx.pokerTable.update({
+        where: { id },
+        data: dto,
+        include: tableWithSeats,
+      });
+    });
+  }
+
+  async deleteTable(casinoId: string, id: string) {
+    await this.findById(casinoId, id);
+    await this.prismaService.$transaction(async (tx) => {
+      await this.lockSeats(tx, id);
+      const occupied = await tx.seat.count({
+        where: { tableId: id, deletedAt: null, status: SeatStatus.OCCUPIED },
+      });
+      if (occupied > 0) {
+        throw new ConflictException('A seat of the table is occupied');
+      }
+      await this.assertNoUpcomingReservations(
+        tx,
+        { tableId: id },
+        'The table has an upcoming reservation',
+      );
+      const { count } = await tx.pokerTable.updateMany({
+        where: { id, deletedAt: null, casinoId },
+        data: { deletedAt: new Date() },
+      });
+      if (count === 0) {
+        throw new NotFoundException(`Table with ID ${id} not found`);
+      }
+    });
+  }
+
+  async updateState(casinoId: string, id: string, dto: TableStateDto) {
+    await this.findById(casinoId, id);
     return await this.prismaService.pokerTable.update({
       where: { id },
       data: {
@@ -83,13 +186,95 @@ export class TablesService {
     });
   }
 
-  async deleteTable(id: string) {
-    const { count } = await this.prismaService.pokerTable.updateMany({
-      where: { id, deletedAt: null },
-      data: { deletedAt: new Date() },
+  async updateSeat(
+    casinoId: string,
+    tableId: string,
+    seatNumber: number,
+    dto: SeatStatusDto,
+  ) {
+    const table = await this.findById(casinoId, tableId);
+    if (dto.status === SeatStatus.OCCUPIED && table.status !== TableStatus.OPEN)
+      throw new ConflictException('This table is not open');
+    return this.prismaService.$transaction(async (tx) => {
+      const seat = await tx.seat.findUnique({
+        where: { tableId_seatNumber: { tableId, seatNumber } },
+      });
+      const now = Date.now();
+      if (!seat || seat.deletedAt !== null)
+        throw new NotFoundException(`Seat ${seatNumber} not found`);
+      if (dto.status === SeatStatus.FREE) {
+        await tx.seat.update({
+          where: { id: seat.id },
+          data: { status: SeatStatus.FREE },
+        });
+        const reservationCount = await tx.reservation.count({
+          where: { seatId: seat.id, status: ReservationStatus.SEATED },
+        });
+        if (reservationCount > 0)
+          throw new ConflictException(
+            'Seat has a SEATED reservation, use leave to free it',
+          );
+      } else if (dto.status === SeatStatus.OCCUPIED) {
+        const reservationCount = await tx.reservation.count({
+          where: {
+            seatId: seat.id,
+            status: {
+              in: [
+                ReservationStatus.CONFIRMED,
+                ReservationStatus.PENDING_PAYMENT,
+              ],
+            },
+            arrivalAt: {
+              gte: new Date(now - WALK_IN_LATE_MS),
+              lt: new Date(now + WALK_IN_GUARD_MS),
+            },
+          },
+        });
+        if (reservationCount > 0) {
+          throw new ConflictException(
+            'Seat is reserved within the next 2 hours',
+          );
+        }
+        await tx.seat.update({
+          where: { id: seat.id },
+          data: { status: SeatStatus.OCCUPIED },
+        });
+      }
+      return tx.pokerTable.findUniqueOrThrow({
+        where: { id: tableId },
+        include: tableWithSeats,
+      });
     });
-    if (count === 0) {
-      throw new NotFoundException(`Table with ID ${id} not found`);
+  }
+
+  // Verrouille les places de la table (numéro > afterSeatNumber) jusqu'au
+  // commit. ReservationsService.create verrouille aussi sa place : une
+  // réservation et un retrait de place ne peuvent pas se croiser.
+  private async lockSeats(
+    tx: Prisma.TransactionClient,
+    tableId: string,
+    afterSeatNumber = 0,
+  ) {
+    await tx.$queryRaw`SELECT id FROM "Seat" WHERE "tableId" = ${tableId} AND "seatNumber" > ${afterSeatNumber} FOR UPDATE`;
+  }
+
+  // 409 si une des places visées a une réservation active pour la journée
+  // casino en cours ou une suivante.
+  private async assertNoUpcomingReservations(
+    client: Prisma.TransactionClient,
+    seatWhere: Prisma.SeatWhereInput,
+    message: string,
+  ) {
+    const reservations = await client.reservation.findMany({
+      where: {
+        seat: seatWhere,
+        status: { in: ACTIVE_RESERVATION_STATUSES },
+      },
+      select: { arrivalAt: true },
+    });
+    const today = casinoDay(new Date());
+    if (reservations.some((r) => casinoDay(r.arrivalAt) >= today)) {
+      throw new ConflictException(message);
     }
   }
 

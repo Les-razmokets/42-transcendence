@@ -1,4 +1,4 @@
-import { registerAs } from "@nestjs/config";
+import { registerAs } from '@nestjs/config';
 
 // 42 OAuth settings, read from .env and injected with @Inject(fortyTwoConfig.KEY).
 // Throws at boot if a variable is missing or invalid: better than failing on the first login.
@@ -14,18 +14,28 @@ export const fortyTwoConfig = registerAs('fortyTwo', () => {
   const pendingSecret = process.env.OAUTH_PENDING_SECRET;
 
   if (
-    !clientId
-    || !clientSecret
-    || !callbackUrl
-    || !baseUrl
-    || !process.env.FORTY_TWO_AUTHORIZE
-    || !process.env.FORTY_TWO_TOKEN
-    || !process.env.FORTY_TWO_PROFILE
-    || !Number.isInteger(timeout)
-    || timeout <= 0
-    || !pendingSecret
+    !clientId ||
+    !clientSecret ||
+    !callbackUrl ||
+    !baseUrl ||
+    !process.env.FORTY_TWO_AUTHORIZE ||
+    !process.env.FORTY_TWO_TOKEN ||
+    !process.env.FORTY_TWO_PROFILE ||
+    !Number.isInteger(timeout) ||
+    timeout <= 0 ||
+    !pendingSecret
   )
     throw new Error('Missing or invalid FORTY_TWO_* variables.');
 
-  return { clientId, clientSecret, callbackUrl, baseUrl, authUrl, tokenUrl, profileUrl, timeout, pendingSecret };
-})
+  return {
+    clientId,
+    clientSecret,
+    callbackUrl,
+    baseUrl,
+    authUrl,
+    tokenUrl,
+    profileUrl,
+    timeout,
+    pendingSecret,
+  };
+});

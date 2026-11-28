@@ -1,7 +1,11 @@
-import { BadRequestException, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ConflictException,
+  NotFoundException,
+} from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import { Prisma } from '../../generated/prisma/client';
-import { PokerVariant } from '../../generated/prisma/enums';
+import { PokerVariant, TableStatus } from '../../generated/prisma/enums';
 import { PrismaService } from '../../prisma/prisma.service';
 import { CreateTableDto } from '../dto/create-table.dto';
 import { TablesService } from '../tables.service';
@@ -17,12 +21,27 @@ describe('TablesService', () => {
       update: jest.fn(),
       updateMany: jest.fn(),
     },
+    seat: {
+      count: jest.fn(),
+      updateMany: jest.fn(),
+      createMany: jest.fn(),
+    },
+    reservation: {
+      findMany: jest.fn(),
+    },
+    $queryRaw: jest.fn(),
+    // Transaction interactive : le callback reçoit le mock lui-même comme `tx`.
+    $transaction: jest.fn(
+      (callback: (tx: unknown) => Promise<unknown>): Promise<unknown> =>
+        callback(prismaMock),
+    ),
   };
+
+  const casinoId = 'f79900e4-ed42-4236-8e93-3bf2ab820f01';
 
   const makeDto = (
     overrides: Partial<CreateTableDto> = {},
   ): CreateTableDto => ({
-    casinoId: 'f79900e4-ed42-4236-8e93-3bf2ab820f01',
     name: 'Table test',
     variant: PokerVariant.TEXAS_HOLDEM,
     smallBlind: 1,
@@ -53,12 +72,13 @@ describe('TablesService', () => {
       const fakeTable = { id: 'table-1' };
       prismaMock.pokerTable.create.mockResolvedValue(fakeTable);
 
-      const created = await service.create(makeDto({ maxSeats: 3 }));
+      const created = await service.create(casinoId, makeDto({ maxSeats: 3 }));
 
       expect(created).toBe(fakeTable);
       expect(prismaMock.pokerTable.create).toHaveBeenCalledWith(
         expect.objectContaining({
           data: expect.objectContaining({
+            casinoId,
             name: 'Table test',
             seats: {
               createMany: {
@@ -72,7 +92,7 @@ describe('TablesService', () => {
 
     it('rejette bigBlind < smallBlind sans appeler Prisma', async () => {
       await expect(
-        service.create(makeDto({ smallBlind: 10, bigBlind: 5 })),
+        service.create(casinoId, makeDto({ smallBlind: 10, bigBlind: 5 })),
       ).rejects.toBeInstanceOf(BadRequestException);
       expect(prismaMock.pokerTable.create).not.toHaveBeenCalled();
     });
@@ -81,13 +101,16 @@ describe('TablesService', () => {
       prismaMock.pokerTable.create.mockResolvedValue({ id: 'table-1' });
 
       await expect(
-        service.create(makeDto({ smallBlind: 5, bigBlind: 5 })),
+        service.create(casinoId, makeDto({ smallBlind: 5, bigBlind: 5 })),
       ).resolves.toBeDefined();
     });
 
     it('rejette OMAHA avec plus de 8 sièges sans appeler Prisma', async () => {
       await expect(
-        service.create(makeDto({ variant: PokerVariant.OMAHA, maxSeats: 9 })),
+        service.create(
+          casinoId,
+          makeDto({ variant: PokerVariant.OMAHA, maxSeats: 9 }),
+        ),
       ).rejects.toBeInstanceOf(BadRequestException);
       expect(prismaMock.pokerTable.create).not.toHaveBeenCalled();
     });
@@ -96,7 +119,10 @@ describe('TablesService', () => {
       prismaMock.pokerTable.create.mockResolvedValue({ id: 'table-1' });
 
       await expect(
-        service.create(makeDto({ variant: PokerVariant.OMAHA, maxSeats: 8 })),
+        service.create(
+          casinoId,
+          makeDto({ variant: PokerVariant.OMAHA, maxSeats: 8 }),
+        ),
       ).resolves.toBeDefined();
     });
 
@@ -104,14 +130,14 @@ describe('TablesService', () => {
       prismaMock.pokerTable.create.mockResolvedValue({ id: 'table-1' });
 
       await expect(
-        service.create(makeDto({ maxSeats: 10 })),
+        service.create(casinoId, makeDto({ maxSeats: 10 })),
       ).resolves.toBeDefined();
     });
 
     it('convertit une erreur Prisma P2003 (casinoId inconnu) en BadRequestException', async () => {
       prismaMock.pokerTable.create.mockRejectedValue(makePrismaError('P2003'));
 
-      await expect(service.create(makeDto())).rejects.toBeInstanceOf(
+      await expect(service.create(casinoId, makeDto())).rejects.toBeInstanceOf(
         BadRequestException,
       );
     });
@@ -120,7 +146,7 @@ describe('TablesService', () => {
       const error = makePrismaError('P2002');
       prismaMock.pokerTable.create.mockRejectedValue(error);
 
-      await expect(service.create(makeDto())).rejects.toBe(error);
+      await expect(service.create(casinoId, makeDto())).rejects.toBe(error);
     });
   });
 
@@ -129,10 +155,17 @@ describe('TablesService', () => {
       const fakeTable = { id: 'table-1' };
       prismaMock.pokerTable.findUnique.mockResolvedValue(fakeTable);
 
-      await expect(service.findById('table-1')).resolves.toBe(fakeTable);
+      await expect(service.findById(casinoId, 'table-1')).resolves.toBe(
+        fakeTable,
+      );
       expect(prismaMock.pokerTable.findUnique).toHaveBeenCalledWith(
         expect.objectContaining({
-          where: { id: 'table-1', deletedAt: null },
+          where: {
+            id: 'table-1',
+            deletedAt: null,
+            casinoId,
+            casino: { deletedAt: null },
+          },
         }),
       );
     });
@@ -140,9 +173,9 @@ describe('TablesService', () => {
     it('lève NotFoundException si Prisma ne trouve rien', async () => {
       prismaMock.pokerTable.findUnique.mockResolvedValue(null);
 
-      await expect(service.findById('inconnue')).rejects.toBeInstanceOf(
-        NotFoundException,
-      );
+      await expect(
+        service.findById(casinoId, 'inconnue'),
+      ).rejects.toBeInstanceOf(NotFoundException);
     });
   });
 
@@ -151,10 +184,10 @@ describe('TablesService', () => {
       const fakeTables = [{ id: 'table-1' }, { id: 'table-2' }];
       prismaMock.pokerTable.findMany.mockResolvedValue(fakeTables);
 
-      await expect(service.findAll()).resolves.toBe(fakeTables);
+      await expect(service.findAll(casinoId)).resolves.toBe(fakeTables);
       expect(prismaMock.pokerTable.findMany).toHaveBeenCalledWith(
         expect.objectContaining({
-          where: { deletedAt: null },
+          where: { deletedAt: null, casinoId, casino: { deletedAt: null } },
           orderBy: { name: 'asc' },
         }),
       );
@@ -173,20 +206,39 @@ describe('TablesService', () => {
 
     beforeEach(() => {
       prismaMock.pokerTable.findUnique.mockResolvedValue(existingTable);
+      prismaMock.pokerTable.updateMany.mockResolvedValue({ count: 1 });
+    });
+
+    it('lève ConflictException si un autre PUT a changé maxSeats entre-temps', async () => {
+      prismaMock.pokerTable.updateMany.mockResolvedValue({ count: 0 });
+
+      await expect(
+        service.updateTable(casinoId, 'table-1', makeDto({ maxSeats: 8 })),
+      ).rejects.toBeInstanceOf(ConflictException);
+      expect(prismaMock.pokerTable.updateMany).toHaveBeenCalledWith({
+        where: { id: 'table-1', deletedAt: null, maxSeats: 6 },
+        data: { maxSeats: 8 },
+      });
+      expect(prismaMock.seat.createMany).not.toHaveBeenCalled();
+      expect(prismaMock.pokerTable.update).not.toHaveBeenCalled();
     });
 
     it('lève NotFoundException sans appeler update si la table n’existe pas', async () => {
       prismaMock.pokerTable.findUnique.mockResolvedValue(null);
 
       await expect(
-        service.updateTable('inconnue', { smallBlind: 1 }),
+        service.updateTable(casinoId, 'inconnue', makeDto()),
       ).rejects.toBeInstanceOf(NotFoundException);
       expect(prismaMock.pokerTable.update).not.toHaveBeenCalled();
     });
 
-    it('rejette une bigBlind inférieure à la smallBlind déjà en base', async () => {
+    it('rejette une bigBlind inférieure à la smallBlind du DTO', async () => {
       await expect(
-        service.updateTable('table-1', { bigBlind: 2 }),
+        service.updateTable(
+          casinoId,
+          'table-1',
+          makeDto({ smallBlind: 10, bigBlind: 5 }),
+        ),
       ).rejects.toBeInstanceOf(BadRequestException);
       expect(prismaMock.pokerTable.update).not.toHaveBeenCalled();
     });
@@ -198,22 +250,62 @@ describe('TablesService', () => {
       });
 
       await expect(
-        service.updateTable('table-1', { variant: PokerVariant.OMAHA }),
+        service.updateTable(
+          casinoId,
+          'table-1',
+          makeDto({ variant: PokerVariant.OMAHA, maxSeats: 9 }),
+        ),
       ).rejects.toBeInstanceOf(BadRequestException);
       expect(prismaMock.pokerTable.update).not.toHaveBeenCalled();
     });
 
-    it('renvoie la table mise à jour sans toucher moneyUpdatedAt si moneyOnTable est absent', async () => {
+    it('remplace toute la configuration et renvoie la table mise à jour', async () => {
+      const updated = { id: 'table-1' };
+      prismaMock.pokerTable.update.mockResolvedValue(updated);
+      const dto = makeDto({ name: 'Renommée', smallBlind: 2, bigBlind: 4 });
+
+      await expect(service.updateTable(casinoId, 'table-1', dto)).resolves.toBe(
+        updated,
+      );
+      expect(prismaMock.pokerTable.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { id: 'table-1' },
+          data: dto,
+        }),
+      );
+    });
+  });
+
+  describe('updateState', () => {
+    beforeEach(() => {
+      prismaMock.pokerTable.findUnique.mockResolvedValue({ id: 'table-1' });
+    });
+
+    it('lève NotFoundException sans appeler update si la table n’existe pas', async () => {
+      prismaMock.pokerTable.findUnique.mockResolvedValue(null);
+
+      await expect(
+        service.updateState(casinoId, 'inconnue', {
+          status: TableStatus.PAUSED,
+        }),
+      ).rejects.toBeInstanceOf(NotFoundException);
+      expect(prismaMock.pokerTable.update).not.toHaveBeenCalled();
+    });
+
+    it('change le statut sans toucher moneyUpdatedAt si moneyOnTable est absent', async () => {
       const updated = { id: 'table-1' };
       prismaMock.pokerTable.update.mockResolvedValue(updated);
 
       await expect(
-        service.updateTable('table-1', { smallBlind: 2, bigBlind: 4 }),
+        service.updateState(casinoId, 'table-1', {
+          status: TableStatus.PAUSED,
+        }),
       ).resolves.toBe(updated);
+      expect(prismaMock.pokerTable.update).toHaveBeenCalledTimes(1);
       expect(prismaMock.pokerTable.update).toHaveBeenCalledWith(
         expect.objectContaining({
           where: { id: 'table-1' },
-          data: { smallBlind: 2, bigBlind: 4 },
+          data: { status: TableStatus.PAUSED },
         }),
       );
     });
@@ -221,23 +313,79 @@ describe('TablesService', () => {
     it('met à jour moneyUpdatedAt quand moneyOnTable est fourni, même à 0', async () => {
       prismaMock.pokerTable.update.mockResolvedValue({ id: 'table-1' });
 
-      await service.updateTable('table-1', { moneyOnTable: 0 });
+      await service.updateState(casinoId, 'table-1', { moneyOnTable: 0 });
 
+      expect(prismaMock.pokerTable.update).toHaveBeenCalledTimes(1);
       expect(prismaMock.pokerTable.update).toHaveBeenCalledWith(
         expect.objectContaining({
           data: { moneyOnTable: 0, moneyUpdatedAt: expect.any(Date) },
         }),
       );
     });
+
+    it('renvoie la table avec ses sièges', async () => {
+      prismaMock.pokerTable.update.mockResolvedValue({ id: 'table-1' });
+
+      await service.updateState(casinoId, 'table-1', {
+        status: TableStatus.OPEN,
+      });
+
+      expect(prismaMock.pokerTable.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          include: expect.objectContaining({ seats: expect.anything() }),
+        }),
+      );
+    });
   });
 
   describe('deleteTable', () => {
+    beforeEach(() => {
+      prismaMock.pokerTable.findUnique.mockResolvedValue({ id: 'table-1' });
+      prismaMock.reservation.findMany.mockResolvedValue([]);
+      prismaMock.seat.count.mockResolvedValue(0);
+    });
+
+    it('lève ConflictException sans supprimer si un walk-in occupe une place', async () => {
+      prismaMock.seat.count.mockResolvedValue(1);
+
+      await expect(
+        service.deleteTable(casinoId, 'table-1'),
+      ).rejects.toBeInstanceOf(ConflictException);
+      expect(prismaMock.seat.count).toHaveBeenCalledWith({
+        where: { tableId: 'table-1', deletedAt: null, status: 'OCCUPIED' },
+      });
+      expect(prismaMock.pokerTable.updateMany).not.toHaveBeenCalled();
+    });
+
+    it('lève NotFoundException sans supprimer si la table n’est pas dans ce casino', async () => {
+      prismaMock.pokerTable.findUnique.mockResolvedValue(null);
+
+      await expect(
+        service.deleteTable(casinoId, 'autre-casino'),
+      ).rejects.toBeInstanceOf(NotFoundException);
+      expect(prismaMock.reservation.findMany).not.toHaveBeenCalled();
+      expect(prismaMock.pokerTable.updateMany).not.toHaveBeenCalled();
+    });
+
+    it('lève ConflictException sans supprimer si une réservation active est à venir', async () => {
+      prismaMock.reservation.findMany.mockResolvedValue([
+        { arrivalAt: new Date(Date.now() + 24 * 60 * 60 * 1000) },
+      ]);
+
+      await expect(
+        service.deleteTable(casinoId, 'table-1'),
+      ).rejects.toBeInstanceOf(ConflictException);
+      expect(prismaMock.pokerTable.updateMany).not.toHaveBeenCalled();
+    });
+
     it('marque la table comme supprimée si elle ne l’est pas déjà', async () => {
       prismaMock.pokerTable.updateMany.mockResolvedValue({ count: 1 });
 
-      await expect(service.deleteTable('table-1')).resolves.toBeUndefined();
+      await expect(
+        service.deleteTable(casinoId, 'table-1'),
+      ).resolves.toBeUndefined();
       expect(prismaMock.pokerTable.updateMany).toHaveBeenCalledWith({
-        where: { id: 'table-1', deletedAt: null },
+        where: { id: 'table-1', deletedAt: null, casinoId },
         data: { deletedAt: expect.any(Date) },
       });
     });
@@ -245,9 +393,9 @@ describe('TablesService', () => {
     it('lève NotFoundException si aucune table n’a été modifiée', async () => {
       prismaMock.pokerTable.updateMany.mockResolvedValue({ count: 0 });
 
-      await expect(service.deleteTable('inconnue')).rejects.toBeInstanceOf(
-        NotFoundException,
-      );
+      await expect(
+        service.deleteTable(casinoId, 'inconnue'),
+      ).rejects.toBeInstanceOf(NotFoundException);
     });
   });
 });

@@ -105,7 +105,11 @@ export class AuthController {
   @Get('42')
   redirectTo42(@Res() res: Response) {
     const state = crypto.randomBytes(32).toString('hex');
-    res.cookie(OAUTH_COOKIE, state, buildOauthCookieOptions(600, this.isProd()));
+    res.cookie(
+      OAUTH_COOKIE,
+      state,
+      buildOauthCookieOptions(600, this.isProd()),
+    );
     res.redirect(this.fortyTwoClient.buildAuthUrl(state));
   }
 
@@ -115,20 +119,24 @@ export class AuthController {
   @Public()
   @Throttle({ default: { limit: 5, ttl: 60000 } })
   @Get('42/callback')
-  async callback42(
-    @Res() res: Response,
-    @Req() req: Request,
-  ) {
+  async callback42(@Res() res: Response, @Req() req: Request) {
     const cookieState = req.cookies[OAUTH_COOKIE];
     const frontUrl = this.config.getOrThrow('FRONTEND_URL');
     // The state is single-use: clear it first, whatever happens next (same path as when it was set).
-    const { maxAge: _maxAge, ...clearOauth } = buildOauthCookieOptions(0, this.isProd());
+    const { maxAge: _maxAge, ...clearOauth } = buildOauthCookieOptions(
+      0,
+      this.isProd(),
+    );
     res.clearCookie(OAUTH_COOKIE, clearOauth);
     // Raw values from req.query: @Query() would let the global ValidationPipe turn an array into "a,b".
     const { code, state } = req.query;
 
     try {
-      if (typeof code !== 'string' || typeof state !== 'string' || typeof cookieState !== 'string')
+      if (
+        typeof code !== 'string' ||
+        typeof state !== 'string' ||
+        typeof cookieState !== 'string'
+      )
         throw new FortyTwoAuthException();
 
       // Constant-time comparison; timingSafeEqual throws on different lengths, hence the length check.
@@ -143,11 +151,18 @@ export class AuthController {
         return res.redirect(frontUrl);
       }
       // New account: nothing is written yet. The signed pending token waits for the birth date.
-      res.cookie(OAUTH_PENDING_COOKIE, result.token, buildOauthCookieOptions(600, this.isProd()))
+      res.cookie(
+        OAUTH_PENDING_COOKIE,
+        result.token,
+        buildOauthCookieOptions(600, this.isProd()),
+      );
       return res.redirect(`${frontUrl}/signup/42`);
     } catch (error) {
       if (!(error instanceof FortyTwoAuthException))
-        this.logger.error('42 OAuth callback failed', error instanceof Error ? error.stack : String(error));
+        this.logger.error(
+          '42 OAuth callback failed',
+          error instanceof Error ? error.stack : String(error),
+        );
       return res.redirect(`${frontUrl}/login?error=oauth`);
     }
   }
@@ -166,9 +181,15 @@ export class AuthController {
   ): Promise<User> {
     const pendingToken = req.cookies[OAUTH_PENDING_COOKIE];
     if (typeof pendingToken !== 'string') throw new FortyTwoAuthException();
-    const { user, token } = await this.auth.completeFortyTwoSignup(pendingToken, dto);
+    const { user, token } = await this.auth.completeFortyTwoSignup(
+      pendingToken,
+      dto,
+    );
     // The pending token is used up: clear it (same path as when it was set) and open a normal session.
-    const { maxAge: _maxAge, ...clearOauth } = buildOauthCookieOptions(0, this.isProd());
+    const { maxAge: _maxAge, ...clearOauth } = buildOauthCookieOptions(
+      0,
+      this.isProd(),
+    );
     res.clearCookie(OAUTH_PENDING_COOKIE, clearOauth);
     res.cookie(COOKIE_NAME, token, this.cookieOptions());
     return user;

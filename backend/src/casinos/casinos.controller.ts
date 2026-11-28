@@ -30,9 +30,7 @@ export class CasinosController {
 
   @SerializeOptions({ schema: publicCasinoSchema })
   @Get()
-  async getActiveCasinos(
-    @Query() query: PaginationDto,
-  ): Promise<CasinoInfo[]> {
+  async getActiveCasinos(@Query() query: PaginationDto): Promise<CasinoInfo[]> {
     return await this.casinos.listActiveCasinos(query.page, query.limit);
   }
 

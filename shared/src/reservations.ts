@@ -28,3 +28,10 @@ export const reservationSchema = z.object({
 });
 export type Reservation = z.infer<typeof reservationSchema>;
 export type ReservationInput = z.input<typeof reservationSchema>;
+
+export const floorReservationSchema = reservationSchema.extend({
+  user: z.object({ pseudo: z.string() }),
+  seat: z.object({ seatNumber: z.int(),  table: z.object({ id: z.string(), name: z.string() }) }),
+});
+export type FloorReservation = z.infer<typeof floorReservationSchema>;
+export type FloorReservationInput = z.input<typeof floorReservationSchema>;

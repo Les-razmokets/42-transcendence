@@ -11,7 +11,7 @@ import { AuthenticatedUser } from '../auth/utils/auth-request';
 /**
  * Service responsible for validating user access permissions to specific casinos.
  * It checks active casino records, membership roles, and global privileges (e.g., system admin status).
- * 
+ *
  * @param user - The currently authenticated user making the request.
  * @param casinoId - The unique identifier of the target casino.
  * @param minRole - The minimum casino role required to pass authorization.

@@ -213,7 +213,10 @@ describe('POST /api/auth/register (e2e)', () => {
       ],
       ['pseudo over 20 chars', () => validBody({ pseudo: 'a'.repeat(21) })],
       // the "42" prefix is reserved for accounts created through 42 OAuth
-      ['pseudo with the reserved 42 prefix', () => validBody({ pseudo: '42jdoe' })],
+      [
+        'pseudo with the reserved 42 prefix',
+        () => validBody({ pseudo: '42jdoe' }),
+      ],
       [
         'pseudo with the reserved prefix after normalization',
         () => validBody({ pseudo: '  42JDoe ' }),

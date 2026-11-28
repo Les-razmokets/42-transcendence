@@ -125,9 +125,13 @@ describe('GET /api/users/me with memberships (e2e)', () => {
     await prisma.casino.deleteMany();
 
     casinoIds.A = (await newCasino('Alpha Casino', 'aliuhfaoierhgpairuhg')).id;
-    casinoIds.B = (await newCasino('Beta Casino', 'adilurvhaserpuhaeripufh')).id;
+    casinoIds.B = (
+      await newCasino('Beta Casino', 'adilurvhaserpuhaeripufh')
+    ).id;
     casinoIds.C = (await newCasino('Gamma Casino', 'ajlrhfieeeee')).id;
-    casinoIds.DELETED = (await newCasino('Zeta Deleted', 'rrrrrrrrrrrrr', true)).id;
+    casinoIds.DELETED = (
+      await newCasino('Zeta Deleted', 'rrrrrrrrrrrrr', true)
+    ).id;
 
     await addMembership('floorA', 'A', CasinoRole.FLOOR);
     // inserted in REVERSE name order on purpose: the list must come back sorted by casino name
