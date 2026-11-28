@@ -15,7 +15,8 @@ fi
 
 echo "restoring $file"
 
-trap 'docker compose start backend' EXIT
+docker compose up -d --wait db
+trap 'docker compose up -d backend' EXIT
 docker compose stop backend
 docker compose exec -T db sh -c 'export PGOPTIONS="-c client_min_messages=warning" &&
 	tmp="${POSTGRES_DB}_restore" &&
@@ -25,4 +26,4 @@ docker compose exec -T db sh -c 'export PGOPTIONS="-c client_min_messages=warnin
 	dropdb -U "$POSTGRES_USER" --force --if-exists "$POSTGRES_DB" &&
 	psql -q -U "$POSTGRES_USER" -d postgres -v ON_ERROR_STOP=1 -c "ALTER DATABASE \"$tmp\" RENAME TO \"$POSTGRES_DB\""' < "$file"
 
-echo "Restore done !"
+echo "Restore done ! Run 'make up' if other services are stopped"
