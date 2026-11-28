@@ -10,7 +10,7 @@ PRISMA = cd $(BACKDIR) && npx prisma
 TESTBACK = docker compose run --build --rm backend npm test && docker compose run --rm backend npm run test:e2e
 TESTFRONT = docker compose run --build --rm frontend npm test -- --run
 SEED = $(COMPOSE) exec -T db sh -c 'psql -U "$$POSTGRES_USER" -d "$$POSTGRES_DB" -v ON_ERROR_STOP=1' < backend/prisma/seed/seed_dev.sql
-
+BACKUP = $(COMPOSE) exec -T db sh -c 'pg_dump -U "$$POSTGRES_USER" -d "$$POSTGRES_DB"' > backups/en_cours.tmp && mv backups/en_cours.tmp ./backups/mydatabase_$$(date +%Y%m%d_%H%M%S).bak
 
 # Colors
 GREEN = \033[0;32m
@@ -82,9 +82,16 @@ testfront:
 
 test: testback testfront
 
+backup:
+	@mkdir -p backups
+	@$(BACKUP) || { echo "$(RED)✗ Backup failed (see error above)$(RESET)"; exit 1; }
+
+restore:
+	@./scripts/restore.sh "$(file)"
+
 seed:
 	@$(SEED)
-	
+
 # Cree une nouvelle migration : make migrate name=add_casino
 migrate:
 	@$(PRISMA) migrate dev $(if $(name),--name $(name))
@@ -108,6 +115,8 @@ help:
 	@echo "  $(YELLOW)all$(RESET)       - Check Node, install deps, generate client, start containers, apply migrations"
 	@echo "  $(YELLOW)up$(RESET)        - Start containers (waits for healthy)"
 	@echo "  $(YELLOW)down$(RESET)      - Stop containers"
+	@echo "  $(YELLOW)backup$(RESET)    - Save the current states of db"
+	@echo "  $(YELLOW)restore$(RESET)   - Restore the latest database backup (file=<dump> to choose one)"
 	@echo "  $(YELLOW)seed$(RESET)      - Test with fake data"
 	@echo "  $(YELLOW)ps$(RESET)        - Show containers status"
 	@echo "  $(YELLOW)logs$(RESET)      - Follow containers logs"
@@ -123,4 +132,4 @@ help:
 	@echo "  $(YELLOW)help$(RESET)      - Show this help message"
 	@echo "$(CYAN)═══════════════════════════════════════════════════════$(RESET)"
 
-.PHONY: all up down ps logs deploy migrate studio clean fclean re help testback testfront test seed
+.PHONY: all up down ps logs deploy migrate studio clean fclean re help testback testfront test seed backup restore
