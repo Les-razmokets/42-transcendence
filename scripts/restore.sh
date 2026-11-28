@@ -13,6 +13,8 @@ if [ ! -s "$file" ]; then
 	exit 1
 fi
 
+echo "restoring $file"
+
 trap 'docker compose start backend' EXIT
 docker compose stop backend
 docker compose exec -T db sh -c 'export PGOPTIONS="-c client_min_messages=warning" &&

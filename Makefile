@@ -87,7 +87,7 @@ backup:
 	@$(BACKUP) || { echo "$(RED)✗ Backup failed (see error above)$(RESET)"; exit 1; }
 
 restore:
-	@./scripts/restore.sh
+	@./scripts/restore.sh "$(file)"
 
 seed:
 	@$(SEED)
@@ -116,7 +116,7 @@ help:
 	@echo "  $(YELLOW)up$(RESET)        - Start containers (waits for healthy)"
 	@echo "  $(YELLOW)down$(RESET)      - Stop containers"
 	@echo "  $(YELLOW)backup$(RESET)    - Save the current states of db"
-	@echo "  $(YELLOW)restore$(RESET)   - Restore the latest database backup"
+	@echo "  $(YELLOW)restore$(RESET)   - Restore the latest database backup (file=<dump> to choose one)"
 	@echo "  $(YELLOW)seed$(RESET)      - Test with fake data"
 	@echo "  $(YELLOW)ps$(RESET)        - Show containers status"
 	@echo "  $(YELLOW)logs$(RESET)      - Follow containers logs"
